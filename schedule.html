@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Circuit Assembly Scheduler</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Crypto JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body { background-color: #f3f4f6; }
+        .conflict-border { border: 2px solid #ef4444; }
+        .warning-border { border: 2px solid #f59e0b; }
+        .auto-assigned { background-color: #dcfce7; } 
+        .blocked-cell { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+        .mirrored-cell { background-color: #fff7ed; color: #9a3412; font-style: italic; border: 1px dashed #fdba74; }
+        .overflow-x-auto::-webkit-scrollbar { height: 8px; }
+        .overflow-x-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .log-entry { border-bottom: 1px solid #e5e7eb; padding: 8px 0; font-family: monospace; font-size: 0.85rem; }
+        
+        /* Drag and Drop Styles */
+        .draggable-row { cursor: grab; }
+        .draggable-row:active { cursor: grabbing; }
+        .droppable-group { transition: background-color 0.2s; }
+        .droppable-group.drag-over { background-color: #e0f2fe; border-color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <!-- Error Display -->
+    <div id="global-error" style="display:none; padding: 20px; background-color: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; margin: 20px; border-radius: 8px;">
+        <h2 style="margin-top:0; font-weight: bold;">Application Error</h2>
+        <pre id="error-message" style="white-space: pre-wrap;"></pre>
+        <button onclick="location.reload()" style="margin-top:10px; padding:5px 10px; cursor:pointer; border:1px solid #991b1b; background: #fff;">Reload Page</button>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+        window.onerror = function(message, source, lineno, colno, error) {
+            document.getElementById('global-error').style.display = 'block';
+            document.getElementById('error-message').textContent = message + '\n\nLocation: ' + lineno + ':' + colno;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useCallback } = React;
+
+        // ---------------- DATA CONSTANTS ----------------
+
+        const SHIFTS = [
+            { id: 'morning', label: 'Morning (7:30-10:00)', minutes: 150 },
+            { id: 'second', label: 'Second (10:00-12:30)', minutes: 150 },
+            { id: 'late', label: 'Late (12:30-3:00)', minutes: 150 },
+            { id: 'concluding', label: 'Concluding (3:00-5:30)', minutes: 150 }
+        ];
+
+        const TOTAL_PROGRAM_MINUTES = 600;
+
+        const AREAS = {
+            AUDITORIUM: 'Auditorium',
+            UPPER_LEVEL: 'Upper Level',
+            STAIRS: 'Stairs',
+            BACKSTAGE: 'Backstage / South Auditorium',
+            DINING: 'Dining Room',
+            LOBBY: 'Lobby',
+            EXTERIOR: 'Exterior'
+        };
+
+        const POSITIONS = [
+            // AUDITORIUM (Black)
+            { id: 'pos12', name: 'Pos 12 (Sect A - Key Man)', area: AREAS.AUDITORIUM, type: 'auditorium', keyMan: true },
+            { id: 'pos09', name: 'Pos 09 (Sect A)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos13', name: 'Pos 13 (Sect B - Key Man)', area: AREAS.AUDITORIUM, type: 'auditorium', keyMan: true },
+            { id: 'pos10', name: 'Pos 10 (Sect B)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos14', name: 'Pos 14 (Sect C)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos11', name: 'Pos 11 (Sect C - Bapt Walk)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos18', name: 'Pos 18 (Sect D)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos15', name: 'Pos 15 (Sect D)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos16', name: 'Pos 16 (Sect E - Key Man)', area: AREAS.AUDITORIUM, type: 'auditorium', keyMan: true },
+            { id: 'pos19', name: 'Pos 19 (Sect E)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos20', name: 'Pos 20 (Sect F)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            { id: 'pos17', name: 'Pos 17 (Sect F)', area: AREAS.AUDITORIUM, type: 'auditorium' },
+            
+            // UPPER LEVEL (Black)
+            { id: 'pos27', name: 'Pos 27', area: AREAS.UPPER_LEVEL, type: 'auditorium' },
+            { id: 'pos28', name: 'Pos 28 (Key Man Count)', area: AREAS.UPPER_LEVEL, type: 'auditorium', keyMan: true },
+            { id: 'pos29', name: 'Pos 29', area: AREAS.UPPER_LEVEL, type: 'auditorium' },
+            { id: 'pos30', name: 'Pos 30', area: AREAS.UPPER_LEVEL, type: 'auditorium' },
+            { id: 'pos31', name: 'Pos 31', area: AREAS.UPPER_LEVEL, type: 'auditorium' },
+            { id: 'pos32', name: 'Pos 32', area: AREAS.UPPER_LEVEL, type: 'auditorium' },
+            
+            // STAIRS (Lobby Color)
+            { id: 'pos25', name: 'Pos 25 (Stairs)', area: AREAS.STAIRS, type: 'rotational' },
+            { id: 'pos26', name: 'Pos 26 (Stairs)', area: AREAS.STAIRS, type: 'rotational' },
+
+            // BACKSTAGE / SOUTH AUDITORIUM (Periwinkle)
+            { id: 'door_backstage', name: 'Pos 04 (Back Stage)', area: AREAS.BACKSTAGE, type: 'rotational' },
+            { id: 'pos_05', name: 'Pos 05 (Chair Lift Hall)', area: AREAS.BACKSTAGE, type: 'rotational' },
+            { id: 'pos_06', name: 'Pos 06 (South Aud)', area: AREAS.BACKSTAGE, type: 'rotational' },
+            { id: 'pos_07', name: 'Pos 07 (Chair Lift Stairs)', area: AREAS.BACKSTAGE, type: 'rotational' },
+            { id: 'pos_08', name: 'Pos 08 (South Aud)', area: AREAS.BACKSTAGE, type: 'rotational' },
+
+            // DINING ROOM (Green)
+            { id: 'dining_01_a', name: 'Pos 01 (South Dining) A', area: AREAS.DINING, type: 'rotational' },
+            { id: 'dining_01_b', name: 'Pos 01 (South Dining) B', area: AREAS.DINING, type: 'rotational' },
+            { id: 'dining_03_a', name: 'Pos 03 (North Dining) A', area: AREAS.DINING, type: 'rotational' },
+            { id: 'dining_03_b', name: 'Pos 03 (North Dining) B', area: AREAS.DINING, type: 'rotational' },
+            { id: 'dining_02',   name: 'Pos 02 (7am-8am Only)', area: AREAS.DINING, type: 'rotational', validShifts: ['morning'] },
+
+            // LOBBY (Grey)
+            { id: 'lobby_km', name: 'Lobby Key Man', area: AREAS.LOBBY, type: 'rotational', keyMan: true },
+            { id: 'lobby_1', name: 'Lobby Attendant 1', area: AREAS.LOBBY, type: 'rotational' },
+            { id: 'lobby_2', name: 'Lobby Attendant 2', area: AREAS.LOBBY, type: 'rotational' },
+            { id: 'lobby_3', name: 'Lobby Attendant 3', area: AREAS.LOBBY, type: 'rotational' },
+            { id: 'door_north', name: 'North Exit Door', area: AREAS.LOBBY, type: 'rotational' }, // Moved here from Aud Doors
+            
+            // MIRRORS
+            { id: 'lobby_ext_1', name: 'Lobby Security (Ext Walk 1)', area: AREAS.LOBBY, type: 'rotational', isMirror: true },
+            { id: 'lobby_ext_2', name: 'Lobby Security (Ext Walk 2)', area: AREAS.LOBBY, type: 'rotational', isMirror: true },
+
+            // EXTERIOR (Yellow)
+            { id: 'ext_walk_1', name: 'Exterior Walk 1', area: AREAS.EXTERIOR, type: 'rotational' },
+            { id: 'ext_walk_2', name: 'Exterior Walk 2', area: AREAS.EXTERIOR, type: 'rotational' }
+        ];
+
+        const INITIAL_ROSTER = [];
+
+        // ---------------- HELPER FUNCTIONS ----------------
+
+        const getAssignId = (val) => {
+            if (!val) return null;
+            if (typeof val === 'object') return parseInt(val.id);
+            return parseInt(val);
+        };
+        
+        const isAutoAssigned = (val) => {
+            if (val && typeof val === 'object') return val.isAuto === true;
+            return false;
+        };
+
+        const getKeyManName = (personnel, id) => {
+            const km = personnel.find(p => p.id === id);
+            return km ? km.name : '';
+        };
+
+        const getLastName = (fullName) => {
+            if (!fullName) return '';
+            const parts = fullName.trim().split(' ');
+            return parts[parts.length - 1].toLowerCase();
+        };
+
+        const parseCSV = (text) => {
+            const arr = [];
+            let quote = false;
+            let row = [];
+            let col = '';
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                const next = text[i+1];
+                if (char === '"') {
+                    if (quote && next === '"') { col += '"'; i++; } else { quote = !quote; }
+                } else if (char === ',' && !quote) {
+                    row.push(col); col = '';
+                } else if (char === '\n' && !quote) {
+                    row.push(col); arr.push(row); row = []; col = '';
+                } else { col += char; }
+            }
+            if (col || row.length > 0) { row.push(col); arr.push(row); }
+            return arr;
+        };
+
+        const areaToCap = (areaName) => {
+            switch(areaName) {
+                case AREAS.AUDITORIUM: return 'auditorium';
+                case AREAS.UPPER_LEVEL: return 'upper_level';
+                case AREAS.STAIRS: return 'stairs';
+                case AREAS.BACKSTAGE: return 'backstage';
+                case AREAS.DINING: return 'dining';
+                // case AREAS.AUD_DOORS: return 'aud_doors'; // Removed
+                case AREAS.LOBBY: return 'lobby';
+                case AREAS.EXTERIOR: return 'exterior';
+                default: return 'roam';
+            }
+        };
+
+        // --- CENTRALIZED CANDIDATE FINDER ---
+        const getCandidatesForPosition = (pos, personnel) => {
+            const requiredCap = areaToCap(pos.area);
+            return personnel.filter(p => {
+                if (!p.caps.includes(requiredCap)) return false;
+                if (pos.keyMan && !p.caps.includes('keyman')) return false;
+                return true;
+            });
+        };
+
+        // ---------------- COMPONENTS ----------------
+
+        function RosterView({ personnel, setPersonnel }) {
+            const [formData, setFormData] = useState({ 
+                name: '', 
+                role: 'Exemplary', 
+                caps: { 
+                    auditorium: false, upper_level: false, stairs: true, backstage: true, 
+                    dining: true, lobby: true, exterior: true, keyman: false 
+                },
+                keyManId: '' 
+            });
+            const [editingId, setEditingId] = useState(null);
+            const [draggedPersonId, setDraggedPersonId] = useState(null);
+            const [dragOverGroup, setDragOverGroup] = useState(null);
+
+            // --- FORM HANDLERS ---
+            const handleCapChange = (cap, checked) => {
+                setFormData(prev => ({ ...prev, caps: { ...prev.caps, [cap]: checked } }));
+            };
+
+            const startEdit = (person) => {
+                setEditingId(person.id);
+                const newCaps = { 
+                    auditorium: false, upper_level: false, stairs: false, backstage: false, 
+                    dining: false, lobby: false, exterior: false, keyman: false 
+                };
+                person.caps.forEach(c => { newCaps[c] = true; });
+                setFormData({
+                    name: person.name,
+                    role: person.role || 'Exemplary',
+                    caps: newCaps,
+                    keyManId: person.keyManId ? person.keyManId.toString() : ''
+                });
+            };
+
+            const cancelEdit = () => {
+                setEditingId(null);
+                setFormData({ 
+                    name: '', role: 'Exemplary',
+                    caps: { auditorium: false, upper_level: false, stairs: true, backstage: true, dining: true, lobby: true, exterior: true, keyman: false },
+                    keyManId: '' 
+                });
+            };
+
+            const savePerson = () => {
+                if (!formData.name.trim()) return;
+                const capabilityList = Object.keys(formData.caps).filter(k => formData.caps[k]);
+                const newKeyManId = formData.keyManId ? parseInt(formData.keyManId) : null;
+
+                const newPerson = { 
+                    name: formData.name, 
+                    role: formData.role,
+                    caps: capabilityList, 
+                    keyManId: newKeyManId 
+                };
+
+                if (editingId !== null) {
+                    setPersonnel(personnel.map(p => p.id === editingId ? { ...p, ...newPerson } : p));
+                    cancelEdit();
+                } else {
+                    const maxId = personnel.reduce((max, p) => (p.id > max ? p.id : max), 0);
+                    setPersonnel([...personnel, { id: maxId + 1, ...newPerson }]);
+                    setFormData({ name: '', role: 'Exemplary', caps: { auditorium: false, upper_level: false, stairs: true, backstage: true, dining: true, lobby: true, exterior: true, keyman: false }, keyManId: '' });
+                }
+            };
+
+            const handleCSVUpload = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const rows = parseCSV(event.target.result);
+                        const dataRows = rows.slice(1).filter(r => r.length > 3 && r[3] && r[3].trim() !== ''); 
+                        let newPersonnel = [...personnel];
+                        let maxId = newPersonnel.reduce((max, p) => (p.id > max ? p.id : max), 0);
+
+                        let updatedCount = 0;
+                        let newCount = 0;
+
+                        dataRows.forEach(row => {
+                            const name = row[3].trim();
+                            const rawRole = row[5] || "";
+                            const keyManName = row[7] || "";
+                            
+                            let role = 'Exemplary';
+                            if (rawRole.includes('Elder')) role = 'Elder';
+                            else if (rawRole.includes('Ministerial')) role = 'MS';
+
+                            let caps = ['lobby', 'dining', 'stairs', 'exterior', 'backstage']; 
+                            if (role === 'Elder' || role === 'MS') caps.push('auditorium', 'upper_level', 'backstage');
+                            if (keyManName.trim().toLowerCase() === name.toLowerCase()) caps.push('keyman');
+
+                            // CHECK FOR EXISTING PERSON
+                            const existingPersonIndex = newPersonnel.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+
+                            if (existingPersonIndex >= 0) {
+                                // UPDATE EXISTING
+                                const existing = newPersonnel[existingPersonIndex];
+                                
+                                // Merge caps: add new ones, keep old custom ones
+                                const updatedCaps = [...new Set([...existing.caps, ...caps])];
+
+                                newPersonnel[existingPersonIndex] = {
+                                    ...existing,
+                                    role: role, // Update role
+                                    caps: updatedCaps, // Update caps
+                                    tempKeyManName: keyManName // Update keyman linkage text
+                                };
+                                updatedCount++;
+                            } else {
+                                // ADD NEW
+                                maxId++;
+                                newPersonnel.push({ id: maxId, name: name, role: role, caps: caps, tempKeyManName: keyManName });
+                                newCount++;
+                            }
+                        });
+
+                        // RE-LINK KEY MEN IDs (For everyone, in case a Key Man was just added/updated)
+                        newPersonnel = newPersonnel.map(p => {
+                            if (p.tempKeyManName && p.tempKeyManName.toLowerCase() !== p.name.toLowerCase()) {
+                                const km = newPersonnel.find(c => c.name.toLowerCase() === p.tempKeyManName.toLowerCase());
+                                if (km) return { ...p, keyManId: km.id };
+                            }
+                            return p;
+                        });
+
+                        setPersonnel(newPersonnel);
+                        alert(`CSV Processed.\nAdded: ${newCount}\nUpdated: ${updatedCount}`);
+                    } catch (err) { alert("Error parsing CSV: " + err.message); }
+                };
+                reader.readAsText(file);
+            };
+
+            const deletePerson = (id) => {
+                if(confirm("Delete this person?")) {
+                    setPersonnel(personnel.filter(p => p.id !== id));
+                    if (editingId === id) cancelEdit();
+                }
+            };
+
+            // --- DRAG AND DROP LOGIC ---
+            const handleDragStart = (e, personId) => {
+                setDraggedPersonId(personId);
+                e.dataTransfer.effectAllowed = "move";
+            };
+
+            const handleDragOver = (e, groupId) => {
+                e.preventDefault(); // Necessary to allow dropping
+                setDragOverGroup(groupId);
+            };
+
+            const handleDrop = (e, targetKeyManId) => {
+                e.preventDefault();
+                setDragOverGroup(null);
+                if (draggedPersonId === null) return;
+
+                // Prevent self-assignment
+                if (draggedPersonId === targetKeyManId) return;
+
+                setPersonnel(prev => prev.map(p => {
+                    if (p.id === draggedPersonId) {
+                        return { ...p, keyManId: targetKeyManId };
+                    }
+                    return p;
+                }));
+                setDraggedPersonId(null);
+            };
+
+
+            const renderCheckbox = (key, label) => (
+                <label className="flex items-center cursor-pointer mr-4 mb-2">
+                    <input type="checkbox" checked={formData.caps[key]} onChange={e=>handleCapChange(key, e.target.checked)} className="mr-2"/>
+                    <span className="text-xs font-bold">{label}</span>
+                </label>
+            );
+
+            // --- GROUPING & SORTING LOGIC ---
+            // 1. Identify all Key Men
+            const keyMen = personnel.filter(p => p.caps.includes('keyman'));
+            // Sort Key Men by LAST NAME
+            keyMen.sort((a, b) => getLastName(a.name).localeCompare(getLastName(b.name)));
+
+            // 2. Create Groups
+            const groups = keyMen.map(km => {
+                const members = personnel.filter(p => p.keyManId === km.id);
+                // Sort members by LAST NAME
+                members.sort((a, b) => getLastName(a.name).localeCompare(getLastName(b.name)));
+                return { keyMan: km, members: members };
+            });
+
+            // 3. Add "No Key Man" Group (Sorted)
+            const orphans = personnel.filter(p => !p.keyManId && !p.caps.includes('keyman'));
+            orphans.sort((a, b) => getLastName(a.name).localeCompare(getLastName(b.name)));
+            
+            if (orphans.length > 0) {
+                groups.push({ keyMan: null, members: orphans });
+            }
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    {/* HEADER & IMPORT */}
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800">Personnel Roster ({personnel.length})</h2>
+                        <div className="relative overflow-hidden inline-block">
+                            <button className="bg-purple-600 text-white py-2 px-4 rounded font-bold hover:bg-purple-700 flex items-center gap-2"><i className="fa fa-file-csv"></i> Import CSV</button>
+                            <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+                        </div>
+                    </div>
+
+                    {/* EDIT FORM */}
+                    <div className={`p-4 rounded border mb-6 ${editingId ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-200'}`}>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold uppercase text-gray-600">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
+                            {editingId && <button onClick={cancelEdit} className="text-xs text-gray-500 hover:text-gray-800 underline">Cancel Edit</button>}
+                        </div>
+                        <div className="flex flex-wrap gap-4 items-start">
+                            <div className="mb-2">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Name</label>
+                                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border p-2 rounded w-48" placeholder="Name" />
+                            </div>
+                            <div className="mb-2">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Role</label>
+                                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border p-2 rounded w-32">
+                                    <option value="Exemplary">Exemplary</option>
+                                    <option value="MS">MS</option>
+                                    <option value="Elder">Elder</option>
+                                </select>
+                            </div>
+                            <div className="mb-2">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Key Man</label>
+                                <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border p-2 rounded w-48">
+                                    <option value="">-- None --</option>
+                                    {personnel.filter(p => p.caps.includes('keyman') && p.id !== editingId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="w-full">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Permissions</label>
+                                <div className="flex flex-wrap bg-white p-2 rounded border">
+                                    {renderCheckbox('auditorium', 'Auditorium')}
+                                    {renderCheckbox('upper_level', 'Upper Lvl')}
+                                    {renderCheckbox('stairs', 'Stairs')}
+                                    {renderCheckbox('backstage', 'Backstage')}
+                                    {renderCheckbox('dining', 'Dining')}
+                                    {renderCheckbox('lobby', 'Lobby')}
+                                    {renderCheckbox('exterior', 'Exterior')}
+                                    {renderCheckbox('keyman', 'KEY MAN')}
+                                </div>
+                            </div>
+                            <button onClick={savePerson} className={`text-white px-4 py-2 rounded font-medium h-10 min-w-[80px] ${editingId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{editingId ? 'Update' : 'Add'}</button>
+                        </div>
+                    </div>
+
+                    {/* ROSTER LIST (Key Man Groups) */}
+                    <div className="space-y-6">
+                        {groups.map(group => (
+                            <div 
+                                key={group.keyMan ? group.keyMan.id : 'none'} 
+                                className={`droppable-group border rounded-lg overflow-hidden shadow-sm ${dragOverGroup === (group.keyMan ? group.keyMan.id : 'none') ? 'drag-over' : 'bg-white'}`}
+                                onDragOver={(e) => handleDragOver(e, group.keyMan ? group.keyMan.id : 'none')}
+                                onDrop={(e) => handleDrop(e, group.keyMan ? group.keyMan.id : null)}
+                            >
+                                {/* GROUP HEADER */}
+                                <div className="bg-gray-100 p-3 border-b flex justify-between items-center">
+                                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                                        <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'} text-blue-600`}></i>
+                                        {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
+                                        <span className="text-xs font-normal text-gray-500 ml-2">({group.members.length} members)</span>
+                                    </h3>
+                                    {group.keyMan && (
+                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-500 hover:underline">Edit Key Man</button>
+                                    )}
+                                </div>
+
+                                {/* MEMBERS TABLE */}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                                            <tr>
+                                                <th className="px-4 py-2 w-1/3">Name</th>
+                                                <th className="px-4 py-2 w-1/6">Role</th>
+                                                <th className="px-4 py-2">Capabilities</th>
+                                                <th className="px-4 py-2 w-20 text-center">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {group.members.length === 0 ? (
+                                                <tr><td colSpan="4" className="px-4 py-3 text-center text-gray-400 italic">Drop members here to assign</td></tr>
+                                            ) : (
+                                                group.members.map(p => (
+                                                    <tr 
+                                                        key={p.id} 
+                                                        draggable 
+                                                        onDragStart={(e) => handleDragStart(e, p.id)}
+                                                        className={`draggable-row hover:bg-blue-50 transition-colors ${editingId === p.id ? 'bg-yellow-50' : ''}`}
+                                                    >
+                                                        <td className="px-4 py-2 font-medium text-gray-900 flex items-center gap-2">
+                                                            <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
+                                                            {p.name}
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-medium 
+                                                                ${p.role === 'Elder' ? 'bg-yellow-100 text-yellow-800' : 
+                                                                  p.role === 'MS' ? 'bg-blue-100 text-blue-800' : 
+                                                                  'bg-gray-100 text-gray-800'}`}>
+                                                                {p.role}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-2">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {p.caps.map(c => (
+                                                                    <span key={c} className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-600">
+                                                                        {c === 'auditorium' ? 'Aud' : c.charAt(0).toUpperCase() + c.slice(1)}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            <div className="flex justify-center gap-2">
+                                                                <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600"><i className="fa fa-pencil"></i></button>
+                                                                <button onClick={() => deletePerson(p.id)} className="text-gray-400 hover:text-red-600"><i className="fa fa-trash"></i></button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, getConflict }) {
+            if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all') return <td className="border p-2 blocked-cell text-center text-xs font-bold uppercase">N/A</td>;
+
+            if (pos.isMirror) {
+                const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2';
+                const mirrorKey = `${sourceKey}_${shiftId}`;
+                const mirrorId = getAssignId(assignments[mirrorKey]);
+                const mirrorPerson = personnel.find(p => p.id === mirrorId);
+                return (
+                    <td className="border p-2 mirrored-cell text-xs">
+                        {mirrorPerson ? <span><i className="fa fa-link mr-1"></i>{mirrorPerson.name}</span> : "-- Linked --"}
+                    </td>
+                );
+            }
+
+            const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`;
+            const assignmentVal = assignments[assignmentKey];
+            const assignedId = getAssignId(assignmentVal);
+            const isAuto = isAutoAssigned(assignmentVal);
+            const conflictData = getConflict(assignedId, pos, shiftId, assignments);
+            const conflictMsg = conflictData ? conflictData.msg : null;
+            const isWarning = conflictData ? conflictData.type === 'warning' : false;
+            const assignedPerson = personnel.find(p => p.id === assignedId);
+
+            // USE UNIFIED CANDIDATE GETTER - Also allows selecting ANYONE manually, but sorted by qualification
+            const getFilteredCandidates = () => {
+                const requiredCap = areaToCap(pos.area);
+                
+                // Create a list of ALL personnel, but mark if they are recommended or not
+                let candidates = personnel.map(p => {
+                    let qualified = true;
+                    if (!p.caps.includes(requiredCap)) qualified = false;
+                    if (pos.keyMan && !p.caps.includes('keyman')) qualified = false;
+                    return { ...p, qualified };
+                });
+
+                // Sort: Qualified first, then Alphabetical
+                candidates.sort((a,b) => {
+                    if (a.qualified && !b.qualified) return -1;
+                    if (!a.qualified && b.qualified) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+
+                if (assignedPerson && !candidates.find(c => c.id === assignedPerson.id)) {
+                    // Ensure current assignment is in list even if logic changes
+                    return [assignedPerson, ...candidates];
+                }
+                return candidates;
+            };
+
+            const filteredCandidates = getFilteredCandidates();
+
+            return (
+                <td className={`border p-2 ${conflictMsg ? (isWarning ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300') : (isAuto ? 'auto-assigned' : '')}`}>
+                    <div className="flex items-center gap-1">
+                        {isAuto && <i className="fa fa-magic text-green-600 text-xs" title="Auto-Assigned"></i>}
+                        <select className={`w-full p-1 rounded text-sm border ${conflictMsg ? (isWarning ? 'text-yellow-800 font-bold border-yellow-400' : 'text-red-700 font-bold border-red-400') : 'border-gray-300'} ${isAuto ? 'bg-transparent' : ''}`} value={assignedId || ""} onChange={(e) => onAssign(assignmentKey, e.target.value)}>
+                            <option value="">-- Unassigned --</option>
+                            {assignedId && !assignedPerson && <option value={assignedId}>Unknown (Removed)</option>}
+                            {filteredCandidates.map(p => {
+                                const cData = getConflict(p.id, pos, shiftId, assignments); 
+                                const isWarn = cData && cData.type === 'warning';
+                                return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400' : ''}>
+                                    {p.name} 
+                                    {!p.qualified ? " (Not Qual)" : ""}
+                                    {cData ? (isWarn ? " ⚠️" : " ⛔") : ""}
+                                </option>;
+                            })}
+                        </select>
+                    </div>
+                    {conflictMsg && <div className={`text-xs mt-1 font-bold ${isWarning ? 'text-yellow-700' : 'text-red-600'}`}><i className={`fa ${isWarning ? 'fa-exclamation-triangle' : 'fa-ban'}`}></i> {conflictMsg}</div>}
+                </td>
+            );
+        }
+
+        // --- LOG VIEW COMPONENT ---
+        function LogView({ log }) {
+            if (!log || log.length === 0) return <div className="bg-white p-6 rounded text-gray-500">No logs available. Run Auto-Fill first.</div>;
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-800">Auto-Assign Logic Log</h2>
+                    <div className="h-96 overflow-y-auto border p-4 rounded bg-gray-50 text-xs font-mono">
+                        {log.map((entry, i) => (
+                            <div key={i} className={`log-entry ${entry.type === 'auditorium' ? 'text-blue-700' : 'text-gray-700'}`}>
+                                {entry.msg}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function StatsView({ personnel, assignments }) {
+            const getBrotherStats = () => {
+                const stats = personnel.map(p => {
+                    let minutesAway = 0;
+                    
+                    Object.keys(assignments).forEach(key => {
+                        const assignVal = assignments[key];
+                        const assignedId = getAssignId(assignVal);
+                        
+                        if (assignedId === p.id) {
+                            let posId = key;
+                            let shiftId = 'all';
+                            if (key.includes('_')) {
+                                const parts = key.split('_');
+                                const lastPart = parts[parts.length-1];
+                                if (SHIFTS.find(s => s.id === lastPart)) {
+                                    shiftId = lastPart;
+                                    posId = parts.slice(0, parts.length-1).join('_');
+                                }
+                            }
+                            const pos = POSITIONS.find(pos => pos.id === posId);
+                            if (pos && pos.type !== 'auditorium') {
+                                const shift = SHIFTS.find(s => s.id === shiftId);
+                                if (shift) minutesAway += shift.minutes;
+                            }
+                        }
+                    });
+
+                    const percentage = Math.round((minutesAway / TOTAL_PROGRAM_MINUTES) * 100);
+                    return { ...p, minutesAway, percentage };
+                });
+
+                return stats.sort((a,b) => b.minutesAway - a.minutesAway);
+            };
+
+            const stats = getBrotherStats();
+
+            const getBarColor = (pct) => {
+                if (pct > 50) return 'bg-red-500';
+                if (pct > 25) return 'bg-yellow-500';
+                if (pct === 0) return 'bg-blue-400'; 
+                return 'bg-green-500';
+            };
+
+            const getRoleColor = (role) => {
+                if(role === 'Elder') return 'text-yellow-600 font-bold';
+                if(role === 'MS') return 'text-blue-600 font-bold';
+                return 'text-gray-500';
+            };
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold mb-4 text-gray-800">Time Statistics (Balance Check)</h2>
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-sm">
+                            <thead>
+                                <tr className="bg-gray-100 text-left">
+                                    <th className="p-2 border">Brother Name</th>
+                                    <th className="p-2 border">Role</th>
+                                    <th className="p-2 border">Minutes Away</th>
+                                    <th className="p-2 border">% Missed</th>
+                                    <th className="p-2 border w-1/3">Visual Load</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {stats.map(p => (
+                                    <tr key={p.id} className="hover:bg-gray-50">
+                                        <td className="p-2 border font-medium">{p.name}</td>
+                                        <td className={`p-2 border ${getRoleColor(p.role)}`}>{p.role}</td>
+                                        <td className={`p-2 border ${p.minutesAway === 0 ? 'text-blue-600 font-bold' : ''}`}>{p.minutesAway} min</td>
+                                        <td className={`p-2 border ${p.percentage > 50 ? 'text-red-600 font-bold' : ''}`}>{p.percentage}%</td>
+                                        <td className="p-2 border">
+                                            <div className="w-full bg-gray-200 rounded-full h-4">
+                                                <div className={`h-4 rounded-full ${getBarColor(p.percentage)}`} style={{ width: `${Math.max(p.percentage, 5)}%` }}></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function ScheduleView({ personnel, assignments, setAssignments, setLog }) {
+            const [pendingAction, setPendingAction] = useState(null);
+
+            const getAreaStyle = (areaName) => {
+                switch(areaName) {
+                    case AREAS.AUDITORIUM: case AREAS.UPPER_LEVEL: return { backgroundColor: '#000000', color: '#ffffff' };
+                    case AREAS.BACKSTAGE: case AREAS.AUD_DOORS: return { backgroundColor: '#8999f7', color: '#000000' };
+                    case AREAS.DINING: return { backgroundColor: '#9cfa8a', color: '#000000' };
+                    case AREAS.LOBBY: case AREAS.STAIRS: return { backgroundColor: '#e2e5e4', color: '#000000' };
+                    case AREAS.EXTERIOR: return { backgroundColor: '#fefe92', color: '#000000' };
+                    default: return { backgroundColor: '#1f2937', color: '#ffffff' };
+                }
+            };
+
+            const getConflict = (personId, pos, currentShiftId, currentAssignments) => {
+                if (!personId) return null;
+                const pid = parseInt(personId);
+                const person = personnel.find(p => p.id === pid);
+                if (!person) return null;
+
+                // 1. Check Permissions (Unified with Dropdown)
+                if (pos.type === 'auditorium' && !person.caps.includes('auditorium')) return { msg: "Qual: Not Aud.", type: 'error', key: null };
+                if (pos.keyMan && !person.caps.includes('keyman')) return { msg: "Qual: Not Key Man", type: 'error', key: null };
+                if (pos.type !== 'auditorium' && !person.caps.includes(areaToCap(pos.area))) return { msg: `Qual: Not ${pos.area}`, type: 'error', key: null };
+
+                // 2. Check Auditorium Balance (Main)
+                if (pos.area === AREAS.AUDITORIUM && pos.type === 'auditorium') {
+                    // Count main aud staff away in this shift
+                    let mainAway = 0;
+                    let sectionAway = 0;
+                    // This check applies to ROTATIONAL assignments for anchored staff
+                    // But here we are assigning the anchor. 
+                    // Actually, the rule is: "don't assign AWAY if...", so we check this during Rotational assign.
+                }
+
+                // 3. Check Existing Assignments
+                for (let p of POSITIONS) {
+                    if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
+                        // Trying to assign someone who IS an anchor to another spot?
+                        if (p.id !== pos.id) return { msg: `Assigned at ${p.name}`, type: 'warning', key: p.id }; // Changed to Warning
+                        if (pos.type !== 'auditorium') {
+                             // Anchor trying to take rotational shift. Check limits.
+                             // 25% check is implicit via Shift Count logic in auto-fill, but we can warn manually.
+                             // Check Section Limit
+                             if (p.area === AREAS.AUDITORIUM) {
+                                 // Count others from this section assigned in this shift
+                                 // TODO: Complex check, skipping for basic conflict to avoid perf hit on dropdown
+                             }
+                        }
+                    }
+                }
+
+                if (pos.type === 'rotational') {
+                    for (let p of POSITIONS) {
+                        if (p.id === pos.id) continue; 
+                        
+                        if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
+                             return { msg: `Also at ${p.name}`, type: 'warning', key: p.id }; // Warning only
+                        }
+
+                        if (p.type === 'rotational' && !p.isMirror) {
+                            if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
+                                const checkKey = `${p.id}_${currentShiftId}`;
+                                if (getAssignId(currentAssignments[checkKey]) === pid) return { msg: `Busy at ${p.name}`, type: 'error', key: checkKey };
+                            }
+                        }
+                    }
+                }
+                return null;
+            };
+
+            const handleAssignAttempt = (key, value) => {
+                const assignObj = value ? { id: parseInt(value), isAuto: false } : null;
+                if (!value) { setAssignments(prev => ({ ...prev, [key]: null })); return; }
+
+                let posId = key;
+                let shiftId = 'all';
+                if (key.includes('_')) {
+                    const parts = key.split('_');
+                    const lastPart = parts[parts.length-1];
+                    if (SHIFTS.find(s => s.id === lastPart)) {
+                        shiftId = lastPart;
+                        posId = parts.slice(0, parts.length-1).join('_');
+                    }
+                }
+
+                const pos = POSITIONS.find(p => p.id === posId);
+                if (!pos) { setAssignments(prev => ({ ...prev, [key]: assignObj })); return; }
+
+                const conflict = getConflict(value, pos, shiftId, assignments);
+                if (conflict && conflict.type === 'error') {
+                    setPendingAction({ targetKey: key, targetValue: assignObj, conflictMsg: conflict.msg, conflictSourceKey: conflict.key, personName: personnel.find(p => p.id === parseInt(value))?.name });
+                } else {
+                    setAssignments(prev => ({ ...prev, [key]: assignObj }));
+                }
+            };
+
+            const confirmConflict = () => {
+                if (pendingAction) { setAssignments(prev => ({ ...prev, [pendingAction.targetKey]: pendingAction.targetValue })); setPendingAction(null); }
+            };
+
+            const resolveAndAssign = () => {
+                if (pendingAction && pendingAction.conflictSourceKey) {
+                    setAssignments(prev => ({ ...prev, [pendingAction.conflictSourceKey]: null, [pendingAction.targetKey]: pendingAction.targetValue }));
+                    setPendingAction(null);
+                }
+            };
+
+            // === SEQUENTIAL & FAIR AUTO FILL ===
+            const autoFill = () => {
+                let newAssignments = { ...assignments };
+                let filledCount = 0;
+                let logEntries = [];
+
+                const addLog = (msg, type) => logEntries.push({ msg, type });
+
+                const getShiftCount = (pid, currentAssignments) => {
+                    let count = 0;
+                    Object.keys(currentAssignments).forEach(key => {
+                        if (getAssignId(currentAssignments[key]) === pid) {
+                            if (key.includes('_') && !key.includes('pos12')) count++;
+                        }
+                    });
+                    return count;
+                };
+
+                const isPersonFree = (pid, shiftId, currentAssignments) => {
+                     for (let p of POSITIONS) {
+                         // Check if busy at ANY auditorium spot
+                         if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
+                         
+                         if (p.type === 'rotational' && !p.isMirror) {
+                            // Check if busy at THIS shift
+                            if (p.validShifts && !p.validShifts.includes(shiftId)) continue;
+                            if (getAssignId(currentAssignments[`${p.id}_${shiftId}`]) === pid) return false;
+                         }
+                     }
+                     return true;
+                };
+
+                // New Check: Section Limit for Anchors
+                const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
+                    // 1. Is he an anchor?
+                    const anchorPos = POSITIONS.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === person.id);
+                    if (!anchorPos) return true; // Not an anchor, so he is free (if not busy elsewhere)
+
+                    // 2. Is he already over 25%? (1 shift)
+                    if (getShiftCount(person.id, currentAssignments) >= 1) return false;
+
+                    // 3. Check Section Limits
+                    const section = anchorPos.section; // e.g. 'A' or undefined (Upper)
+                    
+                    // Get all rotational assignments for this shift
+                    const activeAssignments = [];
+                    POSITIONS.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
+                        if (p.validShifts && !p.validShifts.includes(shiftId)) return;
+                        const assignedId = getAssignId(currentAssignments[`${p.id}_${shiftId}`]);
+                        if (assignedId) activeAssignments.push(assignedId);
+                    });
+
+                    // Count how many anchors from this section are already working this shift
+                    let sectionCount = 0;
+                    let mainTotalCount = 0;
+                    let upperCount = 0;
+
+                    activeAssignments.forEach(aid => {
+                        const ap = POSITIONS.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === aid);
+                        if (ap) {
+                            if (ap.area === AREAS.UPPER_LEVEL) upperCount++;
+                            else {
+                                mainTotalCount++;
+                                if (ap.section === section) sectionCount++;
+                            }
+                        }
+                    });
+
+                    if (anchorPos.area === AREAS.UPPER_LEVEL) {
+                        return upperCount < 1; // Max 1 from Upper
+                    } else {
+                        // Main Auditorium Rules
+                        if (mainTotalCount >= 2) return false; // Max 2 total form main
+                        if (sectionCount >= 1) return false; // Max 1 from this section (excluding self) - wait, count includes self? No self is candidate.
+                        return true; 
+                    }
+                };
+
+                const workedPreviousShift = (pid, currentShiftId, currentAssignments) => {
+                    const shiftIndex = SHIFTS.findIndex(s => s.id === currentShiftId);
+                    if (shiftIndex <= 0) return false;
+                    const prevShiftId = SHIFTS[shiftIndex - 1].id;
+                    let worked = false;
+                    POSITIONS.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
+                        if (getAssignId(currentAssignments[`${p.id}_${prevShiftId}`]) === pid) worked = true;
+                    });
+                    return worked;
+                };
+
+                // 1. Auditorium First
+                addLog("--- Starting Auditorium Fill ---", 'auditorium');
+                POSITIONS.filter(p => p.type === 'auditorium').forEach(pos => {
+                    if (!getAssignId(newAssignments[pos.id])) {
+                        let candidates = getCandidatesForPosition(pos, personnel);
+                        candidates = candidates.filter(p => isPersonFree(p.id, 'all', newAssignments));
+                        
+                        if(candidates.length > 0) {
+                            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                            newAssignments[pos.id] = { id: chosen.id, isAuto: true };
+                            addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
+                            filledCount++;
+                        } else {
+                            addLog(`No candidates for ${pos.name}`, 'error');
+                        }
+                    }
+                });
+
+                // 2. Rotational
+                addLog("--- Starting Rotational Fill ---", 'rotational');
+                SHIFTS.forEach(shift => {
+                    addLog(`>> Processing ${shift.label}`, 'shift');
+                    POSITIONS.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
+                        if (pos.validShifts && !pos.validShifts.includes(shift.id)) return;
+                        const key = `${pos.id}_${shift.id}`;
+                        
+                        if (!getAssignId(newAssignments[key])) {
+                            let candidates = getCandidatesForPosition(pos, personnel);
+                            
+                            candidates = candidates.filter(p => 
+                                isPersonFree(p.id, shift.id, newAssignments) &&
+                                !workedPreviousShift(p.id, shift.id, newAssignments) &&
+                                isAnchorAvailableForShift(p, shift.id, newAssignments)
+                            );
+
+                            if (candidates.length === 0) {
+                                addLog(`Slot ${pos.name}: No candidates.`, 'warn');
+                                return;
+                            }
+
+                            candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
+                            const minShifts = Math.min(...candidates.map(c => c.shifts));
+                            let fairPool = candidates.filter(c => c.shifts === minShifts);
+                            
+                            addLog(`Slot ${pos.name}: Candidates ${candidates.length}, Fair (${minShifts}) ${fairPool.length}`, 'info');
+
+                            if (fairPool.length > 0) {
+                                const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+                                newAssignments[key] = { id: chosen.id, isAuto: true }; 
+                                addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
+                                filledCount++;
+                            }
+                        }
+                    });
+                });
+
+                setAssignments(newAssignments);
+                setLog(logEntries);
+                alert(`Auto-filled ${filledCount} slots.`);
+            };
+
+            const clearAutoAssignments = () => {
+                let count = 0;
+                const cleanedAssignments = { ...assignments };
+                Object.keys(cleanedAssignments).forEach(key => {
+                    if (isAutoAssigned(cleanedAssignments[key])) { cleanedAssignments[key] = null; count++; }
+                });
+                setAssignments(cleanedAssignments);
+                alert(`Cleared ${count} auto-assigned slots.`);
+            };
+
+            const areaGroups = Object.values(AREAS);
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md mt-6 relative">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-bold text-gray-800">Schedule Grid</h2>
+                        <div className="flex gap-2">
+                            <button onClick={clearAutoAssignments} className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 flex items-center gap-2"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
+                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Magic Fill</button>
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="border p-2 text-left w-48 sticky left-0 bg-gray-100 z-10">Position</th>
+                                    {SHIFTS.map(s => <th key={s.id} className="border p-2 text-center min-w-[200px]">{s.label}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {areaGroups.map(area => (
+                                    <React.Fragment key={area}>
+                                        <tr style={getAreaStyle(area)}><td colSpan={5} className="p-2 font-bold uppercase tracking-wider pl-4">{area}</td></tr>
+                                        {POSITIONS.filter(p => p.area === area).map(pos => (
+                                            <tr key={pos.id} className={pos.type === 'auditorium' ? 'auditorium-row' : 'bg-white hover:bg-gray-50'}>
+                                                <td className="border p-2 font-medium sticky left-0 bg-inherit z-10 border-r-2 border-gray-300">
+                                                    {pos.name} {pos.type === 'auditorium' && <span className="block text-[10px] text-blue-600 font-bold">ALL DAY</span>}
+                                                </td>
+                                                {pos.type === 'auditorium' ? (
+                                                    <td colSpan={4} className="border p-0">
+                                                        <div className="p-2 bg-blue-50 h-full flex items-center justify-center">
+                                                            <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} getConflict={getConflict} /></div>
+                                                        </div>
+                                                    </td>
+                                                ) : (
+                                                    SHIFTS.map(shift => <AssignmentCell key={shift.id} shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} getConflict={getConflict} />)
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    {pendingAction && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md border-l-4 border-red-500">
+                                <div className="flex items-center text-red-600 mb-4"><i className="fa fa-exclamation-circle text-2xl mr-3"></i><h3 className="font-bold text-xl">Conflict Detected</h3></div>
+                                <p className="mb-2">Assigning <strong>{pendingAction.personName}</strong> created conflict:</p>
+                                <div className="bg-red-50 p-3 rounded border border-red-200 text-red-800 font-medium mb-6">{pendingAction.conflictMsg}</div>
+                                <div className="flex flex-col gap-3">
+                                    {pendingAction.conflictSourceKey && <button onClick={resolveAndAssign} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"><i className="fa fa-exchange-alt mr-2"></i> Clear Previous & Assign Here</button>}
+                                    <button onClick={confirmConflict} className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-2 px-4 rounded border border-red-300">Accept Conflict</button>
+                                    <button onClick={() => setPendingAction(null)} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">Cancel</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function App() {
+            const [view, setView] = useState('schedule'); 
+            const [personnel, setPersonnel] = useState(INITIAL_ROSTER);
+            const [assignments, setAssignments] = useState({});
+            const [log, setLog] = useState([]); // New Log State
+            const [showSaveModal, setShowSaveModal] = useState(false);
+            const [showLoadModal, setShowLoadModal] = useState(false);
+            const [password, setPassword] = useState('');
+
+            // --- PERSISTENCE ---
+            useEffect(() => {
+                const saved = localStorage.getItem('circuit_scheduler_data');
+                if (saved) {
+                    try {
+                        const parsed = JSON.parse(saved);
+                        if (parsed.personnel) setPersonnel(parsed.personnel);
+                        if (parsed.assignments) setAssignments(parsed.assignments);
+                        if (parsed.log) setLog(parsed.log);
+                    } catch (e) { console.error("Failed to load cache", e); }
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem('circuit_scheduler_data', JSON.stringify({ personnel, assignments, log }));
+            }, [personnel, assignments, log]);
+
+            const resetAll = () => {
+                if(confirm("Are you sure you want to clear EVERYTHING? This cannot be undone.")) {
+                    localStorage.removeItem('circuit_scheduler_data');
+                    window.location.reload();
+                }
+            };
+
+
+            const handleExport = () => {
+                if(!password) return alert("Please enter a password.");
+                const data = JSON.stringify({ personnel, assignments });
+                const encrypted = CryptoJS.AES.encrypt(data, password).toString();
+                const blob = new Blob([encrypted], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Attendants_Schedule_${new Date().toISOString().slice(0,10)}.lock`;
+                a.click();
+                setShowSaveModal(false);
+                setPassword('');
+            };
+
+            const handleImport = (e) => {
+                const file = e.target.files[0];
+                if(!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const encrypted = event.target.result;
+                        const bytes = CryptoJS.AES.decrypt(encrypted, password);
+                        const decryptedData = JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
+                        if(decryptedData.personnel && decryptedData.assignments) {
+                            setPersonnel(decryptedData.personnel);
+                            setAssignments(decryptedData.assignments);
+                            alert("Loaded successfully!");
+                            setShowLoadModal(false);
+                            setPassword('');
+                        } else {
+                            throw new Error("Invalid structure");
+                        }
+                    } catch (err) {
+                        alert("Failed to load! Incorrect password or corrupted file.");
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div className="min-h-screen pb-10">
+                    <div className="bg-blue-900 text-white p-4 shadow-lg">
+                        <div className="container mx-auto flex justify-between items-center">
+                            <h1 className="text-xl font-bold"><i className="fa fa-clipboard-user mr-2"></i> Circuit Attendant Scheduler</h1>
+                            <div className="flex gap-4">
+                                <button onClick={() => setView('schedule')} className={`px-3 py-1 rounded ${view==='schedule'?'bg-blue-700':'hover:bg-blue-800'}`}>Schedule</button>
+                                <button onClick={() => setView('roster')} className={`px-3 py-1 rounded ${view==='roster'?'bg-blue-700':'hover:bg-blue-800'}`}>Roster</button>
+                                <button onClick={() => setView('stats')} className={`px-3 py-1 rounded ${view==='stats'?'bg-blue-700':'hover:bg-blue-800'}`}>Time Stats</button>
+                                <button onClick={() => setView('log')} className={`px-3 py-1 rounded ${view==='log'?'bg-blue-700':'hover:bg-blue-800'}`}>Assignment Log</button>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={resetAll} className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold text-white mr-2">Reset All</button>
+                                <button onClick={() => setShowSaveModal(true)} className="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm font-bold">Save</button>
+                                <button onClick={() => setShowLoadModal(true)} className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-sm font-bold text-black">Load</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="container mx-auto mt-6 px-4">
+                        {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} /> : 
+                         view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} /> :
+                         view === 'log' ? <LogView log={log} /> :
+                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} setLog={setLog} />}
+                    </div>
+                    {showSaveModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded shadow-xl w-96">
+                                <h3 className="font-bold text-lg mb-4">Secure Export</h3>
+                                <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full border p-2 rounded mb-4" placeholder="Password" />
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={()=>setShowSaveModal(false)} className="px-4 py-2 text-gray-600">Cancel</button>
+                                    <button onClick={handleExport} className="px-4 py-2 bg-blue-600 text-white rounded">Download</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {showLoadModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded shadow-xl w-96">
+                                <h3 className="font-bold text-lg mb-4">Load Schedule</h3>
+                                <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full border p-2 rounded mb-4" placeholder="Password" />
+                                <input type="file" onChange={handleImport} className="w-full mb-4" />
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={()=>setShowLoadModal(false)} className="px-4 py-2 text-gray-600">Cancel</button>
+                                    <button onClick={handleExport} className="px-4 py-2 bg-blue-600 text-white rounded">Download</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
