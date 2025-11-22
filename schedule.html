@@ -803,7 +803,91 @@
             );
         }
 
-        function ScheduleView({ personnel, assignments, setAssignments, onAutoFill, areas, positions, shifts }) {
+        function RulesView({ rules, setRules }) {
+            const toggleRule = (key) => setRules({ ...rules, [key]: !rules[key] });
+            const setSeverity = (key, val) => setRules({ ...rules, [key]: val });
+            const setVal = (key, val) => setRules({ ...rules, [key]: val });
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Assignment Rules</h2>
+                    <div className="grid gap-4 max-w-2xl">
+
+                        {/* 1. Capabilities */}
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                            <div>
+                                <h3 className="font-bold text-gray-800">Enforce Capabilities</h3>
+                                <p className="text-xs text-gray-500">Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <select value={rules.capabilitySeverity || 'error'} onChange={e=>setSeverity('capabilitySeverity', e.target.value)} className="border rounded p-1 text-sm">
+                                    <option value="error">Block (Red)</option>
+                                    <option value="warning">Warn (Yellow)</option>
+                                    <option value="off">Off</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* 2. Double Booking */}
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                            <div>
+                                <h3 className="font-bold text-gray-800">Prevent Double Booking</h3>
+                                <p className="text-xs text-gray-500">Ensure a brother is not in two places at once.</p>
+                            </div>
+                            <select value={rules.doubleBookingSeverity || 'error'} onChange={e=>setSeverity('doubleBookingSeverity', e.target.value)} className="border rounded p-1 text-sm">
+                                <option value="error">Block (Red)</option>
+                                <option value="warning">Warn (Yellow)</option>
+                                <option value="off">Off</option>
+                            </select>
+                        </div>
+
+                        {/* 3. Unavailability */}
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                            <div>
+                                <h3 className="font-bold text-gray-800">Respect Unavailability</h3>
+                                <p className="text-xs text-gray-500">Do not assign if brother has program part or marked unavailable.</p>
+                            </div>
+                            <select value={rules.unavailableSeverity || 'error'} onChange={e=>setSeverity('unavailableSeverity', e.target.value)} className="border rounded p-1 text-sm">
+                                <option value="error">Block (Red)</option>
+                                <option value="warning">Warn (Yellow)</option>
+                                <option value="off">Off</option>
+                            </select>
+                        </div>
+
+                        {/* 4. Max Work Percentage */}
+                        <div className="p-4 bg-gray-50 rounded border">
+                            <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-bold text-gray-800">Max Work Load (Program Watch %)</h3>
+                                <span className="font-bold text-blue-600">{rules.maxWorkPercent || 50}%</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mb-2">Auto-fill will skip brothers who have worked more than this % of the day.</p>
+                            <input type="range" min="10" max="100" step="5" value={rules.maxWorkPercent || 50} onChange={e=>setVal('maxWorkPercent', parseInt(e.target.value))} className="w-full" />
+                        </div>
+
+                        {/* 5. Consecutive Shifts */}
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                            <div>
+                                <h3 className="font-bold text-gray-800">Avoid Consecutive Shifts (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500">Try to give a break between shifts.</p>
+                            </div>
+                            <input type="checkbox" checked={rules.avoidConsecutive !== false} onChange={() => toggleRule('avoidConsecutive')} className="h-5 w-5" />
+                        </div>
+
+                        {/* 6. Anchor Limits */}
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                            <div>
+                                <h3 className="font-bold text-gray-800">Enforce Anchor Limits (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500">Limit how many "All Day" staff can be pulled for temporary relief (Max 1 per section).</p>
+                            </div>
+                            <input type="checkbox" checked={rules.anchorLimits !== false} onChange={() => toggleRule('anchorLimits')} className="h-5 w-5" />
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        function ScheduleView({ personnel, assignments, setAssignments, onAutoFill, areas, positions, shifts, rules }) {
             const [pendingAction, setPendingAction] = useState(null);
             const [replacementSlot, setReplacementSlot] = useState(null);
 
@@ -828,35 +912,43 @@
                 const area = areas.find(a => a.id === pos.areaId);
                 const requiredCap = area ? area.capability : null;
 
-                // 1. Check Permissions (Unified with Dropdown)
-                if (pos.type === 'auditorium' && !person.caps.includes('auditorium')) return { msg: "Qual: Not Aud.", type: 'error', key: null };
-                if (pos.keyMan && !person.caps.includes('keyman')) return { msg: "Qual: Not Key Man", type: 'error', key: null };
-                if (pos.type !== 'auditorium' && requiredCap && !person.caps.includes(requiredCap)) return { msg: `Qual: Not ${area.name}`, type: 'error', key: null };
-
-                // 2. Check Unavailability
-                if (person.unavailable && person.unavailable.includes(currentShiftId)) return { msg: "Marked Unavailable", type: 'error', key: null };
-                if (pos.type === 'auditorium' && person.unavailable && person.unavailable.length > 0) return { msg: "Partial Unavailability", type: 'warning', key: null };
-
-                // 3. Check Existing Assignments
-                for (let p of positions) {
-                    if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
-                        // Trying to assign someone who IS an anchor to another spot?
-                        if (p.id !== pos.id) return { msg: `Assigned at ${p.name}`, type: 'warning', key: p.id };
-                    }
+                // 1. Check Permissions
+                if (rules.capabilitySeverity !== 'off') {
+                    const sev = rules.capabilitySeverity || 'error';
+                    if (pos.type === 'auditorium' && !person.caps.includes('auditorium')) return { msg: "Qual: Not Aud.", type: sev, key: null };
+                    if (pos.keyMan && !person.caps.includes('keyman')) return { msg: "Qual: Not Key Man", type: sev, key: null };
+                    if (pos.type !== 'auditorium' && requiredCap && !person.caps.includes(requiredCap)) return { msg: `Qual: Not ${area.name}`, type: sev, key: null };
                 }
 
-                if (pos.type === 'rotational') {
+                // 2. Check Unavailability
+                if (rules.unavailableSeverity !== 'off') {
+                    const sev = rules.unavailableSeverity || 'error';
+                    if (person.unavailable && person.unavailable.includes(currentShiftId)) return { msg: "Marked Unavailable", type: sev, key: null };
+                    if (pos.type === 'auditorium' && person.unavailable && person.unavailable.length > 0) return { msg: "Partial Unavailability", type: sev, key: null };
+                }
+
+                // 3. Check Existing Assignments (Double Booking)
+                if (rules.doubleBookingSeverity !== 'off') {
+                    const sev = rules.doubleBookingSeverity || 'error';
                     for (let p of positions) {
-                        if (p.id === pos.id) continue;
-
                         if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
-                             return { msg: `Also at ${p.name}`, type: 'warning', key: p.id };
+                            if (p.id !== pos.id) return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
                         }
+                    }
 
-                        if (p.type === 'rotational' && !p.isMirror) {
-                            if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
-                                const checkKey = `${p.id}_${currentShiftId}`;
-                                if (getAssignId(currentAssignments[checkKey]) === pid) return { msg: `Busy at ${p.name}`, type: 'error', key: checkKey };
+                    if (pos.type === 'rotational') {
+                        for (let p of positions) {
+                            if (p.id === pos.id) continue;
+
+                            if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
+                                return { msg: `Also at ${p.name}`, type: sev, key: p.id };
+                            }
+
+                            if (p.type === 'rotational' && !p.isMirror) {
+                                if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
+                                    const checkKey = `${p.id}_${currentShiftId}`;
+                                    if (getAssignId(currentAssignments[checkKey]) === pid) return { msg: `Busy at ${p.name}`, type: sev, key: checkKey };
+                                }
                             }
                         }
                     }
@@ -937,6 +1029,8 @@
                 };
 
                 const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
+                    if (rules.anchorLimits === false) return true;
+
                     // 1. Is he an anchor?
                     const anchorPos = positions.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === person.id);
                     if (!anchorPos) return true;
@@ -982,6 +1076,7 @@
                 };
 
                 const workedPreviousShift = (pid, currentShiftId, currentAssignments) => {
+                    if (rules.avoidConsecutive === false) return false;
                     const shiftIndex = shifts.findIndex(s => s.id === currentShiftId);
                     if (shiftIndex <= 0) return false;
                     const prevShiftId = shifts[shiftIndex - 1].id;
@@ -990,6 +1085,14 @@
                         if (getAssignId(currentAssignments[`${p.id}_${prevShiftId}`]) === pid) worked = true;
                     });
                     return worked;
+                };
+
+                const isOverWorkLimit = (pid, currentAssignments) => {
+                    const limit = rules.maxWorkPercent || 50;
+                    const count = getShiftCount(pid, currentAssignments);
+                    // Rough calc: count * 150 mins. Total = 600.
+                    const pct = (count * 150 / TOTAL_PROGRAM_MINUTES) * 100;
+                    return pct >= limit;
                 };
 
                 // 1. Auditorium First
@@ -1024,7 +1127,8 @@
                             candidates = candidates.filter(p =>
                                 isPersonFree(p.id, shift.id, newAssignments) &&
                                 !workedPreviousShift(p.id, shift.id, newAssignments) &&
-                                isAnchorAvailableForShift(p, shift.id, newAssignments)
+                                isAnchorAvailableForShift(p, shift.id, newAssignments) &&
+                                !isOverWorkLimit(p.id, newAssignments)
                             );
 
                             if (candidates.length === 0) {
@@ -1285,7 +1389,7 @@
             );
         }
 
-        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel }) {
+        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules }) {
             const [activeTab, setActiveTab] = useState('areas');
 
             const keyMen = useMemo(() => personnel.filter(p => p.caps.includes('keyman')), [personnel]);
@@ -1345,7 +1449,11 @@
                         <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Areas</button>
                         <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Shifts</button>
                         <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Positions</button>
+                        <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Rules</button>
                     </div>
+
+                    {/* RULES TAB */}
+                    {activeTab === 'rules' && <RulesView rules={rules} setRules={setRules} />}
 
                     {/* AREAS TAB */}
                     {activeTab === 'areas' && (
@@ -1497,11 +1605,19 @@
                 log: [],
                 areas: DEFAULT_AREAS,
                 positions: DEFAULT_POSITIONS,
-                shifts: DEFAULT_SHIFTS
+                shifts: DEFAULT_SHIFTS,
+                rules: {
+                    capabilitySeverity: 'error',
+                    doubleBookingSeverity: 'error',
+                    unavailableSeverity: 'error',
+                    avoidConsecutive: true,
+                    anchorLimits: true,
+                    maxWorkPercent: 50
+                }
             };
 
             const { state, setState, undo, redo, canUndo, canRedo } = useUndoRedo(INITIAL_STATE);
-            const { personnel, assignments, log, areas, positions, shifts } = state;
+            const { personnel, assignments, log, areas, positions, shifts, rules } = state;
 
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [showLoadModal, setShowLoadModal] = useState(false);
@@ -1515,6 +1631,7 @@
             const setAreas = (val) => updateState({ areas: typeof val === 'function' ? val(areas) : val });
             const setPositions = (val) => updateState({ positions: typeof val === 'function' ? val(positions) : val });
             const setShifts = (val) => updateState({ shifts: typeof val === 'function' ? val(shifts) : val });
+            const setRules = (val) => updateState({ rules: typeof val === 'function' ? val(rules) : val });
 
             const handleAutoFill = (newAssignments, newLog) => {
                 updateState({ assignments: newAssignments, log: newLog });
@@ -1526,7 +1643,13 @@
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
-                        const loadedState = { ...INITIAL_STATE, ...parsed };
+                        // Merge default rules if not present in saved data
+                        const defaultRules = INITIAL_STATE.rules;
+                        const loadedState = {
+                            ...INITIAL_STATE,
+                            ...parsed,
+                            rules: { ...defaultRules, ...(parsed.rules || {}) }
+                        };
                         setState(loadedState);
                     } catch (e) { console.error("Failed to load cache", e); }
                 }
@@ -1612,8 +1735,8 @@
                          view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
                          view === 'log' ? <LogView log={log} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
-                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} /> :
-                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} />}
+                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} /> :
+                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} />}
                     </div>
                     {showSaveModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
