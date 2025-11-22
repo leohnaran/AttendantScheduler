@@ -581,10 +581,19 @@
                     return { ...p, qualified };
                 });
 
-                // Sort: Qualified first, then Alphabetical
+                // Sort: Qualified first, then Team-Match, then Alphabetical
                 candidates.sort((a,b) => {
                     if (a.qualified && !b.qualified) return -1;
                     if (!a.qualified && b.qualified) return 1;
+
+                    // Prioritize Team Match
+                    if (pos.teamKeyManId) {
+                        const aTeam = a.keyManId === pos.teamKeyManId;
+                        const bTeam = b.keyManId === pos.teamKeyManId;
+                        if(aTeam && !bTeam) return -1;
+                        if(!aTeam && bTeam) return 1;
+                    }
+
                     return a.name.localeCompare(b.name);
                 });
 
@@ -607,8 +616,10 @@
                             {filteredCandidates.map(p => {
                                 const cData = getConflict(p.id, pos, shiftId, assignments);
                                 const isWarn = cData && cData.type === 'warning';
-                                return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400' : ''}>
+                                const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
+                                return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400' : (isTeamMatch ? 'font-bold bg-green-50' : '')}>
                                     {p.name}
+                                    {isTeamMatch ? " (Team)" : ""}
                                     {!p.qualified ? " (Not Qual)" : ""}
                                     {cData ? (isWarn ? " ⚠️" : " ⛔") : ""}
                                 </option>;
@@ -1025,6 +1036,15 @@
                             const minShifts = Math.min(...candidates.map(c => c.shifts));
                             let fairPool = candidates.filter(c => c.shifts === minShifts);
 
+                            // TEAM PRIORITIZATION
+                            if (pos.teamKeyManId) {
+                                const teamMembers = fairPool.filter(c => c.keyManId === pos.teamKeyManId);
+                                if (teamMembers.length > 0) {
+                                    fairPool = teamMembers;
+                                    addLog(`  > Prioritizing Team Members (${teamMembers.length})`, 'info');
+                                }
+                            }
+
                             addLog(`Slot ${pos.name}: Candidates ${candidates.length}, Fair (${minShifts}) ${fairPool.length}`, 'info');
 
                             if (fairPool.length > 0) {
@@ -1113,6 +1133,84 @@
         }
 
         // --- UNDO/REDO HOOK ---
+        function DepartmentView({ personnel, assignments, areas, positions, shifts }) {
+            const [selectedAreaId, setSelectedAreaId] = useState(areas.length > 0 ? areas[0].id : '');
+
+            const areaPositions = positions.filter(p => p.areaId === selectedAreaId);
+            const selectedArea = areas.find(a => a.id === selectedAreaId);
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <div className="flex justify-between items-center mb-6 print:hidden">
+                        <h2 className="text-2xl font-bold text-gray-800">Department Report</h2>
+                        <div className="flex gap-2">
+                            <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border p-2 rounded">
+                                {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                            <button onClick={() => window.print()} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold"><i className="fa fa-print mr-2"></i> Print</button>
+                        </div>
+                    </div>
+
+                    {/* PRINT HEADER */}
+                    <div className="hidden print:block mb-6 border-b-2 border-black pb-2">
+                        <h1 className="text-3xl font-bold uppercase">{selectedArea ? selectedArea.name : 'Department'} Schedule</h1>
+                        <p className="text-gray-600">Circuit Assembly Attendants</p>
+                    </div>
+
+                    {/* TIMELINE GRID */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                            <thead>
+                                <tr className="bg-gray-100 print:bg-gray-200">
+                                    <th className="border p-2 text-left w-48">Position</th>
+                                    {shifts.map(s => <th key={s.id} className="border p-2 text-center w-32">{s.label}</th>)}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {areaPositions.map(pos => (
+                                    <tr key={pos.id} className="border-b">
+                                        <td className="border p-2 font-bold bg-gray-50 print:bg-gray-100">{pos.name}</td>
+                                        {pos.type === 'auditorium' ? (
+                                            <td colSpan={shifts.length} className="border p-2 text-center bg-blue-50 print:bg-white">
+                                                {(() => {
+                                                    const pid = getAssignId(assignments[pos.id]);
+                                                    const person = personnel.find(p => p.id === pid);
+                                                    return person ? <span className="font-bold text-blue-800">{person.name}</span> : <span className="text-gray-400 italic">Empty</span>;
+                                                })()}
+                                                <div className="text-[10px] uppercase text-gray-500 font-bold mt-1">All Day</div>
+                                            </td>
+                                        ) : (
+                                            shifts.map(shift => {
+                                                if(pos.validShifts && !pos.validShifts.includes(shift.id)) return <td key={shift.id} className="border p-2 bg-gray-100 text-center text-gray-400 text-xs">N/A</td>;
+
+                                                // Check Mirror
+                                                if(pos.isMirror) {
+                                                    const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2'; // Hardcoded mirror logic need update for generic but ok for now
+                                                    const mirrorKey = `${sourceKey}_${shift.id}`;
+                                                    const pid = getAssignId(assignments[mirrorKey]);
+                                                    const person = personnel.find(p => p.id === pid);
+                                                    return <td key={shift.id} className="border p-2 text-center text-xs italic text-gray-500">{person ? `(Link: ${person.name})` : '--'}</td>;
+                                                }
+
+                                                const key = `${pos.id}_${shift.id}`;
+                                                const pid = getAssignId(assignments[key]);
+                                                const person = personnel.find(p => p.id === pid);
+                                                return (
+                                                    <td key={shift.id} className="border p-2 text-center">
+                                                        {person ? <span className="font-medium">{person.name}</span> : <span className="text-red-300">-</span>}
+                                                    </td>
+                                                );
+                                            })
+                                        )}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
         function PrintView({ personnel, assignments, positions, shifts }) {
             const getBrotherAssignments = (p) => {
                 const myAssignments = [];
@@ -1187,8 +1285,10 @@
             );
         }
 
-        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts }) {
+        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel }) {
             const [activeTab, setActiveTab] = useState('areas');
+
+            const keyMen = useMemo(() => personnel.filter(p => p.caps.includes('keyman')), [personnel]);
 
             // --- AREA MANAGEMENT ---
             const [areaForm, setAreaForm] = useState({ id: '', name: '', capability: '', color: '#ffffff', textColor: '#000000' });
@@ -1224,12 +1324,12 @@
             };
 
             // --- POSITION MANAGEMENT ---
-            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false });
+            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '' });
             const addPosition = () => {
                 if (!posForm.id || !posForm.name || !posForm.areaId) return alert("ID, Name, and Area are required");
                 if (positions.find(p => p.id === posForm.id)) return alert("ID must be unique");
-                setPositions([...positions, { ...posForm }]);
-                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false });
+                setPositions([...positions, { ...posForm, teamKeyManId: posForm.teamKeyManId ? parseInt(posForm.teamKeyManId) : null }]);
+                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '' });
             };
             const deletePosition = (id) => {
                 if (confirm("Delete this position?")) {
@@ -1333,6 +1433,10 @@
                                         <option value="rotational">Rotational</option>
                                         <option value="auditorium">Auditorium (All Day)</option>
                                     </select>
+                                    <select value={posForm.teamKeyManId} onChange={e => setPosForm({...posForm, teamKeyManId: e.target.value})} className="border p-2 rounded w-48">
+                                        <option value="">-- Any Team --</option>
+                                        {keyMen.map(km => <option key={km.id} value={km.id}>Team: {km.name}</option>)}
+                                    </select>
                                     <label className="flex items-center cursor-pointer">
                                         <input type="checkbox" checked={posForm.keyMan} onChange={e => setPosForm({...posForm, keyMan: e.target.checked})} className="mr-2" />
                                         <span className="text-sm font-bold">Key Man Only</span>
@@ -1342,13 +1446,14 @@
                             </div>
                              <div className="h-96 overflow-y-auto border rounded">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="bg-gray-100 sticky top-0"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
+                                    <thead><tr className="bg-gray-100 sticky top-0"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
                                     <tbody>
                                         {positions.map(p => (
                                             <tr key={p.id} className="border-b hover:bg-gray-50">
                                                 <td className="p-2">{p.id}</td>
                                                 <td className="p-2">{p.name} {p.keyMan && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200">KM</span>}</td>
                                                 <td className="p-2">{areas.find(a => a.id === p.areaId)?.name || p.areaId}</td>
+                                                <td className="p-2 text-xs text-gray-500">{p.teamKeyManId ? (keyMen.find(k=>k.id===p.teamKeyManId)?.name || 'Unknown') : '-'}</td>
                                                 <td className="p-2">{p.type}</td>
                                                 <td className="p-2 text-center"><button onClick={() => deletePosition(p.id)} className="text-red-500"><i className="fa fa-trash"></i></button></td>
                                             </tr>
@@ -1489,8 +1594,9 @@
                                 <button onClick={() => setView('schedule')} className={`px-3 py-1 rounded ${view==='schedule'?'bg-blue-700':'hover:bg-blue-800'}`}>Schedule</button>
                                 <button onClick={() => setView('roster')} className={`px-3 py-1 rounded ${view==='roster'?'bg-blue-700':'hover:bg-blue-800'}`}>Roster</button>
                                 <button onClick={() => setView('stats')} className={`px-3 py-1 rounded ${view==='stats'?'bg-blue-700':'hover:bg-blue-800'}`}>Time Stats</button>
-                                <button onClick={() => setView('log')} className={`px-3 py-1 rounded ${view==='log'?'bg-blue-700':'hover:bg-blue-800'}`}>Assignment Log</button>
-                                <button onClick={() => setView('print')} className={`px-3 py-1 rounded ${view==='print'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-print mr-1"></i> Print</button>
+                                <button onClick={() => setView('dept')} className={`px-3 py-1 rounded ${view==='dept'?'bg-blue-700':'hover:bg-blue-800'}`}>Depts</button>
+                                <button onClick={() => setView('log')} className={`px-3 py-1 rounded ${view==='log'?'bg-blue-700':'hover:bg-blue-800'}`}>Log</button>
+                                <button onClick={() => setView('print')} className={`px-3 py-1 rounded ${view==='print'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-print mr-1"></i> Slips</button>
                                 <button onClick={() => setView('config')} className={`px-3 py-1 rounded ${view==='config'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-cog mr-1"></i> Config</button>
                             </div>
                             <div className="flex gap-2">
@@ -1503,9 +1609,10 @@
                     <div className="container mx-auto mt-6 px-4">
                         {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} areas={areas} shifts={shifts} /> :
                          view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
+                         view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
                          view === 'log' ? <LogView log={log} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
-                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} /> :
+                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} /> :
                          <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} />}
                     </div>
                     {showSaveModal && (
