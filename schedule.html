@@ -1089,9 +1089,24 @@
 
                 const isOverWorkLimit = (pid, currentAssignments) => {
                     const limit = rules.maxWorkPercent || 50;
-                    const count = getShiftCount(pid, currentAssignments);
-                    // Rough calc: count * 150 mins. Total = 600.
-                    const pct = (count * 150 / TOTAL_PROGRAM_MINUTES) * 100;
+
+                    let minutesWorked = 0;
+                    Object.keys(currentAssignments).forEach(key => {
+                        if (getAssignId(currentAssignments[key]) === pid) {
+                            // Check if key has a shift ID suffix (e.g. pos_morning)
+                            if (key.includes('_') && !key.includes('pos12')) { // pos12 is special keyman exception
+                                const parts = key.split('_');
+                                const shiftId = parts[parts.length - 1];
+                                const shift = shifts.find(s => s.id === shiftId);
+                                if (shift) minutesWorked += shift.minutes;
+                            } else {
+                                // Assume 'auditorium' type (all day) = TOTAL_PROGRAM_MINUTES
+                                minutesWorked += TOTAL_PROGRAM_MINUTES;
+                            }
+                        }
+                    });
+
+                    const pct = (minutesWorked / TOTAL_PROGRAM_MINUTES) * 100;
                     return pct >= limit;
                 };
 
