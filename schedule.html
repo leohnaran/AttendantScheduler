@@ -14,6 +14,11 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 
     <!-- Crypto JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -28,7 +33,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        .dark body { background-color: #0f172a; color: #e2e8f0; }
+        .dark body { background-color: #0f172a; color: #e2e8f0; color-scheme: dark; }
 
         .conflict-border { border: 2px solid #ef4444; }
         .warning-border { border: 2px solid #f59e0b; }
@@ -458,44 +463,44 @@
                         </div>
 
                         {/* EDIT FORM */}
-                        <div className={`p-6 rounded-2xl border mb-8 bg-gray-50/50 border-gray-100 dark:bg-slate-800/50 dark:border-slate-700`}>
+                        <div className={`p-6 rounded-2xl border mb-8 bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700`}>
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Add New Personnel</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Add New Personnel</h3>
                             </div>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Name</label>
-                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                                 </div>
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Role</label>
-                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-32 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                         <option value="Exemplary">Exemplary</option>
                                         <option value="MS">MS</option>
                                         <option value="Elder">Elder</option>
                                     </select>
                                 </div>
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Key Man</label>
-                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" disabled>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" disabled>
                                         <option value="">-- None --</option>
                                     </select>
                                 </div>
 
                                 <div className="w-full">
-                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Permissions</label>
-                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                         {areas.map(area => renderCheckbox(area.capability, area.name))}
                                         {renderCheckbox('keyman', 'KEY MAN')}
                                     </div>
                                 </div>
                                 <div className="w-full mb-4">
-                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Unavailability</label>
-                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                         {shifts.map(s => (
                                             <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
                                                 <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
-                                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</span>
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -536,46 +541,46 @@
                     </div>
 
                     {/* EDIT FORM */}
-                    <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700' : 'bg-gray-50/50 border-gray-100 dark:bg-slate-800/50 dark:border-slate-700'}`}>
+                        <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700' : 'bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700'}`}>
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
                             {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium dark:text-red-400 dark:hover:text-red-300">Cancel Edit</button>}
                         </div>
                         <div className="flex flex-wrap gap-4 items-end">
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Name</label>
-                                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Role</label>
-                                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-32 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="Exemplary">Exemplary</option>
                                     <option value="MS">MS</option>
                                     <option value="Elder">Elder</option>
                                 </select>
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Key Man</label>
-                                <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="">-- None --</option>
                                     {personnel.filter(p => p.caps && p.caps.includes('keyman') && p.id !== editingId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
 
                             <div className="w-full">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Permissions</label>
-                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {areas.map(area => renderCheckbox(area.capability, area.name))}
                                     {renderCheckbox('keyman', 'KEY MAN')}
                                 </div>
                             </div>
                             <div className="w-full mb-4">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Unavailability</label>
-                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {shifts.map(s => (
                                         <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
                                             <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
-                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</span>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
                                         </label>
                                     ))}
                                 </div>
@@ -804,16 +809,16 @@
             const filteredCandidates = getFilteredCandidates();
 
             return (
-                <td className={`p-3 border-l border-dashed border-gray-200 transition-colors duration-300 relative group-hover:bg-opacity-50 ${conflictMsg ? (isWarning ? 'bg-yellow-50/80' : 'bg-red-50/80') : (isAuto ? 'bg-green-50/30' : '')}`}>
+                <td className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-colors duration-300 relative group-hover:bg-opacity-50 ${conflictMsg ? (isWarning ? 'bg-yellow-50/80 dark:bg-yellow-900/40' : 'bg-red-50/80 dark:bg-red-900/40') : (isAuto ? 'bg-green-50/30 dark:bg-green-900/20' : '')}`}>
                     <div className="flex items-center gap-2">
-                        {isAuto && <i className="fa fa-magic text-green-600 text-[10px]" title="Auto-Assigned"></i>}
+                        {isAuto && <i className="fa fa-magic text-green-600 dark:text-green-400 text-[10px]" title="Auto-Assigned"></i>}
                         <div className="relative w-full">
                             <select
                                 className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm appearance-none outline-none focus:ring-2 focus:ring-opacity-50 transition-shadow cursor-pointer
                                     ${conflictMsg
-                                        ? (isWarning ? 'bg-white border border-yellow-300 text-yellow-800 focus:ring-yellow-400' : 'bg-white border border-red-300 text-red-700 focus:ring-red-400')
-                                        : 'bg-white/50 border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm focus:bg-white focus:border-blue-300 focus:ring-blue-400 text-gray-700'}
-                                    ${!assignedId ? 'text-gray-400 font-normal' : 'font-medium'}
+                                        ? (isWarning ? 'bg-white border border-yellow-300 text-yellow-800 focus:ring-yellow-400 dark:bg-slate-800 dark:border-yellow-600 dark:text-yellow-300' : 'bg-white border border-red-300 text-red-700 focus:ring-red-400 dark:bg-slate-800 dark:border-red-600 dark:text-red-300')
+                                        : 'bg-white/50 border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm focus:bg-white focus:border-blue-300 focus:ring-blue-400 text-gray-700 dark:bg-slate-700/50 dark:text-gray-200 dark:hover:bg-slate-600 dark:focus:bg-slate-600 dark:border-transparent'}
+                                    ${!assignedId ? 'text-gray-400 dark:text-gray-500 font-normal' : 'font-medium'}
                                 `}
                                 value={assignedId || ""}
                                 onChange={(e) => onAssign(assignmentKey, e.target.value)}
@@ -824,7 +829,7 @@
                                     const cData = getConflict(p.id, pos, shiftId, assignments);
                                     const isWarn = cData && cData.type === 'warning';
                                     const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
-                                    return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400' : (isTeamMatch ? 'font-bold bg-green-50' : '')}>
+                                    return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400 dark:text-gray-500' : (isTeamMatch ? 'font-bold bg-green-50 dark:bg-green-900 dark:text-green-100' : 'dark:bg-slate-800 dark:text-gray-200')}>
                                         {p.name}
                                         {isTeamMatch ? " (Team)" : ""}
                                         {!p.qualified ? " (Not Qual)" : ""}
@@ -888,23 +893,23 @@
 
             return (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg h-3/4 flex flex-col border border-gray-100 transform transition-all scale-100">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg h-3/4 flex flex-col border border-gray-100 transform transition-all scale-100 dark:bg-slate-900 dark:border-slate-800">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h3 className="font-bold text-xl text-gray-900 tracking-tight">Find Replacement</h3>
-                                <p className="text-sm text-gray-500">{slot.pos.name} • {slot.shiftId === 'all' ? 'All Day' : shifts.find(s=>s.id===slot.shiftId)?.label}</p>
+                                <h3 className="font-bold text-xl text-gray-900 tracking-tight dark:text-white">Find Replacement</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{slot.pos.name} • {slot.shiftId === 'all' ? 'All Day' : shifts.find(s=>s.id===slot.shiftId)?.label}</p>
                             </div>
-                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"><i className="fa fa-times"></i></button>
+                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors dark:bg-slate-800 dark:text-gray-400 dark:hover:text-white"><i className="fa fa-times"></i></button>
                         </div>
-                        <div className="overflow-y-auto flex-1 border border-gray-100 rounded-2xl p-2 bg-gray-50/50 shadow-inner">
-                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10">No qualified, available candidates found.</div> : (
+                        <div className="overflow-y-auto flex-1 border border-gray-100 rounded-2xl p-2 bg-gray-50/50 shadow-inner dark:bg-slate-800/50 dark:border-slate-800">
+                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10 dark:text-gray-400">No qualified, available candidates found.</div> : (
                                 <table className="w-full text-sm">
                                     <tbody>
                                         {candidates.map(p => (
-                                            <tr key={p.id} className="bg-white border-b hover:bg-blue-50 cursor-pointer" onClick={() => onAssign(p.id)}>
+                                            <tr key={p.id} className="bg-white border-b hover:bg-blue-50 cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-gray-200" onClick={() => onAssign(p.id)}>
                                                 <td className="p-3 font-medium">{p.name}</td>
-                                                <td className="p-3 text-right text-xs text-gray-500">{p.role}</td>
-                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">Assign</button></td>
+                                                <td className="p-3 text-right text-xs text-gray-500 dark:text-gray-400">{p.role}</td>
+                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 shadow-sm shadow-green-200 dark:shadow-none">Assign</button></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -996,11 +1001,11 @@
 
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight">Time Statistics (Balance Check)</h2>
-                    <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm">
+                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">Time Statistics (Balance Check)</h2>
+                    <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm dark:border-slate-700">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                <tr className="bg-gray-50/50 border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
                                     <th className="p-4">Brother Name</th>
                                     <th className="p-4">Role</th>
                                     <th className="p-4">Assignments</th>
@@ -1009,22 +1014,22 @@
                                     <th className="p-4 w-1/3">Visual Load</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-gray-50 dark:divide-slate-700">
                                 {stats.map(p => (
-                                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="p-4 font-medium text-gray-700">{p.name}</td>
+                                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/50">
+                                        <td className="p-4 font-medium text-gray-700 dark:text-gray-200">{p.name}</td>
                                         <td className={`p-4 ${getRoleColor(p.role)}`}>{p.role}</td>
-                                        <td className="p-4 text-xs text-gray-500">
+                                        <td className="p-4 text-xs text-gray-500 dark:text-gray-400">
                                             {p.assignmentLabels.length > 0 ? (
                                                 <ul className="list-disc pl-4 space-y-1">
                                                     {p.assignmentLabels.map((lbl, idx) => <li key={idx}>{lbl}</li>)}
                                                 </ul>
-                                            ) : <span className="text-gray-300 italic">-</span>}
+                                            ) : <span className="text-gray-300 italic dark:text-gray-600">-</span>}
                                         </td>
-                                        <td className={`p-4 ${p.minutesAway === 0 ? 'text-blue-600 font-bold' : 'text-gray-600'}`}>{formatMinutesToHHMM(p.minutesAway)}</td>
-                                        <td className={`p-4 ${p.percentage > 50 ? 'text-red-500 font-bold' : 'text-gray-600'}`}>{p.percentage}%</td>
+                                        <td className={`p-4 ${p.minutesAway === 0 ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>{formatMinutesToHHMM(p.minutesAway)}</td>
+                                        <td className={`p-4 ${p.percentage > 50 ? 'text-red-500 font-bold dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>{p.percentage}%</td>
                                         <td className="p-4">
-                                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner dark:bg-slate-700">
                                                 <div className={`h-full rounded-full ${getBarColor(p.percentage)} transition-all duration-500`} style={{ width: `${Math.max(p.percentage, 5)}%` }}></div>
                                             </div>
                                         </td>
@@ -1592,22 +1597,22 @@
                         </div>
                     )}
 
-                    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white dark:bg-slate-800 dark:border-slate-700">
                         <table className="w-full border-collapse text-sm">
                             <thead>
-                                <tr className="bg-gray-50/90 backdrop-blur-sm border-b border-gray-200">
-                                    <th className="p-4 text-left w-64 sticky left-0 bg-gray-50 z-20 font-semibold text-gray-500 uppercase tracking-wider text-xs shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]">Position</th>
-                                    {shifts.map(s => <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200">{s.label}</th>)}
+                                <tr className="bg-gray-50/90 backdrop-blur-sm border-b border-gray-200 dark:bg-slate-900/90 dark:border-slate-700">
+                                    <th className="p-4 text-left w-64 sticky left-0 bg-gray-50 z-20 font-semibold text-gray-500 uppercase tracking-wider text-xs shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] dark:bg-slate-900 dark:text-gray-400">Position</th>
+                                    {shifts.map(s => <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200 dark:border-slate-700 dark:text-gray-400">{s.label}</th>)}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                                 {areas.map(area => (
                                     <React.Fragment key={area.id}>
                                         <tr style={area.style}><td colSpan={5} className="p-3 font-bold uppercase tracking-wider pl-6 shadow-sm relative z-10">{area.name}</td></tr>
                                         {positions.filter(p => p.areaId === area.id).map(pos => (
-                                            <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30' : 'bg-white hover:bg-gray-50'}`}>
-                                                <td className="p-3 pl-6 font-medium sticky left-0 bg-inherit z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] text-gray-700">
-                                                    {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">ALL DAY</span>}
+                                            <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}>
+                                                <td className="p-3 pl-6 font-medium sticky left-0 bg-inherit z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] text-gray-700 dark:border-slate-700 dark:text-gray-300">
+                                                    {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
                                                 </td>
                                                 {pos.type === 'auditorium' ? (
                                                     <td colSpan={4} className="p-0">
@@ -1662,12 +1667,12 @@
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
                     <div className="flex justify-between items-center mb-8 print:hidden">
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Department Report</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Department Report</h2>
                         <div className="flex gap-3">
-                            <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none">
+                            <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                 {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            <button onClick={() => window.print()} className="bg-gray-800 text-white px-5 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2"><i className="fa fa-print"></i> Print</button>
+                            <button onClick={() => window.print()} className="bg-gray-800 text-white px-5 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> Print</button>
                         </div>
                     </div>
 
@@ -1678,30 +1683,30 @@
                     </div>
 
                     {/* TIMELINE GRID */}
-                    <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm print:shadow-none print:border-0">
+                    <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm print:shadow-none print:border-0 dark:border-slate-700">
                         <table className="w-full border-collapse text-sm">
                             <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500 print:bg-gray-200 print:text-black print:border-black">
-                                    <th className="p-3 text-left w-48 border-r border-gray-100 print:border-black">Position</th>
-                                    {shifts.map(s => <th key={s.id} className="p-3 text-center w-32 border-l border-gray-100 print:border-black">{s.label}</th>)}
+                                <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500 print:bg-gray-200 print:text-black print:border-black dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
+                                    <th className="p-3 text-left w-48 border-r border-gray-100 print:border-black dark:border-slate-700">Position</th>
+                                    {shifts.map(s => <th key={s.id} className="p-3 text-center w-32 border-l border-gray-100 print:border-black dark:border-slate-700">{s.label}</th>)}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 print:divide-black">
+                            <tbody className="divide-y divide-gray-100 print:divide-black dark:divide-slate-700">
                                 {areaPositions.map(pos => (
                                     <tr key={pos.id} className="group">
-                                        <td className="p-3 font-medium bg-gray-50/30 text-gray-700 border-r border-gray-100 print:border-black print:bg-gray-100">{pos.name}</td>
+                                        <td className="p-3 font-medium bg-gray-50/30 text-gray-700 border-r border-gray-100 print:border-black print:bg-gray-100 dark:bg-slate-800/50 dark:text-gray-200 dark:border-slate-700">{pos.name}</td>
                                         {pos.type === 'auditorium' ? (
-                                            <td colSpan={shifts.length} className="p-3 text-center bg-blue-50/30 print:bg-white print:border-black">
+                                            <td colSpan={shifts.length} className="p-3 text-center bg-blue-50/30 print:bg-white print:border-black dark:bg-blue-900/10">
                                                 {(() => {
                                                     const pid = getAssignId(assignments[pos.id]);
                                                     const person = personnel.find(p => p.id === pid);
-                                                    return person ? <span className="font-bold text-blue-700 print:text-black">{person.name}</span> : <span className="text-gray-300 italic">Empty</span>;
+                                                    return person ? <span className="font-bold text-blue-700 print:text-black dark:text-blue-300">{person.name}</span> : <span className="text-gray-300 italic dark:text-gray-600">Empty</span>;
                                                 })()}
-                                                <div className="text-[10px] uppercase text-blue-400 font-bold mt-1 tracking-wider print:text-gray-500">All Day</div>
+                                                <div className="text-[10px] uppercase text-blue-400 font-bold mt-1 tracking-wider print:text-gray-500 dark:text-blue-500">All Day</div>
                                             </td>
                                         ) : (
                                             shifts.map(shift => {
-                                                if(pos.validShifts && !pos.validShifts.includes(shift.id)) return <td key={shift.id} className="p-3 bg-gray-100/50 text-center text-gray-300 text-[10px] border-l border-gray-100 print:border-black print:bg-gray-200">N/A</td>;
+                                                if(pos.validShifts && !pos.validShifts.includes(shift.id)) return <td key={shift.id} className="p-3 bg-gray-100/50 text-center text-gray-300 text-[10px] border-l border-gray-100 print:border-black print:bg-gray-200 dark:bg-slate-800/50 dark:text-slate-600 dark:border-slate-700">N/A</td>;
 
                                                 // Check Mirror
                                                 if(pos.isMirror) {
@@ -1709,15 +1714,15 @@
                                                     const mirrorKey = `${sourceKey}_${shift.id}`;
                                                     const pid = getAssignId(assignments[mirrorKey]);
                                                     const person = personnel.find(p => p.id === pid);
-                                                    return <td key={shift.id} className="p-3 text-center text-xs italic text-gray-400 border-l border-gray-100 print:border-black">{person ? `(Link: ${person.name})` : '--'}</td>;
+                                                    return <td key={shift.id} className="p-3 text-center text-xs italic text-gray-400 border-l border-gray-100 print:border-black dark:border-slate-700 dark:text-gray-500">{person ? `(Link: ${person.name})` : '--'}</td>;
                                                 }
 
                                                 const key = `${pos.id}_${shift.id}`;
                                                 const pid = getAssignId(assignments[key]);
                                                 const person = personnel.find(p => p.id === pid);
                                                 return (
-                                                    <td key={shift.id} className="p-3 text-center border-l border-gray-100 print:border-black">
-                                                        {person ? <span className="font-medium text-gray-800">{person.name}</span> : <span className="text-gray-200">-</span>}
+                                                    <td key={shift.id} className="p-3 text-center border-l border-gray-100 print:border-black dark:border-slate-700">
+                                                        {person ? <span className="font-medium text-gray-800 dark:text-gray-200">{person.name}</span> : <span className="text-gray-200 dark:text-slate-700">-</span>}
                                                     </td>
                                                 );
                                             })
