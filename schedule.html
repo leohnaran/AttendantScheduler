@@ -722,6 +722,7 @@
             const getBrotherStats = () => {
                 const stats = personnel.map(p => {
                     let minutesAway = 0;
+                    let assignmentLabels = [];
 
                     Object.keys(assignments).forEach(key => {
                         const assignVal = assignments[key];
@@ -739,15 +740,18 @@
                                 }
                             }
                             const pos = positions.find(pos => pos.id === posId);
-                            if (pos && pos.type !== 'auditorium') {
+                            if (pos) {
                                 const shift = shifts.find(s => s.id === shiftId);
-                                if (shift) minutesAway += shift.minutes;
+                                if (pos.type !== 'auditorium') {
+                                    if (shift) minutesAway += shift.minutes;
+                                }
+                                assignmentLabels.push(`${pos.name} (${shift ? shift.label : 'All Day'})`);
                             }
                         }
                     });
 
                     const percentage = Math.round((minutesAway / TOTAL_PROGRAM_MINUTES) * 100);
-                    return { ...p, minutesAway, percentage };
+                    return { ...p, minutesAway, percentage, assignmentLabels };
                 });
 
                 return stats.sort((a,b) => b.minutesAway - a.minutesAway);
@@ -777,6 +781,7 @@
                                 <tr className="bg-gray-100 text-left">
                                     <th className="p-2 border">Brother Name</th>
                                     <th className="p-2 border">Role</th>
+                                    <th className="p-2 border">Assignments</th>
                                     <th className="p-2 border">Minutes Away</th>
                                     <th className="p-2 border">% Missed</th>
                                     <th className="p-2 border w-1/3">Visual Load</th>
@@ -787,6 +792,13 @@
                                     <tr key={p.id} className="hover:bg-gray-50">
                                         <td className="p-2 border font-medium">{p.name}</td>
                                         <td className={`p-2 border ${getRoleColor(p.role)}`}>{p.role}</td>
+                                        <td className="p-2 border text-xs">
+                                            {p.assignmentLabels.length > 0 ? (
+                                                <ul className="list-disc pl-4">
+                                                    {p.assignmentLabels.map((lbl, idx) => <li key={idx}>{lbl}</li>)}
+                                                </ul>
+                                            ) : <span className="text-gray-400">-</span>}
+                                        </td>
                                         <td className={`p-2 border ${p.minutesAway === 0 ? 'text-blue-600 font-bold' : ''}`}>{p.minutesAway} min</td>
                                         <td className={`p-2 border ${p.percentage > 50 ? 'text-red-600 font-bold' : ''}`}>{p.percentage}%</td>
                                         <td className="p-2 border">
@@ -993,122 +1005,207 @@
                 }
             };
 
+            // === HELPER FUNCTIONS FOR AUTO-FILL & CONFLICT RESOLUTION ===
+            const getShiftCount = (pid, currentAssignments) => {
+                let count = 0;
+                Object.keys(currentAssignments).forEach(key => {
+                    if (getAssignId(currentAssignments[key]) === pid) {
+                        if (key.includes('_') && !key.includes('pos12')) count++;
+                    }
+                });
+                return count;
+            };
+
+            const isPersonFree = (pid, shiftId, currentAssignments) => {
+                 const person = personnel.find(p => p.id === pid);
+                 if (person && person.unavailable && person.unavailable.includes(shiftId)) return false;
+
+                 for (let p of positions) {
+                     // Check if busy at ANY auditorium spot
+                     if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
+
+                     if (p.type === 'rotational' && !p.isMirror) {
+                        if (shiftId === 'all') {
+                            // If checking for 'all day' (Auditorium), must be free ALL shifts
+                            for (let s of shifts) {
+                                if (p.validShifts && !p.validShifts.includes(s.id)) continue;
+                                if (getAssignId(currentAssignments[`${p.id}_${s.id}`]) === pid) return false;
+                            }
+                        } else {
+                            // Check if busy at THIS specific shift
+                            if (p.validShifts && !p.validShifts.includes(shiftId)) continue;
+                            if (getAssignId(currentAssignments[`${p.id}_${shiftId}`]) === pid) return false;
+                        }
+                     }
+                 }
+                 return true;
+            };
+
+            const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
+                if (rules.anchorLimits === false) return true;
+
+                // 1. Is he an anchor?
+                const anchorPos = positions.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === person.id);
+                if (!anchorPos) return true;
+
+                // 2. Is he already over 25%? (1 shift)
+                if (getShiftCount(person.id, currentAssignments) >= 1) return false;
+
+                // 3. Check Section Limits
+                const section = anchorPos.section;
+
+                // Get all rotational assignments for this shift
+                const activeAssignments = [];
+                positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
+                    if (p.validShifts && !p.validShifts.includes(shiftId)) return;
+                    const assignedId = getAssignId(currentAssignments[`${p.id}_${shiftId}`]);
+                    if (assignedId) activeAssignments.push(assignedId);
+                });
+
+                // Count how many anchors from this section are already working this shift
+                let sectionCount = 0;
+                let mainTotalCount = 0;
+                let upperCount = 0;
+
+                activeAssignments.forEach(aid => {
+                    const ap = positions.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === aid);
+                    if (ap) {
+                        if (ap.areaId === 'upper_level') upperCount++;
+                        else {
+                            mainTotalCount++;
+                            if (ap.section === section) sectionCount++;
+                        }
+                    }
+                });
+
+                if (anchorPos.areaId === 'upper_level') {
+                    return upperCount < 1; // Max 1 from Upper
+                } else {
+                    // Main Auditorium Rules
+                    if (mainTotalCount >= 2) return false; // Max 2 total form main
+                    if (sectionCount >= 1) return false; // Max 1 from this section (excluding self)
+                    return true;
+                }
+            };
+
+            const workedPreviousShift = (pid, currentShiftId, currentAssignments) => {
+                if (rules.avoidConsecutive === false) return false;
+                const shiftIndex = shifts.findIndex(s => s.id === currentShiftId);
+                if (shiftIndex <= 0) return false;
+                const prevShiftId = shifts[shiftIndex - 1].id;
+                let worked = false;
+                positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
+                    if (getAssignId(currentAssignments[`${p.id}_${prevShiftId}`]) === pid) worked = true;
+                });
+                return worked;
+            };
+
+            const isOverWorkLimit = (pid, currentAssignments) => {
+                const limit = rules.maxWorkPercent || 50;
+
+                let minutesWorked = 0;
+                Object.keys(currentAssignments).forEach(key => {
+                    if (getAssignId(currentAssignments[key]) === pid) {
+                        // Check if key has a shift ID suffix (e.g. pos_morning)
+                        if (key.includes('_') && !key.includes('pos12')) { // pos12 is special keyman exception
+                            const parts = key.split('_');
+                            const shiftId = parts[parts.length - 1];
+                            const shift = shifts.find(s => s.id === shiftId);
+                            if (shift) minutesWorked += shift.minutes;
+                        } else {
+                            // Assume 'auditorium' type (all day) = TOTAL_PROGRAM_MINUTES
+                            minutesWorked += TOTAL_PROGRAM_MINUTES;
+                        }
+                    }
+                });
+
+                const pct = (minutesWorked / TOTAL_PROGRAM_MINUTES) * 100;
+                return pct >= limit;
+            };
+
+            const fixConflicts = () => {
+                let newAssignments = { ...assignments };
+                let fixedCount = 0;
+                let reassignedCount = 0;
+                let unassignedCount = 0;
+
+                Object.keys(newAssignments).forEach(key => {
+                    const assignVal = newAssignments[key];
+                    const personId = getAssignId(assignVal);
+                    if (!personId) return;
+
+                    let posId = key;
+                    let shiftId = 'all';
+                    if (key.includes('_')) {
+                        const parts = key.split('_');
+                        const lastPart = parts[parts.length-1];
+                        if (shifts.find(s => s.id === lastPart)) {
+                            shiftId = lastPart;
+                            posId = parts.slice(0, parts.length-1).join('_');
+                        }
+                    }
+
+                    const pos = positions.find(p => p.id === posId);
+                    if (!pos) return;
+
+                    const conflict = getConflict(personId, pos, shiftId, newAssignments);
+                    if (conflict && (conflict.type === 'error' || conflict.type === 'warning')) {
+                        // 1. Unassign current
+                        newAssignments[key] = null;
+
+                        // 2. Try to find a replacement
+                        let candidates = getCandidatesForPosition(pos, personnel, areas);
+
+                        candidates = candidates.filter(p =>
+                            isPersonFree(p.id, shiftId, newAssignments) &&
+                            !workedPreviousShift(p.id, shiftId, newAssignments) &&
+                            isAnchorAvailableForShift(p, shiftId, newAssignments) &&
+                            !isOverWorkLimit(p.id, newAssignments)
+                        );
+
+                        if (candidates.length > 0) {
+                            // Find fairest candidate
+                            candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
+                            const minShifts = Math.min(...candidates.map(c => c.shifts));
+                            let fairPool = candidates.filter(c => c.shifts === minShifts);
+
+                            // Team Prioritization
+                            if (pos.teamKeyManId) {
+                                const teamMembers = fairPool.filter(c => c.keyManId === pos.teamKeyManId);
+                                if (teamMembers.length > 0) fairPool = teamMembers;
+                            }
+
+                            if (fairPool.length > 0) {
+                                const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+                                newAssignments[key] = { id: chosen.id, isAuto: true };
+                                reassignedCount++;
+                            } else {
+                                unassignedCount++;
+                            }
+                        } else {
+                            unassignedCount++;
+                        }
+                        fixedCount++;
+                    }
+                });
+
+                if (fixedCount > 0) {
+                    setAssignments(newAssignments);
+                    alert(`Resolved ${fixedCount} conflicts:\n- Reassigned: ${reassignedCount}\n- Unassigned: ${unassignedCount}`);
+                } else {
+                    alert("No conflicts found to fix.");
+                }
+            };
+
             // === SEQUENTIAL & FAIR AUTO FILL ===
             const autoFill = () => {
                 let newAssignments = { ...assignments };
                 let filledCount = 0;
+                let audFilled = 0;
+                let rotFilled = 0;
                 let logEntries = [];
 
                 const addLog = (msg, type) => logEntries.push({ msg, type });
-
-                const getShiftCount = (pid, currentAssignments) => {
-                    let count = 0;
-                    Object.keys(currentAssignments).forEach(key => {
-                        if (getAssignId(currentAssignments[key]) === pid) {
-                            if (key.includes('_') && !key.includes('pos12')) count++;
-                        }
-                    });
-                    return count;
-                };
-
-                const isPersonFree = (pid, shiftId, currentAssignments) => {
-                     const person = personnel.find(p => p.id === pid);
-                     if (person && person.unavailable && person.unavailable.includes(shiftId)) return false;
-
-                     for (let p of positions) {
-                         // Check if busy at ANY auditorium spot
-                         if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
-
-                         if (p.type === 'rotational' && !p.isMirror) {
-                            // Check if busy at THIS shift
-                            if (p.validShifts && !p.validShifts.includes(shiftId)) continue;
-                            if (getAssignId(currentAssignments[`${p.id}_${shiftId}`]) === pid) return false;
-                         }
-                     }
-                     return true;
-                };
-
-                const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
-                    if (rules.anchorLimits === false) return true;
-
-                    // 1. Is he an anchor?
-                    const anchorPos = positions.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === person.id);
-                    if (!anchorPos) return true;
-
-                    // 2. Is he already over 25%? (1 shift)
-                    if (getShiftCount(person.id, currentAssignments) >= 1) return false;
-
-                    // 3. Check Section Limits
-                    const section = anchorPos.section;
-
-                    // Get all rotational assignments for this shift
-                    const activeAssignments = [];
-                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
-                        if (p.validShifts && !p.validShifts.includes(shiftId)) return;
-                        const assignedId = getAssignId(currentAssignments[`${p.id}_${shiftId}`]);
-                        if (assignedId) activeAssignments.push(assignedId);
-                    });
-
-                    // Count how many anchors from this section are already working this shift
-                    let sectionCount = 0;
-                    let mainTotalCount = 0;
-                    let upperCount = 0;
-
-                    activeAssignments.forEach(aid => {
-                        const ap = positions.find(p => p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === aid);
-                        if (ap) {
-                            if (ap.areaId === 'upper_level') upperCount++;
-                            else {
-                                mainTotalCount++;
-                                if (ap.section === section) sectionCount++;
-                            }
-                        }
-                    });
-
-                    if (anchorPos.areaId === 'upper_level') {
-                        return upperCount < 1; // Max 1 from Upper
-                    } else {
-                        // Main Auditorium Rules
-                        if (mainTotalCount >= 2) return false; // Max 2 total form main
-                        if (sectionCount >= 1) return false; // Max 1 from this section (excluding self)
-                        return true;
-                    }
-                };
-
-                const workedPreviousShift = (pid, currentShiftId, currentAssignments) => {
-                    if (rules.avoidConsecutive === false) return false;
-                    const shiftIndex = shifts.findIndex(s => s.id === currentShiftId);
-                    if (shiftIndex <= 0) return false;
-                    const prevShiftId = shifts[shiftIndex - 1].id;
-                    let worked = false;
-                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(p => {
-                        if (getAssignId(currentAssignments[`${p.id}_${prevShiftId}`]) === pid) worked = true;
-                    });
-                    return worked;
-                };
-
-                const isOverWorkLimit = (pid, currentAssignments) => {
-                    const limit = rules.maxWorkPercent || 50;
-
-                    let minutesWorked = 0;
-                    Object.keys(currentAssignments).forEach(key => {
-                        if (getAssignId(currentAssignments[key]) === pid) {
-                            // Check if key has a shift ID suffix (e.g. pos_morning)
-                            if (key.includes('_') && !key.includes('pos12')) { // pos12 is special keyman exception
-                                const parts = key.split('_');
-                                const shiftId = parts[parts.length - 1];
-                                const shift = shifts.find(s => s.id === shiftId);
-                                if (shift) minutesWorked += shift.minutes;
-                            } else {
-                                // Assume 'auditorium' type (all day) = TOTAL_PROGRAM_MINUTES
-                                minutesWorked += TOTAL_PROGRAM_MINUTES;
-                            }
-                        }
-                    });
-
-                    const pct = (minutesWorked / TOTAL_PROGRAM_MINUTES) * 100;
-                    return pct >= limit;
-                };
 
                 // 1. Auditorium First
                 addLog("--- Starting Auditorium Fill ---", 'auditorium');
@@ -1122,6 +1219,7 @@
                             newAssignments[pos.id] = { id: chosen.id, isAuto: true };
                             addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
                             filledCount++;
+                            audFilled++;
                         } else {
                             addLog(`No candidates for ${pos.name}`, 'error');
                         }
@@ -1171,13 +1269,23 @@
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
                                 addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
                                 filledCount++;
+                                rotFilled++;
                             }
                         }
                     });
                 });
 
+                const assignedIds = new Set();
+                Object.keys(newAssignments).forEach(k => {
+                    const pid = getAssignId(newAssignments[k]);
+                    if (pid) assignedIds.add(pid);
+                });
+                const totalPersonnel = personnel.length;
+                const participated = assignedIds.size;
+                const participationPct = totalPersonnel > 0 ? Math.round((participated / totalPersonnel) * 100) : 0;
+
                 onAutoFill(newAssignments, logEntries);
-                alert(`Auto-filled ${filledCount} slots.`);
+                alert(`Auto-Fill Complete!\n\nTotal Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
             };
 
             const clearAutoAssignments = () => {
@@ -1196,7 +1304,8 @@
                         <h2 className="text-2xl font-bold text-gray-800">Schedule Grid</h2>
                         <div className="flex gap-2">
                             <button onClick={clearAutoAssignments} className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 flex items-center gap-2"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
-                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Magic Fill</button>
+                            <button onClick={fixConflicts} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
+                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Fill in Unassigned</button>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
