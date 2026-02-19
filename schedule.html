@@ -1285,7 +1285,7 @@
                 const participationPct = totalPersonnel > 0 ? Math.round((participated / totalPersonnel) * 100) : 0;
 
                 onAutoFill(newAssignments, logEntries);
-                alert(`Auto-Fill Complete!\n\nTotal Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
+                alert(`Auto-Fill Complete!\n\nTotal Volunteers Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
             };
 
             const clearAutoAssignments = () => {
