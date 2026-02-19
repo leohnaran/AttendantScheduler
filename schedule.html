@@ -951,8 +951,24 @@
                         for (let tid of person.tags) {
                             const tag = tags.find(t => t.id === tid);
                             if (tag && tag.restrictedShifts) {
+                                // Specific Shift Block
                                 if (tag.restrictedShifts.includes(currentShiftId)) return { msg: `Tag: ${tag.name}`, type: sev, key: null };
-                                if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0) return { msg: `Tag: ${tag.name} (Partial)`, type: sev, key: null };
+
+                                // All Day Block (Only applies if pos is auditorium)
+                                if (pos.type === 'auditorium' && tag.restrictedShifts.includes('all_day')) return { msg: `Tag: ${tag.name} (All Day)`, type: sev, key: null };
+
+                                // Partial Warning (if assigned to All Day but has SOME shift restrictions, warn but don't block unless 'all_day' is set)
+                                // This logic might need refinement based on user intent.
+                                // User said: "bus rider i wouldn't want in a rotating shift in the morning, however i could have them in an all day shift."
+                                // So if I assign a bus rider (morning restricted) to All Day, it should be ALLOWED (maybe warning).
+                                // Current logic: `if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0)` returns Partial.
+                                // We should probably only warn if we are strict, but for now let's relax it or keep it as warning.
+                                // Let's keep it as warning but ensure it doesn't block unless 'all_day' is present.
+                                if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0 && !tag.restrictedShifts.includes('all_day')) {
+                                     // Check if the partial restriction actually overlaps with "All Day". Technically all shifts overlap all day.
+                                     // So a warning is appropriate.
+                                     return { msg: `Tag: ${tag.name} (Partial)`, type: 'warning', key: null };
+                                }
                             }
                         }
                     }
@@ -1046,7 +1062,11 @@
                  if (person.tags && tags) {
                      for (let tid of person.tags) {
                          const tag = tags.find(t => t.id === tid);
-                         if (tag && tag.restrictedShifts && tag.restrictedShifts.includes(shiftId)) return false;
+                         if (tag && tag.restrictedShifts) {
+                             if (tag.restrictedShifts.includes(shiftId)) return false;
+                             // If checking for 'all' (Auditorium), check if 'all_day' is restricted
+                             if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) return false;
+                         }
                      }
                  }
 
@@ -1618,6 +1638,15 @@
                             <div className="flex-1">
                                 <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Restricted Shifts (Cannot Work)</label>
                                 <div className="flex flex-wrap gap-2">
+                                    <label className="flex items-center text-sm bg-blue-50 border border-blue-200 px-2 py-1 rounded cursor-pointer text-blue-800 font-bold">
+                                        <input
+                                            type="checkbox"
+                                            checked={newTag.restrictedShifts.includes('all_day')}
+                                            onChange={() => toggleShift('all_day')}
+                                            className="mr-2"
+                                        />
+                                        All Day (Auditorium)
+                                    </label>
                                     {shifts.map(s => (
                                         <label key={s.id} className="flex items-center text-sm bg-white border px-2 py-1 rounded cursor-pointer">
                                             <input
