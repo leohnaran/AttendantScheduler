@@ -14,6 +14,11 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
 
     <!-- Crypto JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -22,21 +27,61 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
-        body { background-color: #f3f4f6; }
+        body {
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .dark body { background-color: #0f172a; color: #e2e8f0; color-scheme: dark; }
+
         .conflict-border { border: 2px solid #ef4444; }
         .warning-border { border: 2px solid #f59e0b; }
         .auto-assigned { background-color: #dcfce7; }
+        .dark .auto-assigned { background-color: rgba(22, 163, 74, 0.2); }
+
         .blocked-cell { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+        .dark .blocked-cell { background-color: #1e293b; color: #475569; }
+
         .mirrored-cell { background-color: #fff7ed; color: #9a3412; font-style: italic; border: 1px dashed #fdba74; }
+        .dark .mirrored-cell { background-color: rgba(255, 247, 237, 0.1); color: #fed7aa; border-color: #9a3412; }
+
         .overflow-x-auto::-webkit-scrollbar { height: 8px; }
         .overflow-x-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .overflow-x-auto::-webkit-scrollbar-thumb { background: #475569; }
+
         .log-entry { border-bottom: 1px solid #e5e7eb; padding: 8px 0; font-family: monospace; font-size: 0.85rem; }
+        .dark .log-entry { border-color: #334155; }
 
         /* Drag and Drop Styles */
         .draggable-row { cursor: grab; }
         .draggable-row:active { cursor: grabbing; }
         .droppable-group { transition: background-color 0.2s; }
         .droppable-group.drag-over { background-color: #e0f2fe; border-color: #3b82f6; }
+        .dark .droppable-group.drag-over { background-color: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+
+        /* Glassmorphism Utilities */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-header {
+            background: rgba(15, 23, 42, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body>
@@ -185,13 +230,22 @@
         };
 
         // --- CENTRALIZED CANDIDATE FINDER (Now relies on props) ---
-        const getCandidatesForPosition = (pos, personnel, areas) => {
+        const getCandidatesForPosition = (pos, personnel, areas, tags) => {
             const area = areas.find(a => a.id === pos.areaId);
             if(!area) return [];
             const requiredCap = area.capability;
             return personnel.filter(p => {
                 if (!p.caps || !p.caps.includes(requiredCap)) return false;
                 if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) return false;
+
+                // Check Area Restrictions from Tags
+                if (tags && p.tags) {
+                    for (let tid of p.tags) {
+                        const tag = tags.find(t => t.id === tid);
+                        if (tag && tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) return false;
+                    }
+                }
+
                 return true;
             });
         };
@@ -382,7 +436,7 @@
             const renderCheckbox = (key, label) => (
                 <label className="flex items-center cursor-pointer mr-4 mb-2">
                     <input type="checkbox" checked={formData.caps[key]} onChange={e=>handleCapChange(key, e.target.checked)} className="mr-2"/>
-                    <span className="text-xs font-bold">{label}</span>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{label}</span>
                 </label>
             );
 
@@ -403,100 +457,184 @@
                 groups.push({ keyMan: null, members: orphans });
             }
 
+            if (personnel.length === 0) {
+                return (
+                    <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
+                                <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">Start by adding your team</p>
+                            </div>
+                            <div className="relative overflow-hidden inline-block group">
+                                <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2 dark:bg-purple-600 dark:hover:bg-purple-700"><i className="fa fa-file-csv"></i> Import CSV</button>
+                                <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+                            </div>
+                        </div>
+
+                        {/* EDIT FORM */}
+                        <div className={`p-6 rounded-2xl border mb-8 bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700`}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Add New Personnel</h3>
+                            </div>
+                            <div className="flex flex-wrap gap-4 items-end">
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
+                                        <option value="Exemplary">Exemplary</option>
+                                        <option value="MS">MS</option>
+                                        <option value="Elder">Elder</option>
+                                    </select>
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" disabled>
+                                        <option value="">-- None --</option>
+                                    </select>
+                                </div>
+
+                                <div className="w-full">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                        {areas.map(area => renderCheckbox(area.capability, area.name))}
+                                        {renderCheckbox('keyman', 'KEY MAN')}
+                                    </div>
+                                </div>
+                                <div className="w-full mb-4">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                        {shifts.map(s => (
+                                            <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
+                                                <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
+                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none`}>Add Person</button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50 dark:bg-slate-800/50 dark:border-slate-700">
+                            <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm dark:bg-slate-700 dark:text-blue-400">
+                                <i className="fa fa-user-plus"></i>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2 dark:text-white">Your Roster is Empty</h3>
+                            <p className="text-gray-500 max-w-sm mb-6 dark:text-gray-400">Add brothers manually using the form above, or import your existing list to get started quickly.</p>
+                            <div className="relative overflow-hidden inline-block group">
+                                <button className="bg-white border border-gray-200 text-gray-700 py-2.5 px-6 rounded-full font-semibold shadow-sm hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-800 dark:border-slate-600 dark:text-gray-200 dark:hover:bg-slate-700">
+                                    <i className="fa fa-file-csv text-green-600 dark:text-green-400"></i> Import CSV Roster
+                                </button>
+                                <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
                     {/* HEADER & IMPORT */}
-                    <div className="flex justify-between items-center mb-6">
-                        <h2 className="text-2xl font-bold text-gray-800">Personnel Roster ({personnel.length})</h2>
-                        <div className="relative overflow-hidden inline-block">
-                            <button className="bg-purple-600 text-white py-2 px-4 rounded font-bold hover:bg-purple-700 flex items-center gap-2"><i className="fa fa-file-csv"></i> Import CSV</button>
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
+                            <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">{personnel.length} brothers available</p>
+                        </div>
+                        <div className="relative overflow-hidden inline-block group">
+                            <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2"><i className="fa fa-file-csv"></i> Import CSV</button>
                             <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
                         </div>
                     </div>
 
                     {/* EDIT FORM */}
-                    <div className={`p-4 rounded border mb-6 ${editingId ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-200'}`}>
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-sm font-bold uppercase text-gray-600">{editingId ? 'Detailed Editor (Synced)' : 'Add New Personnel'}</h3>
-                            {editingId && <button onClick={cancelEdit} className="text-xs text-gray-500 hover:text-gray-800 underline">Cancel Edit</button>}
+                        <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700' : 'bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700'}`}>
+                        <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
+                            {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium dark:text-red-400 dark:hover:text-red-300">Cancel Edit</button>}
                         </div>
-                        <div className="flex flex-wrap gap-4 items-start">
+                        <div className="flex flex-wrap gap-4 items-end">
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Name</label>
-                                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border p-2 rounded w-48" placeholder="Name" />
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Role</label>
-                                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border p-2 rounded w-32">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="Exemplary">Exemplary</option>
                                     <option value="MS">MS</option>
                                     <option value="Elder">Elder</option>
                                 </select>
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Key Man</label>
-                                <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border p-2 rounded w-48">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="">-- None --</option>
                                     {personnel.filter(p => p.caps && p.caps.includes('keyman') && p.id !== editingId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
+
                             <div className="w-full">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Permissions</label>
-                                <div className="flex flex-wrap bg-white p-2 rounded border mb-2">
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {areas.map(area => renderCheckbox(area.capability, area.name))}
                                     {renderCheckbox('keyman', 'KEY MAN')}
                                 </div>
                             </div>
-                            <div className="w-full mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Unavailability (Program Parts, etc)</label>
-                                <div className="flex flex-wrap bg-red-50 p-2 rounded border border-red-100">
+                            <div className="w-full mb-4">
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {shifts.map(s => (
-                                        <label key={s.id} className="flex items-center cursor-pointer mr-4">
-                                            <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2"/>
-                                            <span className="text-xs font-bold text-red-800">{s.label}</span>
+                                        <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
+                                            <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{s.label}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
-                            <button onClick={savePerson} className={`text-white px-4 py-2 rounded font-medium h-10 min-w-[80px] ${editingId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'}`}>{editingId ? 'Update' : 'Add'}</button>
+                            <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-200 dark:shadow-none' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none'}`}>{editingId ? 'Update Person' : 'Add Person'}</button>
                         </div>
                     </div>
 
                     {/* ROSTER LIST (Key Man Groups) */}
-                    <div className="space-y-6">
+                    <div className="space-y-8">
                         {groups.map(group => (
                             <div
                                 key={group.keyMan ? group.keyMan.id : 'none'}
-                                className={`droppable-group border rounded-lg overflow-hidden shadow-sm ${dragOverGroup === (group.keyMan ? group.keyMan.id : 'none') ? 'drag-over' : 'bg-white'}`}
+                                className={`droppable-group border border-gray-100 rounded-2xl overflow-hidden shadow-sm transition-all duration-300 ${dragOverGroup === (group.keyMan ? group.keyMan.id : 'none') ? 'bg-blue-50/50 ring-2 ring-blue-200 ring-offset-2' : 'bg-white'}`}
                                 onDragOver={(e) => handleDragOver(e, group.keyMan ? group.keyMan.id : 'none')}
                                 onDrop={(e) => handleDrop(e, group.keyMan ? group.keyMan.id : null)}
                             >
                                 {/* GROUP HEADER */}
-                                <div className="bg-gray-100 p-3 border-b flex justify-between items-center">
-                                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                        <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'} text-blue-600`}></i>
+                                <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm dark:bg-slate-800/50 dark:border-slate-700">
+                                    <h3 className="font-bold text-gray-900 flex items-center gap-3 dark:text-white">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
+                                            <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
+                                        </div>
                                         {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
-                                        <span className="text-xs font-normal text-gray-500 ml-2">({group.members.length} members)</span>
+                                        <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} members</span>
                                     </h3>
                                     {group.keyMan && (
-                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-500 hover:underline">Edit Key Man</button>
+                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit Key Man</button>
                                     )}
                                 </div>
 
                                 {/* MEMBERS TABLE */}
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
-                                        <thead className="bg-gray-50 text-xs uppercase text-gray-500">
-                                            <tr>
-                                                <th className="px-4 py-2 w-1/3">Name</th>
-                                                <th className="px-4 py-2 w-1/6">Role</th>
-                                                <th className="px-4 py-2">Capabilities</th>
-                                                <th className="px-4 py-2 w-20 text-center">Actions</th>
+                                        <thead>
+                                            <tr className="bg-white border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-500">
+                                                <th className="px-6 py-3 w-1/3">Name</th>
+                                                <th className="px-6 py-3 w-1/6">Role</th>
+                                                <th className="px-6 py-3">Capabilities</th>
+                                                <th className="px-6 py-3 w-24 text-center">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-100">
+                                        <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
                                             {group.members.length === 0 ? (
-                                                <tr><td colSpan="4" className="px-4 py-3 text-center text-gray-400 italic">Drop members here to assign</td></tr>
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30">Drop members here to assign</td></tr>
                                             ) : (
                                                 group.members.map(p => {
                                                     const isEditing = editingId === p.id;
@@ -505,9 +643,9 @@
                                                             key={p.id}
                                                             draggable={!isEditing}
                                                             onDragStart={(e) => !isEditing && handleDragStart(e, p.id)}
-                                                            className={`draggable-row hover:bg-blue-50 transition-colors ${isEditing ? 'bg-yellow-50 border-l-4 border-yellow-500' : ''}`}
+                                                            className={`draggable-row transition-all duration-200 ${isEditing ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : 'hover:bg-gray-50/80 bg-white dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}
                                                         >
-                                                            <td className="px-4 py-2 font-medium text-gray-900">
+                                                            <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
                                                                 {isEditing ? (
                                                                     <div className="flex flex-col gap-1">
                                                                         <input
@@ -537,7 +675,7 @@
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td className="px-4 py-2">
+                                                            <td className="px-6 py-3">
                                                                 {isEditing ? (
                                                                     <select
                                                                         value={formData.role}
@@ -549,15 +687,15 @@
                                                                         <option value="Elder">Elder</option>
                                                                     </select>
                                                                 ) : (
-                                                                    <span className={`px-2 py-0.5 rounded text-xs font-medium
-                                                                        ${p.role === 'Elder' ? 'bg-yellow-100 text-yellow-800' :
-                                                                          p.role === 'MS' ? 'bg-blue-100 text-blue-800' :
-                                                                          'bg-gray-100 text-gray-800'}`}>
+                                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-sm
+                                                                        ${p.role === 'Elder' ? 'bg-yellow-100 text-yellow-700' :
+                                                                          p.role === 'MS' ? 'bg-blue-100 text-blue-700' :
+                                                                          'bg-gray-100 text-gray-600'}`}>
                                                                         {p.role}
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className="px-4 py-2">
+                                                            <td className="px-6 py-3">
                                                                 {isEditing ? (
                                                                     <div className="flex flex-wrap gap-2 max-w-[200px]">
                                                                         {areas.map(area => (
@@ -584,23 +722,23 @@
                                                                 ) : (
                                                                     <div className="flex flex-wrap gap-1">
                                                                         {p.caps.map(c => (
-                                                                            <span key={c} className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded text-gray-600">
+                                                                            <span key={c} className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full text-gray-500 font-medium">
                                                                                 {c === 'auditorium' ? 'Aud' : c.charAt(0).toUpperCase() + c.slice(1)}
                                                                             </span>
                                                                         ))}
                                                                     </div>
                                                                 )}
                                                             </td>
-                                                            <td className="px-4 py-2 text-center">
+                                                            <td className="px-6 py-3 text-center">
                                                                 {isEditing ? (
                                                                     <div className="flex justify-center gap-2">
                                                                         <button onClick={savePerson} className="text-green-600 hover:text-green-800 font-bold text-xs bg-green-50 px-2 py-1 rounded border border-green-200">Save</button>
                                                                         <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-700 text-xs px-2 py-1">Cancel</button>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="flex justify-center gap-2">
-                                                                        <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600"><i className="fa fa-pencil"></i></button>
-                                                                        <button onClick={() => deletePerson(p.id)} className="text-gray-400 hover:text-red-600"><i className="fa fa-trash"></i></button>
+                                                                    <div className="flex justify-center gap-3">
+                                                                        <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600 transition-colors"><i className="fa fa-pencil"></i></button>
+                                                                        <button onClick={() => deletePerson(p.id)} className="text-gray-400 hover:text-red-500 transition-colors"><i className="fa fa-trash"></i></button>
                                                                     </div>
                                                                 )}
                                                             </td>
@@ -618,8 +756,8 @@
             );
         }
 
-        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas }) {
-            if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all') return <td className="border p-2 blocked-cell text-center text-xs font-bold uppercase">N/A</td>;
+        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas, tags }) {
+            if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all') return <td className="p-3 bg-gray-50/50 border-l border-dashed border-gray-200 dark:bg-slate-800/50 dark:border-slate-700 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-not-allowed">N/A</td>;
 
             if (pos.isMirror) {
                 const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2';
@@ -627,8 +765,8 @@
                 const mirrorId = getAssignId(assignments[mirrorKey]);
                 const mirrorPerson = personnel.find(p => p.id === mirrorId);
                 return (
-                    <td className="border p-2 mirrored-cell text-xs">
-                        {mirrorPerson ? <span><i className="fa fa-link mr-1"></i>{mirrorPerson.name}</span> : "-- Linked --"}
+                    <td className="p-3 mirrored-cell text-xs border-l border-dashed border-gray-200">
+                        {mirrorPerson ? <span className="flex items-center gap-1 text-orange-700"><i className="fa fa-link text-xs"></i> {mirrorPerson.name}</span> : <span className="text-gray-400 italic">-- Linked --</span>}
                     </td>
                 );
             }
@@ -651,6 +789,14 @@
                     let qualified = true;
                     if (!p.caps || !p.caps.includes(requiredCap)) qualified = false;
                     if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) qualified = false;
+
+                    if (tags && p.tags) {
+                        for (let tid of p.tags) {
+                            const tag = tags.find(t => t.id === tid);
+                            if (tag && tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) qualified = false;
+                        }
+                    }
+
                     return { ...p, qualified };
                 });
 
@@ -680,32 +826,47 @@
             const filteredCandidates = getFilteredCandidates();
 
             return (
-                <td className={`border p-2 ${conflictMsg ? (isWarning ? 'bg-yellow-50 border-yellow-300' : 'bg-red-50 border-red-300') : (isAuto ? 'auto-assigned' : '')}`}>
-                    <div className="flex items-center gap-1">
-                        {isAuto && <i className="fa fa-magic text-green-600 text-xs" title="Auto-Assigned"></i>}
-                        <select className={`w-full p-1 rounded text-sm border ${conflictMsg ? (isWarning ? 'text-yellow-800 font-bold border-yellow-400' : 'text-red-700 font-bold border-red-400') : 'border-gray-300'} ${isAuto ? 'bg-transparent' : ''}`} value={assignedId || ""} onChange={(e) => onAssign(assignmentKey, e.target.value)}>
-                            <option value="">-- Unassigned --</option>
-                            {assignedId && !assignedPerson && <option value={assignedId}>Unknown (Removed)</option>}
-                            {filteredCandidates.map(p => {
-                                const cData = getConflict(p.id, pos, shiftId, assignments);
-                                const isWarn = cData && cData.type === 'warning';
-                                const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
-                                return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400' : (isTeamMatch ? 'font-bold bg-green-50' : '')}>
-                                    {p.name}
-                                    {isTeamMatch ? " (Team)" : ""}
-                                    {!p.qualified ? " (Not Qual)" : ""}
-                                    {cData ? (isWarn ? " ⚠️" : " ⛔") : ""}
-                                </option>;
-                            })}
-                        </select>
-                        <button onClick={() => onFindReplacement(pos, shiftId)} className="ml-1 text-gray-400 hover:text-blue-600" title="Find Replacement"><i className="fa fa-search"></i></button>
+                <td className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-colors duration-300 relative group-hover:bg-opacity-50 ${conflictMsg ? (isWarning ? 'bg-yellow-50/80 dark:bg-yellow-900/40' : 'bg-red-50/80 dark:bg-red-900/40') : (isAuto ? 'bg-green-50/30 dark:bg-green-900/20' : '')}`}>
+                    <div className="flex items-center gap-2">
+                        {isAuto && <i className="fa fa-magic text-green-600 dark:text-green-400 text-[10px]" title="Auto-Assigned"></i>}
+                        <div className="relative w-full">
+                            <select
+                                className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm appearance-none outline-none focus:ring-2 focus:ring-opacity-50 transition-shadow cursor-pointer
+                                    ${conflictMsg
+                                        ? (isWarning ? 'bg-white border border-yellow-300 text-yellow-800 focus:ring-yellow-400 dark:bg-slate-800 dark:border-yellow-600 dark:text-yellow-300' : 'bg-white border border-red-300 text-red-700 focus:ring-red-400 dark:bg-slate-800 dark:border-red-600 dark:text-red-300')
+                                        : 'bg-white/50 border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm focus:bg-white focus:border-blue-300 focus:ring-blue-400 text-gray-700 dark:bg-slate-700/50 dark:text-gray-200 dark:hover:bg-slate-600 dark:focus:bg-slate-600 dark:border-transparent'}
+                                    ${!assignedId ? 'text-gray-400 dark:text-gray-500 font-normal' : 'font-medium'}
+                                `}
+                                value={assignedId || ""}
+                                onChange={(e) => onAssign(assignmentKey, e.target.value)}
+                            >
+                                <option value="">Select...</option>
+                                {assignedId && !assignedPerson && <option value={assignedId}>Unknown (Removed)</option>}
+                                {filteredCandidates.map(p => {
+                                    const cData = getConflict(p.id, pos, shiftId, assignments);
+                                    const isWarn = cData && cData.type === 'warning';
+                                    const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
+                                    return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400 dark:text-gray-500' : (isTeamMatch ? 'font-bold bg-green-50 dark:bg-green-900 dark:text-green-100' : 'dark:bg-slate-800 dark:text-gray-200')}>
+                                        {p.name}
+                                        {isTeamMatch ? " (Team)" : ""}
+                                        {!p.qualified ? " (Not Qual)" : ""}
+                                        {cData ? (isWarn ? " ⚠️" : " ⛔") : ""}
+                                    </option>;
+                                })}
+                            </select>
+                            {/* Custom Arrow */}
+                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+                                <i className="fa fa-chevron-down"></i>
+                            </div>
+                        </div>
+                        <button onClick={() => onFindReplacement(pos, shiftId)} className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Find Replacement"><i className="fa fa-search text-xs"></i></button>
                     </div>
-                    {conflictMsg && <div className={`text-xs mt-1 font-bold ${isWarning ? 'text-yellow-700' : 'text-red-600'}`}><i className={`fa ${isWarning ? 'fa-exclamation-triangle' : 'fa-ban'}`}></i> {conflictMsg}</div>}
+                    {conflictMsg && <div className={`text-[10px] mt-1.5 font-bold flex items-center gap-1 ${isWarning ? 'text-yellow-600' : 'text-red-500'}`}><i className={`fa ${isWarning ? 'fa-exclamation-triangle' : 'fa-ban'}`}></i> {conflictMsg}</div>}
                 </td>
             );
         }
 
-        function FindReplacementModal({ slot, personnel, assignments, areas, positions, shifts, onAssign, onClose }) {
+        function FindReplacementModal({ slot, personnel, assignments, areas, positions, shifts, tags, onAssign, onClose }) {
             const [candidates, setCandidates] = useState([]);
 
             useEffect(() => {
@@ -722,6 +883,20 @@
 
                     // 2. Availability
                     if (p.unavailable && p.unavailable.includes(shiftId)) return false;
+
+                    // 3. Tag Restrictions
+                    if (tags && p.tags) {
+                        for (let tid of p.tags) {
+                            const tag = tags.find(t => t.id === tid);
+                            if (tag) {
+                                if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) return false;
+                                if (tag.restrictedShifts) {
+                                    if (tag.restrictedShifts.includes(shiftId)) return false;
+                                    if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) return false;
+                                }
+                            }
+                        }
+                    }
 
                     return true;
                 });
@@ -748,21 +923,24 @@
             if (!slot) return null;
 
             return (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg h-3/4 flex flex-col">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg">Find Replacement: {slot.pos.name} ({slot.shiftId === 'all' ? 'All Day' : shifts.find(s=>s.id===slot.shiftId)?.label})</h3>
-                            <button onClick={onClose} className="text-gray-500 hover:text-gray-800"><i className="fa fa-times"></i></button>
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg h-3/4 flex flex-col border border-gray-100 transform transition-all scale-100 dark:bg-slate-900 dark:border-slate-800">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="font-bold text-xl text-gray-900 tracking-tight dark:text-white">Find Replacement</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{slot.pos.name} • {slot.shiftId === 'all' ? 'All Day' : shifts.find(s=>s.id===slot.shiftId)?.label}</p>
+                            </div>
+                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors dark:bg-slate-800 dark:text-gray-400 dark:hover:text-white"><i className="fa fa-times"></i></button>
                         </div>
-                        <div className="overflow-y-auto flex-1 border rounded p-2 bg-gray-50">
-                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10">No qualified, available candidates found.</div> : (
+                        <div className="overflow-y-auto flex-1 border border-gray-100 rounded-2xl p-2 bg-gray-50/50 shadow-inner dark:bg-slate-800/50 dark:border-slate-800">
+                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10 dark:text-gray-400">No qualified, available candidates found.</div> : (
                                 <table className="w-full text-sm">
                                     <tbody>
                                         {candidates.map(p => (
-                                            <tr key={p.id} className="bg-white border-b hover:bg-blue-50 cursor-pointer" onClick={() => onAssign(p.id)}>
+                                            <tr key={p.id} className="bg-white border-b hover:bg-blue-50 cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-gray-200" onClick={() => onAssign(p.id)}>
                                                 <td className="p-3 font-medium">{p.name}</td>
-                                                <td className="p-3 text-right text-xs text-gray-500">{p.role}</td>
-                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">Assign</button></td>
+                                                <td className="p-3 text-right text-xs text-gray-500 dark:text-gray-400">{p.role}</td>
+                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 shadow-sm shadow-green-200 dark:shadow-none">Assign</button></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -776,13 +954,13 @@
 
         // --- LOG VIEW COMPONENT ---
         function LogView({ log }) {
-            if (!log || log.length === 0) return <div className="bg-white p-6 rounded text-gray-500">No logs available. Run Auto-Fill first.</div>;
+            if (!log || log.length === 0) return <div className="glass-panel p-8 rounded-3xl text-gray-500 text-center italic dark:text-gray-400">No logs available. Run Auto-Fill first.</div>;
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold mb-4 text-gray-800">Auto-Assign Logic Log</h2>
-                    <div className="h-96 overflow-y-auto border p-4 rounded bg-gray-50 text-xs font-mono">
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">Auto-Assign Logic Log</h2>
+                    <div className="h-96 overflow-y-auto border border-gray-100 p-4 rounded-xl bg-gray-50/50 text-xs font-mono shadow-inner dark:bg-slate-900/50 dark:border-slate-800">
                         {log.map((entry, i) => (
-                            <div key={i} className={`log-entry ${entry.type === 'auditorium' ? 'text-blue-700' : 'text-gray-700'}`}>
+                            <div key={i} className={`log-entry ${entry.type === 'auditorium' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
                                 {entry.msg}
                             </div>
                         ))}
@@ -853,37 +1031,37 @@
             };
 
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold mb-4 text-gray-800">Time Statistics (Balance Check)</h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-sm">
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">Time Statistics (Balance Check)</h2>
+                    <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm dark:border-slate-700">
+                        <table className="w-full text-sm">
                             <thead>
-                                <tr className="bg-gray-100 text-left">
-                                    <th className="p-2 border">Brother Name</th>
-                                    <th className="p-2 border">Role</th>
-                                    <th className="p-2 border">Assignments</th>
-                                    <th className="p-2 border">Out-of-Auditorium Time</th>
-                                    <th className="p-2 border">% Missed</th>
-                                    <th className="p-2 border w-1/3">Visual Load</th>
+                                <tr className="bg-gray-50/50 border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
+                                    <th className="p-4">Brother Name</th>
+                                    <th className="p-4">Role</th>
+                                    <th className="p-4">Assignments</th>
+                                    <th className="p-4">Out-of-Auditorium Time</th>
+                                    <th className="p-4">% Missed</th>
+                                    <th className="p-4 w-1/3">Visual Load</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-50 dark:divide-slate-700">
                                 {stats.map(p => (
-                                    <tr key={p.id} className="hover:bg-gray-50">
-                                        <td className="p-2 border font-medium">{p.name}</td>
-                                        <td className={`p-2 border ${getRoleColor(p.role)}`}>{p.role}</td>
-                                        <td className="p-2 border text-xs">
+                                    <tr key={p.id} className="hover:bg-gray-50/50 transition-colors dark:hover:bg-slate-800/50">
+                                        <td className="p-4 font-medium text-gray-700 dark:text-gray-200">{p.name}</td>
+                                        <td className={`p-4 ${getRoleColor(p.role)}`}>{p.role}</td>
+                                        <td className="p-4 text-xs text-gray-500 dark:text-gray-400">
                                             {p.assignmentLabels.length > 0 ? (
-                                                <ul className="list-disc pl-4">
+                                                <ul className="list-disc pl-4 space-y-1">
                                                     {p.assignmentLabels.map((lbl, idx) => <li key={idx}>{lbl}</li>)}
                                                 </ul>
-                                            ) : <span className="text-gray-400">-</span>}
+                                            ) : <span className="text-gray-300 italic dark:text-gray-600">-</span>}
                                         </td>
-                                        <td className={`p-2 border ${p.minutesAway === 0 ? 'text-blue-600 font-bold' : ''}`}>{formatMinutesToHHMM(p.minutesAway)}</td>
-                                        <td className={`p-2 border ${p.percentage > 50 ? 'text-red-600 font-bold' : ''}`}>{p.percentage}%</td>
-                                        <td className="p-2 border">
-                                            <div className="w-full bg-gray-200 rounded-full h-4">
-                                                <div className={`h-4 rounded-full ${getBarColor(p.percentage)}`} style={{ width: `${Math.max(p.percentage, 5)}%` }}></div>
+                                        <td className={`p-4 ${p.minutesAway === 0 ? 'text-blue-600 font-bold dark:text-blue-400' : 'text-gray-600 dark:text-gray-300'}`}>{formatMinutesToHHMM(p.minutesAway)}</td>
+                                        <td className={`p-4 ${p.percentage > 50 ? 'text-red-500 font-bold dark:text-red-400' : 'text-gray-600 dark:text-gray-300'}`}>{p.percentage}%</td>
+                                        <td className="p-4">
+                                            <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner dark:bg-slate-700">
+                                                <div className={`h-full rounded-full ${getBarColor(p.percentage)} transition-all duration-500`} style={{ width: `${Math.max(p.percentage, 5)}%` }}></div>
                                             </div>
                                         </td>
                                     </tr>
@@ -901,18 +1079,18 @@
             const setVal = (key, val) => setRules({ ...rules, [key]: val });
 
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Assignment Rules</h2>
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Assignment Rules</h2>
                     <div className="grid gap-4 max-w-2xl">
 
                         {/* 1. Capabilities */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800">Enforce Capabilities</h3>
-                                <p className="text-xs text-gray-500">Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Enforce Capabilities</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned.</p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <select value={rules.capabilitySeverity || 'error'} onChange={e=>setSeverity('capabilitySeverity', e.target.value)} className="border rounded p-1 text-sm">
+                                <select value={rules.capabilitySeverity || 'error'} onChange={e=>setSeverity('capabilitySeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                     <option value="error">Block (Red)</option>
                                     <option value="warning">Warn (Yellow)</option>
                                     <option value="off">Off</option>
@@ -921,12 +1099,12 @@
                         </div>
 
                         {/* 2. Double Booking */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800">Prevent Double Booking</h3>
-                                <p className="text-xs text-gray-500">Ensure a brother is not in two places at once.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Prevent Double Booking</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Ensure a brother is not in two places at once.</p>
                             </div>
-                            <select value={rules.doubleBookingSeverity || 'error'} onChange={e=>setSeverity('doubleBookingSeverity', e.target.value)} className="border rounded p-1 text-sm">
+                            <select value={rules.doubleBookingSeverity || 'error'} onChange={e=>setSeverity('doubleBookingSeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                 <option value="error">Block (Red)</option>
                                 <option value="warning">Warn (Yellow)</option>
                                 <option value="off">Off</option>
@@ -934,12 +1112,12 @@
                         </div>
 
                         {/* 3. Unavailability */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800">Respect Unavailability</h3>
-                                <p className="text-xs text-gray-500">Do not assign if brother has program part or marked unavailable.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Respect Unavailability</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Do not assign if brother has program part or marked unavailable.</p>
                             </div>
-                            <select value={rules.unavailableSeverity || 'error'} onChange={e=>setSeverity('unavailableSeverity', e.target.value)} className="border rounded p-1 text-sm">
+                            <select value={rules.unavailableSeverity || 'error'} onChange={e=>setSeverity('unavailableSeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                 <option value="error">Block (Red)</option>
                                 <option value="warning">Warn (Yellow)</option>
                                 <option value="off">Off</option>
@@ -947,29 +1125,29 @@
                         </div>
 
                         {/* 4. Max Work Percentage */}
-                        <div className="p-4 bg-gray-50 rounded border">
+                        <div className="p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-bold text-gray-800">Max Work Load (Program Watch %)</h3>
-                                <span className="font-bold text-blue-600">{rules.maxWorkPercent || 50}%</span>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Max Work Load (Program Watch %)</h3>
+                                <span className="font-bold text-blue-600 dark:text-blue-400">{rules.maxWorkPercent || 50}%</span>
                             </div>
-                            <p className="text-xs text-gray-500 mb-2">Auto-fill will skip brothers who have worked more than this % of the day.</p>
+                            <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Auto-fill will skip brothers who have worked more than this % of the day.</p>
                             <input type="range" min="10" max="100" step="5" value={rules.maxWorkPercent || 50} onChange={e=>setVal('maxWorkPercent', parseInt(e.target.value))} className="w-full" />
                         </div>
 
                         {/* 5. Consecutive Shifts */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800">Avoid Consecutive Shifts (Auto-Fill)</h3>
-                                <p className="text-xs text-gray-500">Try to give a break between shifts.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Avoid Consecutive Shifts (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Try to give a break between shifts.</p>
                             </div>
                             <input type="checkbox" checked={rules.avoidConsecutive !== false} onChange={() => toggleRule('avoidConsecutive')} className="h-5 w-5" />
                         </div>
 
                         {/* 6. Anchor Limits */}
-                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border">
+                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800">Enforce Anchor Limits (Auto-Fill)</h3>
-                                <p className="text-xs text-gray-500">Limit how many "All Day" staff can be pulled for temporary relief (Max 1 per section).</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">Enforce Anchor Limits (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">Limit how many "All Day" staff can be pulled for temporary relief (Max 1 per section).</p>
                             </div>
                             <input type="checkbox" checked={rules.anchorLimits !== false} onChange={() => toggleRule('anchorLimits')} className="h-5 w-5" />
                         </div>
@@ -1023,24 +1201,23 @@
                     if (person.tags && tags) {
                         for (let tid of person.tags) {
                             const tag = tags.find(t => t.id === tid);
-                            if (tag && tag.restrictedShifts) {
-                                // Specific Shift Block
-                                if (tag.restrictedShifts.includes(currentShiftId)) return { msg: `Tag: ${tag.name}`, type: sev, key: null };
+                            if (tag) {
+                                // Area Block
+                                if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) return { msg: `Tag: ${tag.name} (Area)`, type: sev, key: null };
 
-                                // All Day Block (Only applies if pos is auditorium)
-                                if (pos.type === 'auditorium' && tag.restrictedShifts.includes('all_day')) return { msg: `Tag: ${tag.name} (All Day)`, type: sev, key: null };
+                                if (tag.restrictedShifts) {
+                                    // Specific Shift Block
+                                    if (tag.restrictedShifts.includes(currentShiftId)) return { msg: `Tag: ${tag.name}`, type: sev, key: null };
 
-                                // Partial Warning (if assigned to All Day but has SOME shift restrictions, warn but don't block unless 'all_day' is set)
-                                // This logic might need refinement based on user intent.
-                                // User said: "bus rider i wouldn't want in a rotating shift in the morning, however i could have them in an all day shift."
-                                // So if I assign a bus rider (morning restricted) to All Day, it should be ALLOWED (maybe warning).
-                                // Current logic: `if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0)` returns Partial.
-                                // We should probably only warn if we are strict, but for now let's relax it or keep it as warning.
-                                // Let's keep it as warning but ensure it doesn't block unless 'all_day' is present.
-                                if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0 && !tag.restrictedShifts.includes('all_day')) {
-                                     // Check if the partial restriction actually overlaps with "All Day". Technically all shifts overlap all day.
-                                     // So a warning is appropriate.
-                                     return { msg: `Tag: ${tag.name} (Partial)`, type: 'warning', key: null };
+                                    // All Day Block (Only applies if pos is auditorium)
+                                    if (pos.type === 'auditorium' && tag.restrictedShifts.includes('all_day')) return { msg: `Tag: ${tag.name} (All Day)`, type: sev, key: null };
+
+                                    // Partial Warning (if assigned to All Day but has SOME shift restrictions, warn but don't block unless 'all_day' is set)
+                                    if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0 && !tag.restrictedShifts.includes('all_day')) {
+                                         // Check if the partial restriction actually overlaps with "All Day". Technically all shifts overlap all day.
+                                         // So a warning is appropriate.
+                                         return { msg: `Tag: ${tag.name} (Partial)`, type: 'warning', key: null };
+                                    }
                                 }
                             }
                         }
@@ -1277,7 +1454,7 @@
                         newAssignments[key] = null;
 
                         // 2. Try to find a replacement
-                        let candidates = getCandidatesForPosition(pos, personnel, areas);
+                        let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
 
                         candidates = candidates.filter(p =>
                             isPersonFree(p.id, shiftId, newAssignments) &&
@@ -1334,7 +1511,7 @@
                 addLog("--- Starting Auditorium Fill ---", 'auditorium');
                 positions.filter(p => p.type === 'auditorium').forEach(pos => {
                     if (!getAssignId(newAssignments[pos.id])) {
-                        let candidates = getCandidatesForPosition(pos, personnel, areas);
+                        let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
                         candidates = candidates.filter(p => isPersonFree(p.id, 'all', newAssignments));
 
                         if(candidates.length > 0) {
@@ -1358,7 +1535,7 @@
                         const key = `${pos.id}_${shift.id}`;
 
                         if (!getAssignId(newAssignments[key])) {
-                            let candidates = getCandidatesForPosition(pos, personnel, areas);
+                            let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
 
                             candidates = candidates.filter(p =>
                                 isPersonFree(p.id, shift.id, newAssignments) &&
@@ -1421,41 +1598,60 @@
                 alert(`Cleared ${count} auto-assigned slots.`);
             };
 
+            const isScheduleEmpty = useMemo(() => {
+                const filled = Object.values(assignments).filter(val => getAssignId(val)).length;
+                return filled === 0;
+            }, [assignments]);
+
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md mt-6 relative">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-800">Schedule Grid</h2>
-                        <div className="flex gap-2">
-                            <button onClick={clearAutoAssignments} className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 flex items-center gap-2"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
-                            <button onClick={fixConflicts} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
-                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Fill in Unassigned</button>
+                <div className="glass-panel p-8 rounded-3xl shadow-sm mt-8 relative">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Schedule Grid</h2>
+                        <div className="flex flex-wrap gap-3">
+                            <button onClick={clearAutoAssignments} className="bg-white border border-gray-200 text-orange-600 px-5 py-2 rounded-full hover:bg-orange-50 hover:border-orange-200 font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-700 dark:border-slate-600 dark:text-orange-400 dark:hover:bg-slate-600"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
+                            <button onClick={fixConflicts} className="bg-yellow-100 text-yellow-800 px-5 py-2 rounded-full hover:bg-yellow-200 font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
+                            <button onClick={autoFill} className={`text-white px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-magic"></i> Fill in Unassigned</button>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300 text-sm">
+
+                    {isScheduleEmpty && personnel.length > 0 && (
+                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
+                                <div>
+                                    <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
+                                    <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Fill in Unassigned" to automatically generate a schedule.</p>
+                                </div>
+                            </div>
+                            <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
+                        </div>
+                    )}
+
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white dark:bg-slate-800 dark:border-slate-700">
+                        <table className="w-full border-collapse text-sm">
                             <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="border p-2 text-left w-48 sticky left-0 bg-gray-100 z-10">Position</th>
-                                    {shifts.map(s => <th key={s.id} className="border p-2 text-center min-w-[200px]">{s.label}</th>)}
+                                <tr className="bg-gray-50/90 backdrop-blur-sm border-b border-gray-200 dark:bg-slate-900/90 dark:border-slate-700">
+                                    <th className="p-4 text-left w-64 sticky left-0 bg-gray-50 z-20 font-semibold text-gray-500 uppercase tracking-wider text-xs shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] dark:bg-slate-900 dark:text-gray-400">Position</th>
+                                    {shifts.map(s => <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200 dark:border-slate-700 dark:text-gray-400">{s.label}</th>)}
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                                 {areas.map(area => (
                                     <React.Fragment key={area.id}>
-                                        <tr style={area.style}><td colSpan={5} className="p-2 font-bold uppercase tracking-wider pl-4">{area.name}</td></tr>
+                                        <tr style={area.style}><td colSpan={5} className="p-3 font-bold uppercase tracking-wider pl-6 shadow-sm relative z-10">{area.name}</td></tr>
                                         {positions.filter(p => p.areaId === area.id).map(pos => (
-                                            <tr key={pos.id} className={pos.type === 'auditorium' ? 'auditorium-row' : 'bg-white hover:bg-gray-50'}>
-                                                <td className="border p-2 font-medium sticky left-0 bg-inherit z-10 border-r-2 border-gray-300">
-                                                    {pos.name} {pos.type === 'auditorium' && <span className="block text-[10px] text-blue-600 font-bold">ALL DAY</span>}
+                                            <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}>
+                                                <td className="p-3 pl-6 font-medium sticky left-0 bg-inherit z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] text-gray-700 dark:border-slate-700 dark:text-gray-300">
+                                                    {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
                                                 </td>
                                                 {pos.type === 'auditorium' ? (
-                                                    <td colSpan={4} className="border p-0">
-                                                        <div className="p-2 bg-blue-50 h-full flex items-center justify-center">
-                                                            <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} /></div>
+                                                    <td colSpan={4} className="p-0">
+                                                        <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
+                                                            <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} /></div>
                                                         </div>
                                                     </td>
                                                 ) : (
-                                                    shifts.map(shift => <AssignmentCell key={shift.id} shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} />)
+                                                    shifts.map(shift => <AssignmentCell key={shift.id} shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} />)
                                                 )}
                                             </tr>
                                         ))}
@@ -1464,17 +1660,25 @@
                             </tbody>
                         </table>
                     </div>
-                    {replacementSlot && <FindReplacementModal slot={replacementSlot} personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} onAssign={handleReplacementAssign} onClose={()=>setReplacementSlot(null)} />}
+                    {replacementSlot && <FindReplacementModal slot={replacementSlot} personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} tags={tags} onAssign={handleReplacementAssign} onClose={()=>setReplacementSlot(null)} />}
                     {pendingAction && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md border-l-4 border-red-500">
-                                <div className="flex items-center text-red-600 mb-4"><i className="fa fa-exclamation-circle text-2xl mr-3"></i><h3 className="font-bold text-xl">Conflict Detected</h3></div>
-                                <p className="mb-2">Assigning <strong>{pendingAction.personName}</strong> created conflict:</p>
-                                <div className="bg-red-50 p-3 rounded border border-red-200 text-red-800 font-medium mb-6">{pendingAction.conflictMsg}</div>
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-gray-100 transform transition-all scale-100">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0"><i className="fa fa-exclamation-triangle"></i></div>
+                                    <div>
+                                        <h3 className="font-bold text-xl text-gray-900 tracking-tight">Conflict Detected</h3>
+                                        <p className="text-sm text-gray-500">Assigning {pendingAction.personName}</p>
+                                    </div>
+                                </div>
+                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 font-medium mb-8 text-sm flex items-start gap-3">
+                                    <i className="fa fa-info-circle mt-0.5"></i>
+                                    {pendingAction.conflictMsg}
+                                </div>
                                 <div className="flex flex-col gap-3">
-                                    {pendingAction.conflictSourceKey && <button onClick={resolveAndAssign} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"><i className="fa fa-exchange-alt mr-2"></i> Clear Previous & Assign Here</button>}
-                                    <button onClick={confirmConflict} className="w-full bg-red-100 hover:bg-red-200 text-red-800 font-bold py-2 px-4 rounded border border-red-300">Accept Conflict</button>
-                                    <button onClick={() => setPendingAction(null)} className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded">Cancel</button>
+                                    {pendingAction.conflictSourceKey && <button onClick={resolveAndAssign} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"><i className="fa fa-exchange-alt"></i> Resolve & Assign Here</button>}
+                                    <button onClick={confirmConflict} className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Ignore & Assign Anyway</button>
+                                    <button onClick={() => setPendingAction(null)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Cancel</button>
                                 </div>
                             </div>
                         </div>
@@ -1491,14 +1695,14 @@
             const selectedArea = areas.find(a => a.id === selectedAreaId);
 
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="flex justify-between items-center mb-6 print:hidden">
-                        <h2 className="text-2xl font-bold text-gray-800">Department Report</h2>
-                        <div className="flex gap-2">
-                            <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border p-2 rounded">
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <div className="flex justify-between items-center mb-8 print:hidden">
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Department Report</h2>
+                        <div className="flex gap-3">
+                            <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                 {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            <button onClick={() => window.print()} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold"><i className="fa fa-print mr-2"></i> Print</button>
+                            <button onClick={() => window.print()} className="bg-gray-800 text-white px-5 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> Print</button>
                         </div>
                     </div>
 
@@ -1509,46 +1713,46 @@
                     </div>
 
                     {/* TIMELINE GRID */}
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300 text-sm">
+                    <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm print:shadow-none print:border-0 dark:border-slate-700">
+                        <table className="w-full border-collapse text-sm">
                             <thead>
-                                <tr className="bg-gray-100 print:bg-gray-200">
-                                    <th className="border p-2 text-left w-48">Position</th>
-                                    {shifts.map(s => <th key={s.id} className="border p-2 text-center w-32">{s.label}</th>)}
+                                <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500 print:bg-gray-200 print:text-black print:border-black dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
+                                    <th className="p-3 text-left w-48 border-r border-gray-100 print:border-black dark:border-slate-700">Position</th>
+                                    {shifts.map(s => <th key={s.id} className="p-3 text-center w-32 border-l border-gray-100 print:border-black dark:border-slate-700">{s.label}</th>)}
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-gray-100 print:divide-black dark:divide-slate-700">
                                 {areaPositions.map(pos => (
-                                    <tr key={pos.id} className="border-b">
-                                        <td className="border p-2 font-bold bg-gray-50 print:bg-gray-100">{pos.name}</td>
+                                    <tr key={pos.id} className="group">
+                                        <td className="p-3 font-medium bg-gray-50/30 text-gray-700 border-r border-gray-100 print:border-black print:bg-gray-100 dark:bg-slate-800/50 dark:text-gray-200 dark:border-slate-700">{pos.name}</td>
                                         {pos.type === 'auditorium' ? (
-                                            <td colSpan={shifts.length} className="border p-2 text-center bg-blue-50 print:bg-white">
+                                            <td colSpan={shifts.length} className="p-3 text-center bg-blue-50/30 print:bg-white print:border-black dark:bg-blue-900/10">
                                                 {(() => {
                                                     const pid = getAssignId(assignments[pos.id]);
                                                     const person = personnel.find(p => p.id === pid);
-                                                    return person ? <span className="font-bold text-blue-800">{person.name}</span> : <span className="text-gray-400 italic">Empty</span>;
+                                                    return person ? <span className="font-bold text-blue-700 print:text-black dark:text-blue-300">{person.name}</span> : <span className="text-gray-300 italic dark:text-gray-600">Empty</span>;
                                                 })()}
-                                                <div className="text-[10px] uppercase text-gray-500 font-bold mt-1">All Day</div>
+                                                <div className="text-[10px] uppercase text-blue-400 font-bold mt-1 tracking-wider print:text-gray-500 dark:text-blue-500">All Day</div>
                                             </td>
                                         ) : (
                                             shifts.map(shift => {
-                                                if(pos.validShifts && !pos.validShifts.includes(shift.id)) return <td key={shift.id} className="border p-2 bg-gray-100 text-center text-gray-400 text-xs">N/A</td>;
+                                                if(pos.validShifts && !pos.validShifts.includes(shift.id)) return <td key={shift.id} className="p-3 bg-gray-100/50 text-center text-gray-300 text-[10px] border-l border-gray-100 print:border-black print:bg-gray-200 dark:bg-slate-800/50 dark:text-slate-600 dark:border-slate-700">N/A</td>;
 
                                                 // Check Mirror
                                                 if(pos.isMirror) {
-                                                    const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2'; // Hardcoded mirror logic need update for generic but ok for now
+                                                    const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2';
                                                     const mirrorKey = `${sourceKey}_${shift.id}`;
                                                     const pid = getAssignId(assignments[mirrorKey]);
                                                     const person = personnel.find(p => p.id === pid);
-                                                    return <td key={shift.id} className="border p-2 text-center text-xs italic text-gray-500">{person ? `(Link: ${person.name})` : '--'}</td>;
+                                                    return <td key={shift.id} className="p-3 text-center text-xs italic text-gray-400 border-l border-gray-100 print:border-black dark:border-slate-700 dark:text-gray-500">{person ? `(Link: ${person.name})` : '--'}</td>;
                                                 }
 
                                                 const key = `${pos.id}_${shift.id}`;
                                                 const pid = getAssignId(assignments[key]);
                                                 const person = personnel.find(p => p.id === pid);
                                                 return (
-                                                    <td key={shift.id} className="border p-2 text-center">
-                                                        {person ? <span className="font-medium">{person.name}</span> : <span className="text-red-300">-</span>}
+                                                    <td key={shift.id} className="p-3 text-center border-l border-gray-100 print:border-black dark:border-slate-700">
+                                                        {person ? <span className="font-medium text-gray-800 dark:text-gray-200">{person.name}</span> : <span className="text-gray-200 dark:text-slate-700">-</span>}
                                                     </td>
                                                 );
                                             })
@@ -1601,32 +1805,32 @@
             brothersWithAssignments.sort((a,b) => getLastName(a.name).localeCompare(getLastName(b.name)));
 
             return (
-                <div className="bg-white p-8 print:p-0">
-                    <div className="flex justify-between items-center mb-6 print:hidden">
-                        <h2 className="text-2xl font-bold text-gray-800">Assignment Slips</h2>
-                        <button onClick={() => window.print()} className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-bold"><i className="fa fa-print mr-2"></i> Print Now</button>
+                <div className="glass-panel p-8 rounded-3xl shadow-sm print:shadow-none print:border-none print:bg-white">
+                    <div className="flex justify-between items-center mb-8 print:hidden">
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Assignment Slips</h2>
+                        <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> Print Now</button>
                     </div>
                     <div className="grid grid-cols-2 gap-4 print:block print:gap-0">
                         {brothersWithAssignments.map(p => (
-                            <div key={p.id} className="border-2 border-gray-800 rounded p-4 mb-4 break-inside-avoid print:mb-6 print:border-black">
-                                <h3 className="font-bold text-xl border-b-2 border-gray-800 pb-2 mb-2 text-center uppercase">{p.name}</h3>
+                            <div key={p.id} className="border-2 border-gray-800 rounded p-4 mb-4 break-inside-avoid print:mb-6 print:border-black dark:border-slate-500">
+                                <h3 className="font-bold text-xl border-b-2 border-gray-800 pb-2 mb-2 text-center uppercase dark:text-white dark:border-slate-500">{p.name}</h3>
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="bg-gray-200 print:bg-gray-300">
+                                        <tr className="bg-gray-200 print:bg-gray-300 dark:bg-slate-700 dark:text-white">
                                             <th className="p-2 text-left w-1/2">Position</th>
                                             <th className="p-2 text-right w-1/2">Time</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {getBrotherAssignments(p).map((a, idx) => (
-                                            <tr key={idx} className="border-b border-gray-400">
-                                                <td className="p-2 font-bold">{a.posName}</td>
-                                                <td className="p-2 text-right">{a.time}</td>
+                                            <tr key={idx} className="border-b border-gray-400 dark:border-slate-600">
+                                                <td className="p-2 font-bold dark:text-gray-200">{a.posName}</td>
+                                                <td className="p-2 text-right dark:text-gray-200">{a.time}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
-                                <div className="mt-4 text-center text-xs text-gray-500 italic">
+                                <div className="mt-4 text-center text-xs text-gray-500 italic dark:text-gray-400">
                                     Please arrive at your post 5 minutes early.
                                 </div>
                             </div>
@@ -1636,8 +1840,8 @@
             );
         }
 
-        function TagsView({ tags, setTags, personnel, setPersonnel, shifts, onDeleteTag }) {
-            const [newTag, setNewTag] = useState({ name: '', restrictedShifts: [] });
+        function TagsView({ tags, setTags, personnel, setPersonnel, shifts, areas, onDeleteTag }) {
+            const [newTag, setNewTag] = useState({ name: '', restrictedShifts: [], restrictedAreas: [] });
             const [selectedTagId, setSelectedTagId] = useState('');
             const [filterName, setFilterName] = useState('');
 
@@ -1646,7 +1850,7 @@
                 if (!newTag.name) return alert("Tag Name is required");
                 const id = 'tag_' + Date.now();
                 setTags([...tags, { id, ...newTag }]);
-                setNewTag({ name: '', restrictedShifts: [] });
+                setNewTag({ name: '', restrictedShifts: [], restrictedAreas: [] });
             };
 
             const deleteTag = (id) => {
@@ -1656,13 +1860,52 @@
                 }
             };
 
-            const toggleShift = (shiftId) => {
+            // Toggle for NEW tag form
+            const toggleShiftNew = (shiftId) => {
                 const current = newTag.restrictedShifts;
                 if (current.includes(shiftId)) {
                     setNewTag({ ...newTag, restrictedShifts: current.filter(s => s !== shiftId) });
                 } else {
                     setNewTag({ ...newTag, restrictedShifts: [...current, shiftId] });
                 }
+            };
+
+            const toggleAreaNew = (areaId) => {
+                const current = newTag.restrictedAreas || [];
+                if (current.includes(areaId)) {
+                    setNewTag({ ...newTag, restrictedAreas: current.filter(a => a !== areaId) });
+                } else {
+                    setNewTag({ ...newTag, restrictedAreas: [...current, areaId] });
+                }
+            };
+
+            // Toggle for EXISTING tag (Edit Mode)
+            const toggleShiftEdit = (tag, shiftId) => {
+                const current = tag.restrictedShifts || [];
+                let newShifts;
+                if (current.includes(shiftId)) {
+                    newShifts = current.filter(s => s !== shiftId);
+                } else {
+                    newShifts = [...current, shiftId];
+                }
+                const updatedTag = { ...tag, restrictedShifts: newShifts };
+                setTags(tags.map(t => t.id === tag.id ? updatedTag : t));
+            };
+
+            const toggleAreaEdit = (tag, areaId) => {
+                const current = tag.restrictedAreas || [];
+                let newAreas;
+                if (current.includes(areaId)) {
+                    newAreas = current.filter(a => a !== areaId);
+                } else {
+                    newAreas = [...current, areaId];
+                }
+                const updatedTag = { ...tag, restrictedAreas: newAreas };
+                setTags(tags.map(t => t.id === tag.id ? updatedTag : t));
+            };
+
+            const updateTagName = (tag, newName) => {
+                setTags(tags.map(t => t.id === tag.id ? { ...t, name: newName } : t));
             };
 
             // --- BULK ASSIGNMENT ---
@@ -1682,74 +1925,98 @@
             };
 
             const selectedTag = tags.find(t => t.id === selectedTagId);
-            const filteredPersonnel = personnel.filter(p => p.name.toLowerCase().includes(filterName.toLowerCase()));
+
+            // FILTER & SORT
+            const filteredPersonnel = personnel.filter(p =>
+                p.name.toLowerCase().includes(filterName.toLowerCase()) ||
+                (p.role && p.role.toLowerCase().includes(filterName.toLowerCase()))
+            );
+            filteredPersonnel.sort((a,b) => a.name.localeCompare(b.name));
 
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Tags & Constraints</h2>
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Tags & Constraints</h2>
 
                     {/* TOP: CREATE TAG */}
-                    <div className="bg-gray-50 p-4 rounded border mb-6">
-                        <h3 className="font-bold text-lg mb-2">Create New Tag</h3>
-                        <div className="flex gap-4 items-start mb-2">
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Tag Name</label>
+                    <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 mb-8 dark:bg-slate-800/50 dark:border-slate-700">
+                        <h3 className="font-bold text-lg mb-2 dark:text-gray-200">Create New Tag</h3>
+                        <div className="flex flex-col md:flex-row gap-4 items-start mb-2">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Tag Name</label>
                                 <input
                                     type="text"
                                     value={newTag.name}
                                     onChange={e => setNewTag({...newTag, name: e.target.value})}
-                                    className="border p-2 rounded w-full"
+                                    className="border border-gray-200 p-2.5 rounded-xl w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                     placeholder="e.g. Bus Riders"
                                 />
                             </div>
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Restricted Shifts (Cannot Work)</label>
-                                <div className="flex flex-wrap gap-2">
-                                    <label className="flex items-center text-sm bg-blue-50 border border-blue-200 px-2 py-1 rounded cursor-pointer text-blue-800 font-bold">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Restricted Shifts (Cannot Work)</label>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    <label className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes('all_day') ? 'bg-blue-100 border-blue-200 text-blue-700 font-bold dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
                                         <input
                                             type="checkbox"
                                             checked={newTag.restrictedShifts.includes('all_day')}
-                                            onChange={() => toggleShift('all_day')}
+                                            onChange={() => toggleShiftNew('all_day')}
                                             className="mr-2"
                                         />
                                         All Day (Auditorium)
                                     </label>
                                     {shifts.map(s => (
-                                        <label key={s.id} className="flex items-center text-sm bg-white border px-2 py-1 rounded cursor-pointer">
+                                        <label key={s.id} className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes(s.id) ? 'bg-red-100 border-red-200 text-red-700 font-bold dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={newTag.restrictedShifts.includes(s.id)}
-                                                onChange={() => toggleShift(s.id)}
+                                                onChange={() => toggleShiftNew(s.id)}
                                                 className="mr-2"
                                             />
                                             {s.label}
                                         </label>
                                     ))}
                                 </div>
+
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Restricted Areas (Cannot Work)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {areas.map(a => (
+                                        <label key={a.id} className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedAreas && newTag.restrictedAreas.includes(a.id) ? 'bg-purple-100 border-purple-200 text-purple-700 font-bold dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={newTag.restrictedAreas && newTag.restrictedAreas.includes(a.id)}
+                                                onChange={() => toggleAreaNew(a.id)}
+                                                className="mr-2"
+                                            />
+                                            {a.name}
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
-                            <button onClick={addTag} className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 h-full mt-5">Create</button>
+                            <button onClick={addTag} className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold hover:bg-blue-700 md:mt-5 w-full md:w-auto shadow-sm active:scale-95 transition-all dark:bg-blue-600 dark:hover:bg-blue-500">Create</button>
                         </div>
                     </div>
 
                     {/* MAIN SPLIT: LIST & ASSIGN */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* LEFT: TAG LIST */}
-                        <div className="border rounded p-4">
-                            <h3 className="font-bold text-lg mb-4 border-b pb-2">Existing Tags</h3>
+                        <div className="border rounded-2xl p-4 bg-white/50 dark:bg-slate-800/30 dark:border-slate-700">
+                            <h3 className="font-bold text-lg mb-4 border-b border-gray-100 pb-2 dark:text-gray-200 dark:border-slate-700">Existing Tags</h3>
                             {tags.length === 0 && <p className="text-gray-400 italic">No tags created.</p>}
                             <ul className="space-y-2">
                                 {tags.map(tag => (
                                     <li key={tag.id}
                                         onClick={() => setSelectedTagId(tag.id)}
-                                        className={`p-3 rounded border cursor-pointer flex justify-between items-center transition-colors ${selectedTagId === tag.id ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}`}
+                                        className={`p-3 rounded-xl border cursor-pointer flex justify-between items-center transition-all ${selectedTagId === tag.id ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-200 dark:bg-slate-700 dark:border-blue-500 dark:ring-blue-900' : 'bg-white border-gray-200 hover:bg-gray-50 dark:bg-slate-800 dark:border-slate-600 dark:hover:bg-slate-700'}`}
                                     >
                                         <div>
-                                            <div className="font-bold">{tag.name}</div>
-                                            <div className="text-xs text-red-600">
-                                                {tag.restrictedShifts.length > 0 ? `Restricts: ${tag.restrictedShifts.length} shifts` : 'No restrictions'}
+                                            <div className="font-bold text-gray-800 dark:text-gray-200">{tag.name}</div>
+                                            <div className="text-xs text-red-600 dark:text-red-400">
+                                            {tag.restrictedShifts.length > 0 && <span>{tag.restrictedShifts.length} shifts</span>}
+                                            {tag.restrictedShifts.length > 0 && tag.restrictedAreas && tag.restrictedAreas.length > 0 && <span>, </span>}
+                                            {tag.restrictedAreas && tag.restrictedAreas.length > 0 && <span>{tag.restrictedAreas.length} areas</span>}
+                                            {(!tag.restrictedShifts.length && (!tag.restrictedAreas || !tag.restrictedAreas.length)) && <span>No restrictions</span>}
                                             </div>
                                         </div>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }} className="text-gray-400 hover:text-red-500 px-2">
+                                        <button onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }} className="text-gray-400 hover:text-red-500 px-2 transition-colors dark:text-gray-500 dark:hover:text-red-400">
                                             <i className="fa fa-trash"></i>
                                         </button>
                                     </li>
@@ -1758,51 +2025,115 @@
                         </div>
 
                         {/* RIGHT: ASSIGNMENT */}
-                        <div className="col-span-2 border rounded p-4 flex flex-col h-[600px]">
-                            <h3 className="font-bold text-lg mb-4 border-b pb-2">
-                                {selectedTag ? `Manage Members: ${selectedTag.name}` : 'Select a Tag to Manage Members'}
-                            </h3>
-
+                        <div className="col-span-2 border rounded-2xl p-6 flex flex-col h-[650px] bg-white/50 dark:bg-slate-800/30 dark:border-slate-700">
                             {selectedTag ? (
                                 <>
-                                    <div className="mb-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Search personnel..."
-                                            value={filterName}
-                                            onChange={e => setFilterName(e.target.value)}
-                                            className="w-full border p-2 rounded"
-                                        />
+                                    <div className="mb-6 pb-6 border-b border-gray-200 dark:border-slate-700">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="font-bold text-lg dark:text-gray-200">
+                                                Edit Tag: <span className="text-blue-600 dark:text-blue-400">{selectedTag.name}</span>
+                                            </h3>
+                                        </div>
+
+                                        {/* EDIT CONTROLS */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 dark:text-gray-500">Tag Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={selectedTag.name}
+                                                    onChange={(e) => updateTagName(selectedTag, e.target.value)}
+                                                    className="border border-gray-200 p-2 rounded-lg w-full max-w-sm text-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-gray-400 mb-2 dark:text-gray-500">Restricted Shifts</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <label className={`flex items-center text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border ${selectedTag.restrictedShifts.includes('all_day') ? 'bg-blue-100 border-blue-200 text-blue-700 font-bold dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300'}`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedTag.restrictedShifts.includes('all_day')}
+                                                            onChange={() => toggleShiftEdit(selectedTag, 'all_day')}
+                                                            className="mr-1.5"
+                                                        />
+                                                        All Day
+                                                    </label>
+                                                    {shifts.map(s => (
+                                                        <label key={s.id} className={`flex items-center text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border ${selectedTag.restrictedShifts.includes(s.id) ? 'bg-red-100 border-red-200 text-red-700 font-bold dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300'}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedTag.restrictedShifts.includes(s.id)}
+                                                                onChange={() => toggleShiftEdit(selectedTag, s.id)}
+                                                                className="mr-1.5"
+                                                            />
+                                                            {s.label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-gray-400 mb-2 dark:text-gray-500">Restricted Areas</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {areas.map(a => (
+                                                        <label key={a.id} className={`flex items-center text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border ${selectedTag.restrictedAreas && selectedTag.restrictedAreas.includes(a.id) ? 'bg-purple-100 border-purple-200 text-purple-700 font-bold dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300'}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedTag.restrictedAreas && selectedTag.restrictedAreas.includes(a.id)}
+                                                                onChange={() => toggleAreaEdit(selectedTag, a.id)}
+                                                                className="mr-1.5"
+                                                            />
+                                                            {a.name}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto border rounded bg-gray-50">
+
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-wide">Manage Members</h4>
+                                        <div className="relative w-64">
+                                            <i className="fa fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                                            <input
+                                                type="text"
+                                                placeholder="Search Name or Role..."
+                                                value={filterName}
+                                                onChange={e => setFilterName(e.target.value)}
+                                                className="w-full border border-gray-200 p-2 pl-9 rounded-lg bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50/50 shadow-inner dark:bg-slate-800/50 dark:border-slate-700">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-100 sticky top-0">
+                                            <thead className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300">
                                                 <tr>
-                                                    <th className="p-2 text-left w-10">
-                                                        {/* Header Checkbox logic usually complex, skipping for simplicity */}
-                                                    </th>
-                                                    <th className="p-2 text-left">Name</th>
-                                                    <th className="p-2 text-left">Current Tags</th>
+                                                    <th className="p-3 text-left w-10"></th>
+                                                    <th className="p-3 text-left">Name</th>
+                                                    <th className="p-3 text-left">Role</th>
+                                                    <th className="p-3 text-left">Current Tags</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                                                 {filteredPersonnel.map(p => {
                                                     const isMember = p.tags && p.tags.includes(selectedTag.id);
                                                     return (
-                                                        <tr key={p.id} className={`hover:bg-white transition-colors ${isMember ? 'bg-green-50' : ''}`} onClick={() => togglePersonTag(p.id, selectedTag.id)}>
-                                                            <td className="p-2 text-center">
+                                                        <tr key={p.id} className={`hover:bg-white transition-colors cursor-pointer group dark:hover:bg-slate-700 ${isMember ? 'bg-green-50 dark:bg-green-900/10' : ''}`} onClick={() => togglePersonTag(p.id, selectedTag.id)}>
+                                                            <td className="p-3 text-center">
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={isMember || false}
                                                                     onChange={() => {}} // Handled by row click
-                                                                    className="w-4 h-4 cursor-pointer"
+                                                                    className="w-4 h-4 cursor-pointer text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                                                                 />
                                                             </td>
-                                                            <td className="p-2 font-medium cursor-pointer">{p.name}</td>
-                                                            <td className="p-2 text-xs text-gray-500">
+                                                            <td className="p-3 font-medium text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">{p.name}</td>
+                                                            <td className="p-3 text-xs text-gray-500 dark:text-gray-400">{p.role}</td>
+                                                            <td className="p-3 text-xs text-gray-500">
                                                                 {p.tags && p.tags.map(tid => {
                                                                     const t = tags.find(tag => tag.id === tid);
-                                                                    return t ? <span key={tid} className="bg-gray-200 px-1 rounded mr-1">{t.name}</span> : null;
+                                                                    return t ? <span key={tid} className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mr-1 dark:bg-slate-600 dark:text-gray-300">{t.name}</span> : null;
                                                                 })}
                                                             </td>
                                                         </tr>
@@ -1811,13 +2142,16 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div className="mt-2 text-xs text-gray-500 text-right">
+                                    <div className="mt-2 text-xs text-gray-400 text-right dark:text-gray-500">
                                         Click rows to toggle membership.
                                     </div>
                                 </>
                             ) : (
-                                <div className="flex-1 flex items-center justify-center text-gray-400">
-                                    &larr; Select a tag from the left
+                                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-2xl mb-4 dark:bg-slate-700">
+                                        <i className="fa fa-tags"></i>
+                                    </div>
+                                    <p>Select a tag from the left to edit settings and manage members.</p>
                                 </div>
                             )}
                         </div>
@@ -1879,14 +2213,14 @@
             };
 
             return (
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Configuration</h2>
+                <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Configuration</h2>
 
-                    <div className="flex border-b mb-4">
-                        <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Areas</button>
-                        <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Shifts</button>
-                        <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Positions</button>
-                        <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600' : 'text-gray-500'}`}>Rules</button>
+                    <div className="flex border-b mb-6 overflow-x-auto dark:border-slate-700">
+                        <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Areas</button>
+                        <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Shifts</button>
+                        <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Positions</button>
+                        <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Rules</button>
                     </div>
 
                     {/* RULES TAB */}
@@ -1895,26 +2229,26 @@
                     {/* AREAS TAB */}
                     {activeTab === 'areas' && (
                         <div>
-                            <div className="bg-gray-50 p-4 rounded border mb-4">
-                                <h3 className="font-bold mb-2">Add New Area</h3>
+                            <div className="bg-gray-50 p-4 rounded border mb-4 dark:bg-slate-800 dark:border-slate-700">
+                                <h3 className="font-bold mb-2 dark:text-white">Add New Area</h3>
                                 <div className="flex gap-2 mb-2">
-                                    <input placeholder="ID (e.g. parking)" value={areaForm.id} onChange={e => setAreaForm({...areaForm, id: e.target.value})} className="border p-2 rounded w-32" />
-                                    <input placeholder="Name (e.g. Parking Lot)" value={areaForm.name} onChange={e => setAreaForm({...areaForm, name: e.target.value})} className="border p-2 rounded w-64" />
-                                    <input placeholder="Capability (opt)" value={areaForm.capability} onChange={e => setAreaForm({...areaForm, capability: e.target.value})} className="border p-2 rounded w-32" />
+                                    <input placeholder="ID (e.g. parking)" value={areaForm.id} onChange={e => setAreaForm({...areaForm, id: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <input placeholder="Name (e.g. Parking Lot)" value={areaForm.name} onChange={e => setAreaForm({...areaForm, name: e.target.value})} className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <input placeholder="Capability (opt)" value={areaForm.capability} onChange={e => setAreaForm({...areaForm, capability: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <label className="text-sm">Bg Color:</label>
+                                    <label className="text-sm dark:text-gray-300">Bg Color:</label>
                                     <input type="color" value={areaForm.color} onChange={e => setAreaForm({...areaForm, color: e.target.value})} />
-                                    <label className="text-sm ml-2">Text Color:</label>
+                                    <label className="text-sm ml-2 dark:text-gray-300">Text Color:</label>
                                     <input type="color" value={areaForm.textColor} onChange={e => setAreaForm({...areaForm, textColor: e.target.value})} />
                                     <button onClick={addArea} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">Add Area</button>
                                 </div>
                             </div>
                             <table className="w-full text-sm">
-                                <thead><tr className="bg-gray-100"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Capability</th><th className="p-2 text-left">Preview</th><th className="p-2">Action</th></tr></thead>
+                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Capability</th><th className="p-2 text-left">Preview</th><th className="p-2">Action</th></tr></thead>
                                 <tbody>
                                     {areas.map(a => (
-                                        <tr key={a.id} className="border-b">
+                                        <tr key={a.id} className="border-b dark:border-slate-700 dark:text-gray-200">
                                             <td className="p-2">{a.id}</td>
                                             <td className="p-2">{a.name}</td>
                                             <td className="p-2">{a.capability}</td>
@@ -1930,26 +2264,26 @@
                     {/* SHIFTS TAB */}
                     {activeTab === 'shifts' && (
                         <div>
-                            <div className="bg-gray-50 p-4 rounded border mb-4 flex gap-2 items-end">
+                            <div className="bg-gray-50 p-4 rounded border mb-4 flex gap-2 items-end dark:bg-slate-800 dark:border-slate-700">
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600">ID</label>
-                                    <input value={shiftForm.id} onChange={e => setShiftForm({...shiftForm, id: e.target.value})} className="border p-2 rounded w-32" placeholder="e.g. mid_morning" />
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400">ID</label>
+                                    <input value={shiftForm.id} onChange={e => setShiftForm({...shiftForm, id: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="e.g. mid_morning" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600">Label</label>
-                                    <input value={shiftForm.label} onChange={e => setShiftForm({...shiftForm, label: e.target.value})} className="border p-2 rounded w-64" placeholder="e.g. Mid-Morning (10:00-11:00)" />
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400">Label</label>
+                                    <input value={shiftForm.label} onChange={e => setShiftForm({...shiftForm, label: e.target.value})} className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white" placeholder="e.g. Mid-Morning (10:00-11:00)" />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600">Minutes</label>
-                                    <input type="number" value={shiftForm.minutes} onChange={e => setShiftForm({...shiftForm, minutes: e.target.value})} className="border p-2 rounded w-24" />
+                                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-400">Minutes</label>
+                                    <input type="number" value={shiftForm.minutes} onChange={e => setShiftForm({...shiftForm, minutes: e.target.value})} className="border p-2 rounded w-24 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                 </div>
                                 <button onClick={addShift} className="bg-blue-600 text-white px-4 py-2 rounded h-10">Add Shift</button>
                             </div>
                             <table className="w-full text-sm">
-                                <thead><tr className="bg-gray-100"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Label</th><th className="p-2 text-left">Minutes</th><th className="p-2">Action</th></tr></thead>
+                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Label</th><th className="p-2 text-left">Minutes</th><th className="p-2">Action</th></tr></thead>
                                 <tbody>
                                     {shifts.map(s => (
-                                        <tr key={s.id} className="border-b">
+                                        <tr key={s.id} className="border-b dark:border-slate-700 dark:text-gray-200">
                                             <td className="p-2">{s.id}</td>
                                             <td className="p-2">{s.label}</td>
                                             <td className="p-2">{s.minutes}</td>
@@ -1964,41 +2298,41 @@
                     {/* POSITIONS TAB */}
                     {activeTab === 'positions' && (
                         <div>
-                            <div className="bg-gray-50 p-4 rounded border mb-4">
+                            <div className="bg-gray-50 p-4 rounded border mb-4 dark:bg-slate-800 dark:border-slate-700">
                                 <div className="flex gap-2 mb-2">
-                                    <input placeholder="ID (e.g. park_1)" value={posForm.id} onChange={e => setPosForm({...posForm, id: e.target.value})} className="border p-2 rounded w-32" />
-                                    <input placeholder="Name (e.g. Lot Entrance)" value={posForm.name} onChange={e => setPosForm({...posForm, name: e.target.value})} className="border p-2 rounded w-64" />
-                                    <select value={posForm.areaId} onChange={e => setPosForm({...posForm, areaId: e.target.value})} className="border p-2 rounded w-48">
+                                    <input placeholder="ID (e.g. park_1)" value={posForm.id} onChange={e => setPosForm({...posForm, id: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <input placeholder="Name (e.g. Lot Entrance)" value={posForm.name} onChange={e => setPosForm({...posForm, name: e.target.value})} className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <select value={posForm.areaId} onChange={e => setPosForm({...posForm, areaId: e.target.value})} className="border p-2 rounded w-48 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                         <option value="">-- Select Area --</option>
                                         {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex gap-4 items-center">
-                                     <select value={posForm.type} onChange={e => setPosForm({...posForm, type: e.target.value})} className="border p-2 rounded w-32">
+                                     <select value={posForm.type} onChange={e => setPosForm({...posForm, type: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                         <option value="rotational">Rotational</option>
                                         <option value="auditorium">Auditorium (All Day)</option>
                                     </select>
-                                    <select value={posForm.teamKeyManId} onChange={e => setPosForm({...posForm, teamKeyManId: e.target.value})} className="border p-2 rounded w-48">
+                                    <select value={posForm.teamKeyManId} onChange={e => setPosForm({...posForm, teamKeyManId: e.target.value})} className="border p-2 rounded w-48 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                         <option value="">-- Any Team --</option>
                                         {keyMen.map(km => <option key={km.id} value={km.id}>Team: {km.name}</option>)}
                                     </select>
-                                    <label className="flex items-center cursor-pointer">
+                                    <label className="flex items-center cursor-pointer dark:text-gray-300">
                                         <input type="checkbox" checked={posForm.keyMan} onChange={e => setPosForm({...posForm, keyMan: e.target.checked})} className="mr-2" />
                                         <span className="text-sm font-bold">Key Man Only</span>
                                     </label>
                                     <button onClick={addPosition} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">Add Position</button>
                                 </div>
                             </div>
-                             <div className="h-96 overflow-y-auto border rounded">
+                             <div className="h-96 overflow-y-auto border rounded dark:border-slate-700">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="bg-gray-100 sticky top-0"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
+                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
                                     <tbody>
                                         {positions.map(p => (
-                                            <tr key={p.id} className="border-b hover:bg-gray-50">
+                                            <tr key={p.id} className="border-b hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-gray-200">
                                                 <td className="p-2">{p.id}</td>
-                                                <td className="p-2">{p.name} {p.keyMan && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200">KM</span>}</td>
+                                                <td className="p-2">{p.name} {p.keyMan && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:border-yellow-700">KM</span>}</td>
                                                 <td className="p-2">{areas.find(a => a.id === p.areaId)?.name || p.areaId}</td>
-                                                <td className="p-2 text-xs text-gray-500">{p.teamKeyManId ? (keyMen.find(k=>k.id===p.teamKeyManId)?.name || 'Unknown') : '-'}</td>
+                                                <td className="p-2 text-xs text-gray-500 dark:text-gray-400">{p.teamKeyManId ? (keyMen.find(k=>k.id===p.teamKeyManId)?.name || 'Unknown') : '-'}</td>
                                                 <td className="p-2">{p.type}</td>
                                                 <td className="p-2 text-center"><button onClick={() => deletePosition(p.id)} className="text-red-500"><i className="fa fa-trash"></i></button></td>
                                             </tr>
@@ -2033,6 +2367,91 @@
             return { state, setState, undo, redo, canUndo: index > 0, canRedo: index < history.length - 1 };
         }
 
+        function QuickStartModal({ onClose }) {
+            const [step, setStep] = useState(0);
+            const steps = [
+                {
+                    title: "Welcome to Scheduler",
+                    icon: "fa-hand-sparkles",
+                    color: "text-blue-600",
+                    content: (
+                        <div className="text-center">
+                            <p className="text-gray-600 mb-4">A secure, simple tool for managing Attendant schedules for Circuit Assemblies.</p>
+                            <div className="flex justify-center gap-4 text-sm text-gray-500">
+                                <span className="flex items-center gap-1"><i className="fa fa-lock"></i> 100% Private</span>
+                                <span className="flex items-center gap-1"><i className="fa fa-wifi"></i> Offline Capable</span>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: "1. Configure Layout",
+                    icon: "fa-cog",
+                    color: "text-gray-600",
+                    content: "Go to the <b>Config</b> tab to customize your Departments (Areas), Time Slots (Shifts), and specific Posts (Positions). We've started you off with a standard template."
+                },
+                {
+                    title: "2. Build Your Roster",
+                    icon: "fa-users",
+                    color: "text-purple-600",
+                    content: "Go to the <b>Roster</b> tab. You can manually add brothers or use the <b>Import CSV</b> button for bulk entry. Drag and drop names to assign them to Key Man teams."
+                },
+                {
+                    title: "3. Create Schedule",
+                    icon: "fa-calendar-alt",
+                    color: "text-green-600",
+                    content: "Head to the <b>Schedule</b> tab. Use <b>Fill in Unassigned</b> to automatically fill empty slots based on qualifications and fairness. You can also click any cell to manually assign."
+                },
+                {
+                    title: "4. Review & Print",
+                    icon: "fa-print",
+                    color: "text-red-600",
+                    content: "Check the <b>Time Stats</b> tab to ensure workload balance. Then use <b>Slips</b> to print individual assignment slips for every volunteer."
+                }
+            ];
+
+            const handleNext = () => {
+                if (step < steps.length - 1) setStep(step + 1);
+                else handleFinish();
+            };
+
+            const handleFinish = () => {
+                localStorage.setItem('has_seen_quickstart', 'true');
+                onClose();
+            };
+
+            const current = steps[step];
+
+            return (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all dark:bg-slate-900 dark:border dark:border-slate-800">
+                        <div className="bg-gradient-to-br from-gray-50 to-white p-8 text-center border-b border-gray-100 dark:from-slate-800 dark:to-slate-900 dark:border-slate-800">
+                            <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-white shadow-lg flex items-center justify-center text-3xl ${current.color} dark:bg-slate-700 dark:text-blue-400`}>
+                                <i className={`fa ${current.icon}`}></i>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{current.title}</h2>
+                        </div>
+                        <div className="p-8">
+                            <div className="text-gray-600 text-lg leading-relaxed mb-8 dark:text-slate-300">
+                                {typeof current.content === 'string' ? <div dangerouslySetInnerHTML={{__html: current.content}} /> : current.content}
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1">
+                                    {steps.map((_, i) => (
+                                        <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-blue-600' : 'w-2 bg-gray-200 dark:bg-slate-700'}`}></div>
+                                    ))}
+                                </div>
+                                <button onClick={handleNext} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 dark:shadow-none">
+                                    {step === steps.length - 1 ? "Get Started" : "Next"} <i className="fa fa-arrow-right ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function App() {
             const [view, setView] = useState('schedule');
 
@@ -2059,7 +2478,23 @@
 
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [showLoadModal, setShowLoadModal] = useState(false);
+            const [showQuickStart, setShowQuickStart] = useState(false);
+            const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dark_mode') === 'true');
             const [password, setPassword] = useState('');
+
+            useEffect(() => {
+                const hasSeen = localStorage.getItem('has_seen_quickstart');
+                if (!hasSeen) setShowQuickStart(true);
+            }, []);
+
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('dark_mode', darkMode);
+            }, [darkMode]);
 
             // --- WRAPPERS FOR STATE UPDATES ---
             const updateState = (updates) => setState({ ...state, ...updates });
@@ -2154,36 +2589,60 @@
             };
 
             return (
-                <div className="min-h-screen pb-10">
-                    <div className="bg-blue-900 text-white p-4 shadow-lg">
-                        <div className="container mx-auto flex justify-between items-center">
-                            <h1 className="text-xl font-bold"><i className="fa fa-clipboard-user mr-2"></i> Circuit Attendant Scheduler</h1>
-                            <div className="flex items-center gap-4">
-                                <button onClick={undo} disabled={!canUndo} className={`px-3 py-1 rounded ${!canUndo ? 'bg-blue-800 text-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`} title="Undo"><i className="fa fa-undo"></i></button>
-                                <button onClick={redo} disabled={!canRedo} className={`px-3 py-1 rounded ${!canRedo ? 'bg-blue-800 text-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'}`} title="Redo"><i className="fa fa-redo"></i></button>
-                                <div className="w-px h-6 bg-blue-700 mx-2"></div>
-                                <button onClick={() => setView('schedule')} className={`px-3 py-1 rounded ${view==='schedule'?'bg-blue-700':'hover:bg-blue-800'}`}>Schedule</button>
-                                <button onClick={() => setView('roster')} className={`px-3 py-1 rounded ${view==='roster'?'bg-blue-700':'hover:bg-blue-800'}`}>Roster</button>
-                                <button onClick={() => setView('stats')} className={`px-3 py-1 rounded ${view==='stats'?'bg-blue-700':'hover:bg-blue-800'}`}>Time Stats</button>
-                                <button onClick={() => setView('dept')} className={`px-3 py-1 rounded ${view==='dept'?'bg-blue-700':'hover:bg-blue-800'}`}>Depts</button>
-                                <button onClick={() => setView('log')} className={`px-3 py-1 rounded ${view==='log'?'bg-blue-700':'hover:bg-blue-800'}`}>Log</button>
-                                <button onClick={() => setView('tags')} className={`px-3 py-1 rounded ${view==='tags'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-tags mr-1"></i> Tags</button>
-                                <button onClick={() => setView('print')} className={`px-3 py-1 rounded ${view==='print'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-print mr-1"></i> Slips</button>
-                                <button onClick={() => setView('config')} className={`px-3 py-1 rounded ${view==='config'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-cog mr-1"></i> Config</button>
+                <div className="min-h-screen pb-10 text-gray-800">
+                    <header className="glass-header sticky top-0 z-50 px-6 py-3 shadow-sm mb-8">
+                        <div className="container mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+                            <div className="flex items-center gap-6">
+                                <h1 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-3">
+                                    <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-blue-500 to-blue-700">
+                                        <i className="fa fa-clipboard-user"></i>
+                                    </div>
+                                    <span className="tracking-tight">Circuit Attendant Scheduler</span>
+                                </h1>
+                                <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
+                                <div className="flex gap-1">
+                                    <button onClick={undo} disabled={!canUndo} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!canUndo ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'}`} title="Undo"><i className="fa fa-undo"></i></button>
+                                    <button onClick={redo} disabled={!canRedo} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!canRedo ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'}`} title="Redo"><i className="fa fa-redo"></i></button>
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button onClick={resetAll} className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm font-bold text-white mr-2">Reset All</button>
-                                <button onClick={() => setShowSaveModal(true)} className="bg-green-500 hover:bg-green-600 px-3 py-1 rounded text-sm font-bold">Save</button>
-                                <button onClick={() => setShowLoadModal(true)} className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-sm font-bold text-black">Load</button>
+
+                            <nav className="flex items-center p-1 bg-gray-100/80 rounded-full overflow-hidden shadow-inner border border-gray-200">
+                                {['schedule', 'roster', 'stats', 'dept', 'log', 'tags', 'print', 'config'].map(v => (
+                                    <button
+                                        key={v}
+                                        onClick={() => setView(v)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${view===v ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
+                                    >
+                                        {v === 'schedule' ? 'Schedule' :
+                                         v === 'roster' ? 'Roster' :
+                                         v === 'stats' ? 'Time Stats' :
+                                         v === 'dept' ? 'Depts' :
+                                         v === 'log' ? 'Log' :
+                                         v === 'tags' ? 'Tags' :
+                                         v === 'print' ? 'Slips' : 'Config'}
+                                    </button>
+                                ))}
+                            </nav>
+
+                            <div className="flex gap-3 items-center">
+                                <button onClick={() => setDarkMode(!darkMode)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${darkMode ? 'text-yellow-400 hover:bg-white/10' : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'}`} title="Toggle Dark Mode">
+                                    <i className={`fa ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+                                </button>
+                                <button onClick={() => setShowQuickStart(true)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-white/10 dark:text-gray-500 dark:hover:text-blue-400 transition-all" title="Help / Quick Start"><i className="fa fa-circle-question text-lg"></i></button>
+                                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
+                                <button onClick={resetAll} className="text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">Reset</button>
+                                <button onClick={() => setShowSaveModal(true)} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"><i className="fa fa-download text-blue-500"></i> Save</button>
+                                <button onClick={() => setShowLoadModal(true)} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm shadow-blue-200 transition-all flex items-center gap-2"><i className="fa fa-upload"></i> Load</button>
                             </div>
                         </div>
-                    </div>
+                    </header>
+                    {showQuickStart && <QuickStartModal onClose={() => setShowQuickStart(false)} />}
                     <div className="container mx-auto mt-6 px-4">
                         {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} areas={areas} shifts={shifts} tags={tags} /> :
                          view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
                          view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
                          view === 'log' ? <LogView log={log} /> :
-                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} onDeleteTag={handleDeleteTag} /> :
+                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} areas={areas} onDeleteTag={handleDeleteTag} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
                          view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} /> :
                          <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
