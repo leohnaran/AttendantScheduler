@@ -1025,9 +1025,17 @@
                      if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
 
                      if (p.type === 'rotational' && !p.isMirror) {
-                        // Check if busy at THIS shift
-                        if (p.validShifts && !p.validShifts.includes(shiftId)) continue;
-                        if (getAssignId(currentAssignments[`${p.id}_${shiftId}`]) === pid) return false;
+                        if (shiftId === 'all') {
+                            // If checking for 'all day' (Auditorium), must be free ALL shifts
+                            for (let s of shifts) {
+                                if (p.validShifts && !p.validShifts.includes(s.id)) continue;
+                                if (getAssignId(currentAssignments[`${p.id}_${s.id}`]) === pid) return false;
+                            }
+                        } else {
+                            // Check if busy at THIS specific shift
+                            if (p.validShifts && !p.validShifts.includes(shiftId)) continue;
+                            if (getAssignId(currentAssignments[`${p.id}_${shiftId}`]) === pid) return false;
+                        }
                      }
                  }
                  return true;
@@ -1277,7 +1285,7 @@
                 const participationPct = totalPersonnel > 0 ? Math.round((participated / totalPersonnel) * 100) : 0;
 
                 onAutoFill(newAssignments, logEntries);
-                alert(`Auto-Fill Complete!\n\nTotal Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nParticipation: ${participated}/${totalPersonnel} brothers (${participationPct}%)`);
+                alert(`Auto-Fill Complete!\n\nTotal Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
             };
 
             const clearAutoAssignments = () => {
