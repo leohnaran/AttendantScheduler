@@ -722,6 +722,7 @@
             const getBrotherStats = () => {
                 const stats = personnel.map(p => {
                     let minutesAway = 0;
+                    let assignmentLabels = [];
 
                     Object.keys(assignments).forEach(key => {
                         const assignVal = assignments[key];
@@ -739,15 +740,18 @@
                                 }
                             }
                             const pos = positions.find(pos => pos.id === posId);
-                            if (pos && pos.type !== 'auditorium') {
+                            if (pos) {
                                 const shift = shifts.find(s => s.id === shiftId);
-                                if (shift) minutesAway += shift.minutes;
+                                if (pos.type !== 'auditorium') {
+                                    if (shift) minutesAway += shift.minutes;
+                                }
+                                assignmentLabels.push(`${pos.name} (${shift ? shift.label : 'All Day'})`);
                             }
                         }
                     });
 
                     const percentage = Math.round((minutesAway / TOTAL_PROGRAM_MINUTES) * 100);
-                    return { ...p, minutesAway, percentage };
+                    return { ...p, minutesAway, percentage, assignmentLabels };
                 });
 
                 return stats.sort((a,b) => b.minutesAway - a.minutesAway);
@@ -777,6 +781,7 @@
                                 <tr className="bg-gray-100 text-left">
                                     <th className="p-2 border">Brother Name</th>
                                     <th className="p-2 border">Role</th>
+                                    <th className="p-2 border">Assignments</th>
                                     <th className="p-2 border">Minutes Away</th>
                                     <th className="p-2 border">% Missed</th>
                                     <th className="p-2 border w-1/3">Visual Load</th>
@@ -787,6 +792,13 @@
                                     <tr key={p.id} className="hover:bg-gray-50">
                                         <td className="p-2 border font-medium">{p.name}</td>
                                         <td className={`p-2 border ${getRoleColor(p.role)}`}>{p.role}</td>
+                                        <td className="p-2 border text-xs">
+                                            {p.assignmentLabels.length > 0 ? (
+                                                <ul className="list-disc pl-4">
+                                                    {p.assignmentLabels.map((lbl, idx) => <li key={idx}>{lbl}</li>)}
+                                                </ul>
+                                            ) : <span className="text-gray-400">-</span>}
+                                        </td>
                                         <td className={`p-2 border ${p.minutesAway === 0 ? 'text-blue-600 font-bold' : ''}`}>{p.minutesAway} min</td>
                                         <td className={`p-2 border ${p.percentage > 50 ? 'text-red-600 font-bold' : ''}`}>{p.percentage}%</td>
                                         <td className="p-2 border">
@@ -993,10 +1005,50 @@
                 }
             };
 
+            const fixConflicts = () => {
+                let newAssignments = { ...assignments };
+                let fixedCount = 0;
+
+                Object.keys(newAssignments).forEach(key => {
+                    const assignVal = newAssignments[key];
+                    const personId = getAssignId(assignVal);
+                    if (!personId) return;
+
+                    let posId = key;
+                    let shiftId = 'all';
+                    if (key.includes('_')) {
+                        const parts = key.split('_');
+                        const lastPart = parts[parts.length-1];
+                        if (shifts.find(s => s.id === lastPart)) {
+                            shiftId = lastPart;
+                            posId = parts.slice(0, parts.length-1).join('_');
+                        }
+                    }
+
+                    const pos = positions.find(p => p.id === posId);
+                    if (!pos) return;
+
+                    const conflict = getConflict(personId, pos, shiftId, newAssignments);
+                    if (conflict && (conflict.type === 'error' || conflict.type === 'warning')) {
+                        newAssignments[key] = null;
+                        fixedCount++;
+                    }
+                });
+
+                if (fixedCount > 0) {
+                    setAssignments(newAssignments);
+                    alert(`Fixed ${fixedCount} conflicts/warnings by unassigning them.`);
+                } else {
+                    alert("No conflicts found to fix.");
+                }
+            };
+
             // === SEQUENTIAL & FAIR AUTO FILL ===
             const autoFill = () => {
                 let newAssignments = { ...assignments };
                 let filledCount = 0;
+                let audFilled = 0;
+                let rotFilled = 0;
                 let logEntries = [];
 
                 const addLog = (msg, type) => logEntries.push({ msg, type });
@@ -1122,6 +1174,7 @@
                             newAssignments[pos.id] = { id: chosen.id, isAuto: true };
                             addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
                             filledCount++;
+                            audFilled++;
                         } else {
                             addLog(`No candidates for ${pos.name}`, 'error');
                         }
@@ -1171,13 +1224,23 @@
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
                                 addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
                                 filledCount++;
+                                rotFilled++;
                             }
                         }
                     });
                 });
 
+                const assignedIds = new Set();
+                Object.keys(newAssignments).forEach(k => {
+                    const pid = getAssignId(newAssignments[k]);
+                    if (pid) assignedIds.add(pid);
+                });
+                const totalPersonnel = personnel.length;
+                const participated = assignedIds.size;
+                const participationPct = totalPersonnel > 0 ? Math.round((participated / totalPersonnel) * 100) : 0;
+
                 onAutoFill(newAssignments, logEntries);
-                alert(`Auto-filled ${filledCount} slots.`);
+                alert(`Auto-Fill Complete!\n\nTotal Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nParticipation: ${participated}/${totalPersonnel} brothers (${participationPct}%)`);
             };
 
             const clearAutoAssignments = () => {
@@ -1196,7 +1259,8 @@
                         <h2 className="text-2xl font-bold text-gray-800">Schedule Grid</h2>
                         <div className="flex gap-2">
                             <button onClick={clearAutoAssignments} className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 flex items-center gap-2"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
-                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Magic Fill</button>
+                            <button onClick={fixConflicts} className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
+                            <button onClick={autoFill} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center gap-2"><i className="fa fa-magic"></i> Fill in Unassigned</button>
                         </div>
                     </div>
                     <div className="overflow-x-auto">

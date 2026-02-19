@@ -29,7 +29,18 @@ def verify_schedule_app(page):
     expect(page.get_by_label("Auditorium", exact=True)).to_be_visible()
     expect(page.get_by_label("Exterior")).to_be_visible()
 
-    # 5. Screenshot
+    # 6. Verify New Buttons in Schedule View
+    page.get_by_role("button", name="Schedule").click()
+    expect(page.get_by_role("button", name="Fill in Unassigned")).to_be_visible()
+    expect(page.get_by_role("button", name="Fix Conflicts")).to_be_visible()
+
+    # 7. Verify Stats View Column
+    page.get_by_role("button", name="Time Stats").click()
+    # Wait for the view change
+    expect(page.locator("h2").filter(has_text="Time Statistics")).to_be_visible()
+    expect(page.get_by_role("columnheader", name="Assignments")).to_be_visible()
+
+    # 8. Screenshot
     page.screenshot(path="verification_screenshot.png", full_page=True)
 
 if __name__ == "__main__":
