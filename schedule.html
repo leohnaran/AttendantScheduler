@@ -1563,7 +1563,7 @@
             );
         }
 
-        function TagsView({ tags, setTags, personnel, setPersonnel, shifts }) {
+        function TagsView({ tags, setTags, personnel, setPersonnel, shifts, onDeleteTag }) {
             const [newTag, setNewTag] = useState({ name: '', restrictedShifts: [] });
             const [selectedTagId, setSelectedTagId] = useState('');
             const [filterName, setFilterName] = useState('');
@@ -1578,13 +1578,7 @@
 
             const deleteTag = (id) => {
                 if (confirm("Delete this tag?")) {
-                    setTags(tags.filter(t => t.id !== id));
-                    // Clean up personnel
-                    const newPersonnel = personnel.map(p => ({
-                        ...p,
-                        tags: p.tags ? p.tags.filter(tid => tid !== id) : []
-                    }));
-                    setPersonnel(newPersonnel);
+                    onDeleteTag(id);
                     if (selectedTagId === id) setSelectedTagId('');
                 }
             };
@@ -2009,6 +2003,15 @@
                 updateState({ assignments: newAssignments, log: newLog });
             };
 
+            const handleDeleteTag = (tagId) => {
+                 const newTags = tags.filter(t => t.id !== tagId);
+                 const newPersonnel = personnel.map(p => ({
+                    ...p,
+                    tags: p.tags ? p.tags.filter(tid => tid !== tagId) : []
+                 }));
+                 updateState({ tags: newTags, personnel: newPersonnel });
+            };
+
             // --- PERSISTENCE ---
             useEffect(() => {
                 const saved = localStorage.getItem('circuit_scheduler_data');
@@ -2107,7 +2110,7 @@
                          view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
                          view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
                          view === 'log' ? <LogView log={log} /> :
-                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} /> :
+                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} onDeleteTag={handleDeleteTag} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
                          view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} /> :
                          <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
