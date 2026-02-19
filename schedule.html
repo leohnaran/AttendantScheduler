@@ -28,20 +28,32 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
+        .dark body { background-color: #0f172a; color: #e2e8f0; }
+
         .conflict-border { border: 2px solid #ef4444; }
         .warning-border { border: 2px solid #f59e0b; }
         .auto-assigned { background-color: #dcfce7; }
+        .dark .auto-assigned { background-color: rgba(22, 163, 74, 0.2); }
+
         .blocked-cell { background-color: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+        .dark .blocked-cell { background-color: #1e293b; color: #475569; }
+
         .mirrored-cell { background-color: #fff7ed; color: #9a3412; font-style: italic; border: 1px dashed #fdba74; }
+        .dark .mirrored-cell { background-color: rgba(255, 247, 237, 0.1); color: #fed7aa; border-color: #9a3412; }
+
         .overflow-x-auto::-webkit-scrollbar { height: 8px; }
         .overflow-x-auto::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .overflow-x-auto::-webkit-scrollbar-thumb { background: #475569; }
+
         .log-entry { border-bottom: 1px solid #e5e7eb; padding: 8px 0; font-family: monospace; font-size: 0.85rem; }
+        .dark .log-entry { border-color: #334155; }
 
         /* Drag and Drop Styles */
         .draggable-row { cursor: grab; }
         .draggable-row:active { cursor: grabbing; }
         .droppable-group { transition: background-color 0.2s; }
         .droppable-group.drag-over { background-color: #e0f2fe; border-color: #3b82f6; }
+        .dark .droppable-group.drag-over { background-color: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
 
         /* Glassmorphism Utilities */
         .glass-panel {
@@ -50,11 +62,20 @@
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
+        .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            border-color: rgba(255, 255, 255, 0.05);
+        }
+
         .glass-header {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-header {
+            background: rgba(15, 23, 42, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
     </style>
 </head>
@@ -422,13 +443,91 @@
                 groups.push({ keyMan: null, members: orphans });
             }
 
+            if (personnel.length === 0) {
+                return (
+                    <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                        <div className="flex justify-between items-center mb-8">
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
+                                <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">Start by adding your team</p>
+                            </div>
+                            <div className="relative overflow-hidden inline-block group">
+                                <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2 dark:bg-purple-600 dark:hover:bg-purple-700"><i className="fa fa-file-csv"></i> Import CSV</button>
+                                <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+                            </div>
+                        </div>
+
+                        {/* EDIT FORM */}
+                        <div className={`p-6 rounded-2xl border mb-8 bg-gray-50/50 border-gray-100 dark:bg-slate-800/50 dark:border-slate-700`}>
+                            <div className="flex justify-between items-center mb-4">
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Add New Personnel</h3>
+                            </div>
+                            <div className="flex flex-wrap gap-4 items-end">
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Name</label>
+                                    <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Role</label>
+                                    <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-32 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
+                                        <option value="Exemplary">Exemplary</option>
+                                        <option value="MS">MS</option>
+                                        <option value="Elder">Elder</option>
+                                    </select>
+                                </div>
+                                <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Key Man</label>
+                                    <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" disabled>
+                                        <option value="">-- None --</option>
+                                    </select>
+                                </div>
+
+                                <div className="w-full">
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Permissions</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                        {areas.map(area => renderCheckbox(area.capability, area.name))}
+                                        {renderCheckbox('keyman', 'KEY MAN')}
+                                    </div>
+                                </div>
+                                <div className="w-full mb-4">
+                                    <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Unavailability</label>
+                                    <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
+                                        {shifts.map(s => (
+                                            <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
+                                                <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
+                                                <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none`}>Add Person</button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col items-center justify-center py-16 text-center border-2 border-dashed border-gray-200 rounded-3xl bg-gray-50/50 dark:bg-slate-800/50 dark:border-slate-700">
+                            <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm dark:bg-slate-700 dark:text-blue-400">
+                                <i className="fa fa-user-plus"></i>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2 dark:text-white">Your Roster is Empty</h3>
+                            <p className="text-gray-500 max-w-sm mb-6 dark:text-gray-400">Add brothers manually using the form above, or import your existing list to get started quickly.</p>
+                            <div className="relative overflow-hidden inline-block group">
+                                <button className="bg-white border border-gray-200 text-gray-700 py-2.5 px-6 rounded-full font-semibold shadow-sm hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-800 dark:border-slate-600 dark:text-gray-200 dark:hover:bg-slate-700">
+                                    <i className="fa fa-file-csv text-green-600 dark:text-green-400"></i> Import CSV Roster
+                                </button>
+                                <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
                     {/* HEADER & IMPORT */}
                     <div className="flex justify-between items-center mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Personnel Roster</h2>
-                            <p className="text-gray-500 text-sm mt-1">{personnel.length} brothers available</p>
+                            <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
+                            <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">{personnel.length} brothers available</p>
                         </div>
                         <div className="relative overflow-hidden inline-block group">
                             <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2"><i className="fa fa-file-csv"></i> Import CSV</button>
@@ -437,51 +536,51 @@
                     </div>
 
                     {/* EDIT FORM */}
-                    <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200' : 'bg-gray-50/50 border-gray-100'}`}>
+                    <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700' : 'bg-gray-50/50 border-gray-100 dark:bg-slate-800/50 dark:border-slate-700'}`}>
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
-                            {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium">Cancel Edit</button>}
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
+                            {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium dark:text-red-400 dark:hover:text-red-300">Cancel Edit</button>}
                         </div>
                         <div className="flex flex-wrap gap-4 items-end">
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Name</label>
-                                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm" placeholder="Full Name" />
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Name</label>
+                                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Role</label>
-                                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-32 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Role</label>
+                                <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-32 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="Exemplary">Exemplary</option>
                                     <option value="MS">MS</option>
                                     <option value="Elder">Elder</option>
                                 </select>
                             </div>
                             <div className="mb-2">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Key Man</label>
-                                <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Key Man</label>
+                                <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-200 p-2.5 rounded-xl w-48 bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="">-- None --</option>
                                     {personnel.filter(p => p.caps && p.caps.includes('keyman') && p.id !== editingId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                 </select>
                             </div>
 
                             <div className="w-full">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Permissions</label>
-                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 mb-4 shadow-sm">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Permissions</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {areas.map(area => renderCheckbox(area.capability, area.name))}
                                     {renderCheckbox('keyman', 'KEY MAN')}
                                 </div>
                             </div>
                             <div className="w-full mb-4">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Unavailability</label>
-                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Unavailability</label>
+                                <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-100 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {shifts.map(s => (
                                         <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
-                                            <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200"/>
-                                            <span className="text-sm font-medium text-gray-600">{s.label}</span>
+                                            <input type="checkbox" checked={formData.unavailable && formData.unavailable.includes(s.id)} onChange={e=>handleUnavailableChange(s.id, e.target.checked)} className="mr-2 w-4 h-4 text-red-500 rounded border-gray-300 focus:ring-red-200 dark:border-slate-600 dark:bg-slate-700"/>
+                                            <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{s.label}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
-                            <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}>{editingId ? 'Update Person' : 'Add Person'}</button>
+                            <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-200 dark:shadow-none' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none'}`}>{editingId ? 'Update Person' : 'Add Person'}</button>
                         </div>
                     </div>
 
@@ -495,16 +594,16 @@
                                 onDrop={(e) => handleDrop(e, group.keyMan ? group.keyMan.id : null)}
                             >
                                 {/* GROUP HEADER */}
-                                <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm">
-                                    <h3 className="font-bold text-gray-900 flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
+                                <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm dark:bg-slate-800/50 dark:border-slate-700">
+                                    <h3 className="font-bold text-gray-900 flex items-center gap-3 dark:text-white">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
                                             <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
                                         </div>
                                         {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
-                                        <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">{group.members.length} members</span>
+                                        <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} members</span>
                                     </h3>
                                     {group.keyMan && (
-                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors">Edit Key Man</button>
+                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit Key Man</button>
                                     )}
                                 </div>
 
@@ -512,16 +611,16 @@
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <thead>
-                                            <tr className="bg-white border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                            <tr className="bg-white border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-500">
                                                 <th className="px-6 py-3 w-1/3">Name</th>
                                                 <th className="px-6 py-3 w-1/6">Role</th>
                                                 <th className="px-6 py-3">Capabilities</th>
                                                 <th className="px-6 py-3 w-24 text-center">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-50">
+                                        <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
                                             {group.members.length === 0 ? (
-                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30">Drop members here to assign</td></tr>
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30">Drop members here to assign</td></tr>
                                             ) : (
                                                 group.members.map(p => {
                                                     const isEditing = editingId === p.id;
@@ -530,9 +629,9 @@
                                                             key={p.id}
                                                             draggable={!isEditing}
                                                             onDragStart={(e) => !isEditing && handleDragStart(e, p.id)}
-                                                            className={`draggable-row transition-all duration-200 ${isEditing ? 'bg-yellow-50/50' : 'hover:bg-gray-50/80 bg-white'}`}
+                                                            className={`draggable-row transition-all duration-200 ${isEditing ? 'bg-yellow-50/50 dark:bg-yellow-900/20' : 'hover:bg-gray-50/80 bg-white dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}
                                                         >
-                                                            <td className="px-6 py-3 font-medium text-gray-700">
+                                                            <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
                                                                 {isEditing ? (
                                                                     <div className="flex flex-col gap-1">
                                                                         <input
@@ -1464,6 +1563,11 @@
                 alert(`Cleared ${count} auto-assigned slots.`);
             };
 
+            const isScheduleEmpty = useMemo(() => {
+                const filled = Object.values(assignments).filter(val => getAssignId(val)).length;
+                return filled === 0;
+            }, [assignments]);
+
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm mt-8 relative">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -1471,9 +1575,23 @@
                         <div className="flex flex-wrap gap-3">
                             <button onClick={clearAutoAssignments} className="bg-white border border-gray-200 text-orange-600 px-5 py-2 rounded-full hover:bg-orange-50 hover:border-orange-200 font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
                             <button onClick={fixConflicts} className="bg-yellow-100 text-yellow-800 px-5 py-2 rounded-full hover:bg-yellow-200 font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
-                            <button onClick={autoFill} className="bg-green-600 text-white px-5 py-2 rounded-full hover:bg-green-700 font-semibold shadow-sm shadow-green-200 transition-all flex items-center gap-2 active:scale-95"><i className="fa fa-magic"></i> Fill in Unassigned</button>
+                            <button onClick={autoFill} className={`text-white px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-magic"></i> Fill in Unassigned</button>
                         </div>
                     </div>
+
+                    {isScheduleEmpty && personnel.length > 0 && (
+                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
+                                <div>
+                                    <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
+                                    <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Fill in Unassigned" to automatically generate a schedule.</p>
+                                </div>
+                            </div>
+                            <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
+                        </div>
+                    )}
+
                     <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
                         <table className="w-full border-collapse text-sm">
                             <thead>
@@ -1707,13 +1825,31 @@
                 }
             };
 
-            const toggleShift = (shiftId) => {
+            // Toggle for NEW tag form
+            const toggleShiftNew = (shiftId) => {
                 const current = newTag.restrictedShifts;
                 if (current.includes(shiftId)) {
                     setNewTag({ ...newTag, restrictedShifts: current.filter(s => s !== shiftId) });
                 } else {
                     setNewTag({ ...newTag, restrictedShifts: [...current, shiftId] });
                 }
+            };
+
+            // Toggle for EXISTING tag (Edit Mode)
+            const toggleShiftEdit = (tag, shiftId) => {
+                const current = tag.restrictedShifts || [];
+                let newShifts;
+                if (current.includes(shiftId)) {
+                    newShifts = current.filter(s => s !== shiftId);
+                } else {
+                    newShifts = [...current, shiftId];
+                }
+                const updatedTag = { ...tag, restrictedShifts: newShifts };
+                setTags(tags.map(t => t.id === tag.id ? updatedTag : t));
+            };
+
+            const updateTagName = (tag, newName) => {
+                setTags(tags.map(t => t.id === tag.id ? { ...t, name: newName } : t));
             };
 
             // --- BULK ASSIGNMENT ---
@@ -1733,44 +1869,50 @@
             };
 
             const selectedTag = tags.find(t => t.id === selectedTagId);
-            const filteredPersonnel = personnel.filter(p => p.name.toLowerCase().includes(filterName.toLowerCase()));
+
+            // FILTER & SORT
+            const filteredPersonnel = personnel.filter(p =>
+                p.name.toLowerCase().includes(filterName.toLowerCase()) ||
+                (p.role && p.role.toLowerCase().includes(filterName.toLowerCase()))
+            );
+            filteredPersonnel.sort((a,b) => a.name.localeCompare(b.name));
 
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6">Tags & Constraints</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Tags & Constraints</h2>
 
                     {/* TOP: CREATE TAG */}
-                    <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 mb-8">
-                        <h3 className="font-bold text-lg mb-2">Create New Tag</h3>
-                        <div className="flex gap-4 items-start mb-2">
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Tag Name</label>
+                    <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 mb-8 dark:bg-slate-800/50 dark:border-slate-700">
+                        <h3 className="font-bold text-lg mb-2 dark:text-gray-200">Create New Tag</h3>
+                        <div className="flex flex-col md:flex-row gap-4 items-start mb-2">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Tag Name</label>
                                 <input
                                     type="text"
                                     value={newTag.name}
                                     onChange={e => setNewTag({...newTag, name: e.target.value})}
-                                    className="border border-gray-200 p-2.5 rounded-xl w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                                    className="border border-gray-200 p-2.5 rounded-xl w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                     placeholder="e.g. Bus Riders"
                                 />
                             </div>
-                            <div className="flex-1">
-                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">Restricted Shifts (Cannot Work)</label>
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1 dark:text-gray-500">Restricted Shifts (Cannot Work)</label>
                                 <div className="flex flex-wrap gap-2">
-                                    <label className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes('all_day') ? 'bg-blue-100 border-blue-200 text-blue-700 font-bold' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                    <label className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes('all_day') ? 'bg-blue-100 border-blue-200 text-blue-700 font-bold dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
                                         <input
                                             type="checkbox"
                                             checked={newTag.restrictedShifts.includes('all_day')}
-                                            onChange={() => toggleShift('all_day')}
+                                            onChange={() => toggleShiftNew('all_day')}
                                             className="mr-2"
                                         />
                                         All Day (Auditorium)
                                     </label>
                                     {shifts.map(s => (
-                                        <label key={s.id} className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes(s.id) ? 'bg-red-100 border-red-200 text-red-700 font-bold' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                        <label key={s.id} className={`flex items-center text-sm px-3 py-1.5 rounded-full cursor-pointer transition-all border ${newTag.restrictedShifts.includes(s.id) ? 'bg-red-100 border-red-200 text-red-700 font-bold dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600'}`}>
                                             <input
                                                 type="checkbox"
                                                 checked={newTag.restrictedShifts.includes(s.id)}
-                                                onChange={() => toggleShift(s.id)}
+                                                onChange={() => toggleShiftNew(s.id)}
                                                 className="mr-2"
                                             />
                                             {s.label}
@@ -1778,29 +1920,29 @@
                                     ))}
                                 </div>
                             </div>
-                            <button onClick={addTag} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 h-full mt-5 shadow-sm active:scale-95 transition-all">Create</button>
+                            <button onClick={addTag} className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-bold hover:bg-blue-700 md:mt-5 w-full md:w-auto shadow-sm active:scale-95 transition-all dark:bg-blue-600 dark:hover:bg-blue-500">Create</button>
                         </div>
                     </div>
 
                     {/* MAIN SPLIT: LIST & ASSIGN */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* LEFT: TAG LIST */}
-                        <div className="border rounded p-4">
-                            <h3 className="font-bold text-lg mb-4 border-b pb-2">Existing Tags</h3>
+                        <div className="border rounded-2xl p-4 bg-white/50 dark:bg-slate-800/30 dark:border-slate-700">
+                            <h3 className="font-bold text-lg mb-4 border-b border-gray-100 pb-2 dark:text-gray-200 dark:border-slate-700">Existing Tags</h3>
                             {tags.length === 0 && <p className="text-gray-400 italic">No tags created.</p>}
                             <ul className="space-y-2">
                                 {tags.map(tag => (
                                     <li key={tag.id}
                                         onClick={() => setSelectedTagId(tag.id)}
-                                        className={`p-3 rounded border cursor-pointer flex justify-between items-center transition-colors ${selectedTagId === tag.id ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}`}
+                                        className={`p-3 rounded-xl border cursor-pointer flex justify-between items-center transition-all ${selectedTagId === tag.id ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-200 dark:bg-slate-700 dark:border-blue-500 dark:ring-blue-900' : 'bg-white border-gray-200 hover:bg-gray-50 dark:bg-slate-800 dark:border-slate-600 dark:hover:bg-slate-700'}`}
                                     >
                                         <div>
-                                            <div className="font-bold">{tag.name}</div>
-                                            <div className="text-xs text-red-600">
+                                            <div className="font-bold text-gray-800 dark:text-gray-200">{tag.name}</div>
+                                            <div className="text-xs text-red-600 dark:text-red-400">
                                                 {tag.restrictedShifts.length > 0 ? `Restricts: ${tag.restrictedShifts.length} shifts` : 'No restrictions'}
                                             </div>
                                         </div>
-                                        <button onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }} className="text-gray-400 hover:text-red-500 px-2">
+                                        <button onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }} className="text-gray-400 hover:text-red-500 px-2 transition-colors dark:text-gray-500 dark:hover:text-red-400">
                                             <i className="fa fa-trash"></i>
                                         </button>
                                     </li>
@@ -1809,52 +1951,98 @@
                         </div>
 
                         {/* RIGHT: ASSIGNMENT */}
-                        <div className="col-span-2 border rounded p-4 flex flex-col h-[600px]">
-                            <h3 className="font-bold text-lg mb-4 border-b pb-2">
-                                {selectedTag ? `Manage Members: ${selectedTag.name}` : 'Select a Tag to Manage Members'}
-                            </h3>
-
+                        <div className="col-span-2 border rounded-2xl p-6 flex flex-col h-[650px] bg-white/50 dark:bg-slate-800/30 dark:border-slate-700">
                             {selectedTag ? (
                                 <>
-                                    <div className="mb-4 relative">
-                                        <i className="fa fa-search absolute left-3 top-3 text-gray-400"></i>
-                                        <input
-                                            type="text"
-                                            placeholder="Search personnel..."
-                                            value={filterName}
-                                            onChange={e => setFilterName(e.target.value)}
-                                            className="w-full border border-gray-200 p-2.5 pl-10 rounded-xl bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm"
-                                        />
+                                    <div className="mb-6 pb-6 border-b border-gray-200 dark:border-slate-700">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="font-bold text-lg dark:text-gray-200">
+                                                Edit Tag: <span className="text-blue-600 dark:text-blue-400">{selectedTag.name}</span>
+                                            </h3>
+                                        </div>
+
+                                        {/* EDIT CONTROLS */}
+                                        <div className="space-y-4">
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 dark:text-gray-500">Tag Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={selectedTag.name}
+                                                    onChange={(e) => updateTagName(selectedTag, e.target.value)}
+                                                    className="border border-gray-200 p-2 rounded-lg w-full max-w-sm text-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold uppercase text-gray-400 mb-2 dark:text-gray-500">Restricted Shifts</label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <label className={`flex items-center text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border ${selectedTag.restrictedShifts.includes('all_day') ? 'bg-blue-100 border-blue-200 text-blue-700 font-bold dark:bg-blue-900 dark:border-blue-700 dark:text-blue-300' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300'}`}>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedTag.restrictedShifts.includes('all_day')}
+                                                            onChange={() => toggleShiftEdit(selectedTag, 'all_day')}
+                                                            className="mr-1.5"
+                                                        />
+                                                        All Day
+                                                    </label>
+                                                    {shifts.map(s => (
+                                                        <label key={s.id} className={`flex items-center text-xs px-2.5 py-1 rounded-full cursor-pointer transition-all border ${selectedTag.restrictedShifts.includes(s.id) ? 'bg-red-100 border-red-200 text-red-700 font-bold dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300'}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedTag.restrictedShifts.includes(s.id)}
+                                                                onChange={() => toggleShiftEdit(selectedTag, s.id)}
+                                                                className="mr-1.5"
+                                                            />
+                                                            {s.label}
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50/50 shadow-inner">
+
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm uppercase tracking-wide">Manage Members</h4>
+                                        <div className="relative w-64">
+                                            <i className="fa fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                                            <input
+                                                type="text"
+                                                placeholder="Search Name or Role..."
+                                                value={filterName}
+                                                onChange={e => setFilterName(e.target.value)}
+                                                className="w-full border border-gray-200 p-2 pl-9 rounded-lg bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto border border-gray-100 rounded-xl bg-gray-50/50 shadow-inner dark:bg-slate-800/50 dark:border-slate-700">
                                         <table className="w-full text-sm">
-                                            <thead className="bg-gray-100 sticky top-0">
+                                            <thead className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300">
                                                 <tr>
-                                                    <th className="p-2 text-left w-10">
-                                                        {/* Header Checkbox logic usually complex, skipping for simplicity */}
-                                                    </th>
-                                                    <th className="p-2 text-left">Name</th>
-                                                    <th className="p-2 text-left">Current Tags</th>
+                                                    <th className="p-3 text-left w-10"></th>
+                                                    <th className="p-3 text-left">Name</th>
+                                                    <th className="p-3 text-left">Role</th>
+                                                    <th className="p-3 text-left">Current Tags</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
                                                 {filteredPersonnel.map(p => {
                                                     const isMember = p.tags && p.tags.includes(selectedTag.id);
                                                     return (
-                                                        <tr key={p.id} className={`hover:bg-white transition-colors ${isMember ? 'bg-green-50' : ''}`} onClick={() => togglePersonTag(p.id, selectedTag.id)}>
-                                                            <td className="p-2 text-center">
+                                                        <tr key={p.id} className={`hover:bg-white transition-colors cursor-pointer group dark:hover:bg-slate-700 ${isMember ? 'bg-green-50 dark:bg-green-900/10' : ''}`} onClick={() => togglePersonTag(p.id, selectedTag.id)}>
+                                                            <td className="p-3 text-center">
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={isMember || false}
                                                                     onChange={() => {}} // Handled by row click
-                                                                    className="w-4 h-4 cursor-pointer"
+                                                                    className="w-4 h-4 cursor-pointer text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
                                                                 />
                                                             </td>
-                                                            <td className="p-2 font-medium cursor-pointer">{p.name}</td>
-                                                            <td className="p-2 text-xs text-gray-500">
+                                                            <td className="p-3 font-medium text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">{p.name}</td>
+                                                            <td className="p-3 text-xs text-gray-500 dark:text-gray-400">{p.role}</td>
+                                                            <td className="p-3 text-xs text-gray-500">
                                                                 {p.tags && p.tags.map(tid => {
                                                                     const t = tags.find(tag => tag.id === tid);
-                                                                    return t ? <span key={tid} className="bg-gray-200 px-1 rounded mr-1">{t.name}</span> : null;
+                                                                    return t ? <span key={tid} className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mr-1 dark:bg-slate-600 dark:text-gray-300">{t.name}</span> : null;
                                                                 })}
                                                             </td>
                                                         </tr>
@@ -1863,13 +2051,16 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div className="mt-2 text-xs text-gray-500 text-right">
+                                    <div className="mt-2 text-xs text-gray-400 text-right dark:text-gray-500">
                                         Click rows to toggle membership.
                                     </div>
                                 </>
                             ) : (
-                                <div className="flex-1 flex items-center justify-center text-gray-400">
-                                    &larr; Select a tag from the left
+                                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-2xl mb-4 dark:bg-slate-700">
+                                        <i className="fa fa-tags"></i>
+                                    </div>
+                                    <p>Select a tag from the left to edit settings and manage members.</p>
                                 </div>
                             )}
                         </div>
@@ -2085,6 +2276,91 @@
             return { state, setState, undo, redo, canUndo: index > 0, canRedo: index < history.length - 1 };
         }
 
+        function QuickStartModal({ onClose }) {
+            const [step, setStep] = useState(0);
+            const steps = [
+                {
+                    title: "Welcome to Scheduler",
+                    icon: "fa-hand-sparkles",
+                    color: "text-blue-600",
+                    content: (
+                        <div className="text-center">
+                            <p className="text-gray-600 mb-4">A secure, simple tool for managing Attendant schedules for Circuit Assemblies.</p>
+                            <div className="flex justify-center gap-4 text-sm text-gray-500">
+                                <span className="flex items-center gap-1"><i className="fa fa-lock"></i> 100% Private</span>
+                                <span className="flex items-center gap-1"><i className="fa fa-wifi"></i> Offline Capable</span>
+                            </div>
+                        </div>
+                    )
+                },
+                {
+                    title: "1. Configure Layout",
+                    icon: "fa-cog",
+                    color: "text-gray-600",
+                    content: "Go to the <b>Config</b> tab to customize your Departments (Areas), Time Slots (Shifts), and specific Posts (Positions). We've started you off with a standard template."
+                },
+                {
+                    title: "2. Build Your Roster",
+                    icon: "fa-users",
+                    color: "text-purple-600",
+                    content: "Go to the <b>Roster</b> tab. You can manually add brothers or use the <b>Import CSV</b> button for bulk entry. Drag and drop names to assign them to Key Man teams."
+                },
+                {
+                    title: "3. Create Schedule",
+                    icon: "fa-calendar-alt",
+                    color: "text-green-600",
+                    content: "Head to the <b>Schedule</b> tab. Use <b>Fill in Unassigned</b> to magically fill empty slots based on qualifications and fairness. You can also click any cell to manually assign."
+                },
+                {
+                    title: "4. Review & Print",
+                    icon: "fa-print",
+                    color: "text-red-600",
+                    content: "Check the <b>Time Stats</b> tab to ensure workload balance. Then use <b>Slips</b> to print individual assignment slips for every volunteer."
+                }
+            ];
+
+            const handleNext = () => {
+                if (step < steps.length - 1) setStep(step + 1);
+                else handleFinish();
+            };
+
+            const handleFinish = () => {
+                localStorage.setItem('has_seen_quickstart', 'true');
+                onClose();
+            };
+
+            const current = steps[step];
+
+            return (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all dark:bg-slate-900 dark:border dark:border-slate-800">
+                        <div className="bg-gradient-to-br from-gray-50 to-white p-8 text-center border-b border-gray-100 dark:from-slate-800 dark:to-slate-900 dark:border-slate-800">
+                            <div className={`w-16 h-16 mx-auto mb-4 rounded-full bg-white shadow-lg flex items-center justify-center text-3xl ${current.color} dark:bg-slate-700 dark:text-blue-400`}>
+                                <i className={`fa ${current.icon}`}></i>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{current.title}</h2>
+                        </div>
+                        <div className="p-8">
+                            <div className="text-gray-600 text-lg leading-relaxed mb-8 dark:text-slate-300">
+                                {typeof current.content === 'string' ? <div dangerouslySetInnerHTML={{__html: current.content}} /> : current.content}
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <div className="flex gap-1">
+                                    {steps.map((_, i) => (
+                                        <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === step ? 'w-6 bg-blue-600' : 'w-2 bg-gray-200 dark:bg-slate-700'}`}></div>
+                                    ))}
+                                </div>
+                                <button onClick={handleNext} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 dark:shadow-none">
+                                    {step === steps.length - 1 ? "Get Started" : "Next"} <i className="fa fa-arrow-right ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function App() {
             const [view, setView] = useState('schedule');
 
@@ -2111,7 +2387,23 @@
 
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [showLoadModal, setShowLoadModal] = useState(false);
+            const [showQuickStart, setShowQuickStart] = useState(false);
+            const [darkMode, setDarkMode] = useState(() => localStorage.getItem('dark_mode') === 'true');
             const [password, setPassword] = useState('');
+
+            useEffect(() => {
+                const hasSeen = localStorage.getItem('has_seen_quickstart');
+                if (!hasSeen) setShowQuickStart(true);
+            }, []);
+
+            useEffect(() => {
+                if (darkMode) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+                localStorage.setItem('dark_mode', darkMode);
+            }, [darkMode]);
 
             // --- WRAPPERS FOR STATE UPDATES ---
             const updateState = (updates) => setState({ ...state, ...updates });
@@ -2241,13 +2533,19 @@
                                 ))}
                             </nav>
 
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 items-center">
+                                <button onClick={() => setDarkMode(!darkMode)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${darkMode ? 'text-yellow-400 hover:bg-white/10' : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'}`} title="Toggle Dark Mode">
+                                    <i className={`fa ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
+                                </button>
+                                <button onClick={() => setShowQuickStart(true)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-white/10 dark:text-gray-500 dark:hover:text-blue-400 transition-all" title="Help / Quick Start"><i className="fa fa-circle-question text-lg"></i></button>
+                                <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
                                 <button onClick={resetAll} className="text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">Reset</button>
-                                <button onClick={() => setShowSaveModal(true)} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-download text-blue-500"></i> Save</button>
+                                <button onClick={() => setShowSaveModal(true)} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"><i className="fa fa-download text-blue-500"></i> Save</button>
                                 <button onClick={() => setShowLoadModal(true)} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm shadow-blue-200 transition-all flex items-center gap-2"><i className="fa fa-upload"></i> Load</button>
                             </div>
                         </div>
                     </header>
+                    {showQuickStart && <QuickStartModal onClose={() => setShowQuickStart(false)} />}
                     <div className="container mx-auto mt-6 px-4">
                         {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} areas={areas} shifts={shifts} tags={tags} /> :
                          view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
