@@ -1152,12 +1152,12 @@
                             <input type="checkbox" checked={rules.anchorLimits !== false} onChange={() => toggleRule('anchorLimits')} className="h-5 w-5" />
                         </div>
 
-                        {/* 7. Auditorium Rotation Mode */}
+                        {/* 7. Auditorium Relief Mode */}
                         <div className="p-4 bg-blue-50 rounded border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
                             <div className="flex justify-between items-center mb-4">
                                 <div>
-                                    <h3 className="font-bold text-blue-900 dark:text-blue-300">Auditorium Rotation Mode</h3>
-                                    <p className="text-xs text-blue-700 dark:text-blue-400">Treat Auditorium positions as shift-based to allow breaks.</p>
+                                    <h3 className="font-bold text-blue-900 dark:text-blue-300">Auditorium Relief Mode</h3>
+                                    <p className="text-xs text-blue-700 dark:text-blue-400">Allow Auditorium staff to be double-booked for rotational assignments (Relief Duty).</p>
                                 </div>
                                 <input type="checkbox" checked={rules.auditoriumRotationMode === true} onChange={() => toggleRule('auditoriumRotationMode')} className="h-5 w-5" />
                             </div>
@@ -1165,11 +1165,11 @@
                             {rules.auditoriumRotationMode && (
                                 <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
                                     <div className="flex justify-between items-center mb-2">
-                                        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Target Coverage per Shift</h4>
-                                        <span className="font-bold text-blue-600 dark:text-blue-400">{rules.auditoriumCoverage || 75}%</span>
+                                        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Max Relief % per Shift</h4>
+                                        <span className="font-bold text-blue-600 dark:text-blue-400">{rules.auditoriumCoverage || 25}%</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Leave some posts empty each shift to allow rotation, while ensuring 1 per Section.</p>
-                                    <input type="range" min="10" max="100" step="5" value={rules.auditoriumCoverage || 75} onChange={e=>setVal('auditoriumCoverage', parseInt(e.target.value))} className="w-full" />
+                                    <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Limit how many Auditorium brothers can be pulled away at once.</p>
+                                    <input type="range" min="5" max="50" step="5" value={rules.auditoriumCoverage || 25} onChange={e=>setVal('auditoriumCoverage', parseInt(e.target.value))} className="w-full" />
                                 </div>
                             )}
                         </div>
@@ -1250,34 +1250,82 @@
                 if (rules.doubleBookingSeverity !== 'off') {
                     const sev = rules.doubleBookingSeverity || 'error';
                     for (let p of positions) {
-                        // Check for All Day assignments
+                        // A. Check for All Day assignments (Auditorium)
                         if (p.type === 'auditorium') {
-                            // Check Main ID (All Day)
                             if (getAssignId(currentAssignments[p.id]) === pid) {
-                                if (p.id !== pos.id) return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
-                                if (pos.type === 'rotational') return { msg: `Assigned at ${p.name}`, type: sev, key: p.id }; // If I am rotational, I cant be in all day aud
-                            }
-                            // Check Shift ID (Rotational Auditorium)
-                            if (currentShiftId !== 'all') {
-                                const key = `${p.id}_${currentShiftId}`;
-                                if (getAssignId(currentAssignments[key]) === pid && key !== (pos.id + (pos.type==='auditorium' ? ('_'+currentShiftId) : ''))) {
-                                     return { msg: `Assigned at ${p.name}`, type: sev, key: key };
+                                // Conflict?
+                                if (p.id !== pos.id) {
+                                    // If target is ALSO all day -> Conflict
+                                    if (pos.type === 'auditorium') return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
+
+                                    // If target is Rotational -> Depends on "Relief Mode"
+                                    if (pos.type === 'rotational') {
+                                        if (!rules.auditoriumRotationMode) {
+                                            return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
+                                        }
+                                        // Relief Mode is ON: Double booking allowed, BUT check Constraints:
+
+                                        // 1. Section Safety: Is the OTHER brother from this section also gone?
+                                        if (p.section) {
+                                            let sectionAbandoned = false;
+                                            // Find all other auditorium positions in this section
+                                            const sectionMates = positions.filter(op => op.type === 'auditorium' && op.section === p.section && op.id !== p.id);
+
+                                            // Check if ANY of them are currently assigned to a rotational shift
+                                            for(let mate of sectionMates) {
+                                                const mateId = getAssignId(currentAssignments[mate.id]);
+                                                if (mateId) {
+                                                    // Is THIS mate assigned to a rotational shift at this time?
+                                                    for (let rp of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                        if (rp.validShifts && !rp.validShifts.includes(currentShiftId)) continue;
+                                                        if (rp.id === pos.id) continue; // Skip the spot we are trying to fill
+                                                        if (getAssignId(currentAssignments[`${rp.id}_${currentShiftId}`]) === mateId) {
+                                                            sectionAbandoned = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (sectionAbandoned) return { msg: `Section ${p.section} Abandoned`, type: 'error', key: null };
+                                        }
+
+                                        // 2. Max Relief %
+                                        const audPositions = positions.filter(x => x.type === 'auditorium');
+                                        const totalAud = audPositions.length;
+                                        const maxRelief = Math.floor(totalAud * ((rules.auditoriumCoverage || 25) / 100));
+
+                                        let currentReliefCount = 0;
+                                        // Count how many auditorium brothers are on rotational duty this shift
+                                        for (let ap of audPositions) {
+                                            const apId = getAssignId(currentAssignments[ap.id]);
+                                            if (!apId) continue;
+                                            if (apId === pid) continue; // Don't count self yet
+
+                                            for (let rp of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                if (rp.validShifts && !rp.validShifts.includes(currentShiftId)) continue;
+                                                if (getAssignId(currentAssignments[`${rp.id}_${currentShiftId}`]) === apId) {
+                                                    currentReliefCount++;
+                                                    break; // Counted once per person per shift
+                                                }
+                                            }
+                                        }
+
+                                        if (currentReliefCount >= maxRelief) return { msg: `Max Relief (${maxRelief}) Hit`, type: 'warning', key: null };
+
+                                        // If we pass checks, return INFO
+                                        return { msg: "Auditorium Relief", type: "warning", key: p.id };
+                                    }
                                 }
                             }
                         }
 
-                        // Check for Rotational assignments
-                        if ((p.type === 'rotational' || (p.type === 'auditorium' && rules.auditoriumRotationMode)) && !p.isMirror) {
-                            if (p.id === pos.id && p.type !== 'auditorium') continue; // Skip self if same pos (unless we are checking cross-shift)
+                        // B. Check for Rotational assignments (Standard)
+                        if (p.type === 'rotational' && !p.isMirror) {
+                            if (p.id === pos.id) continue; // Skip self check
 
                             if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
                                 const checkKey = `${p.id}_${currentShiftId}`;
-                                // Ensure we are not flagging ourselves
-                                let isSelf = false;
-                                if(pos.type === 'auditorium' && p.id === pos.id) isSelf = true;
-                                if(pos.type === 'rotational' && p.id === pos.id) isSelf = true; // Handled above but safe
-
-                                if (!isSelf && getAssignId(currentAssignments[checkKey]) === pid) {
+                                if (getAssignId(currentAssignments[checkKey]) === pid) {
                                     return { msg: `Busy at ${p.name}`, type: sev, key: checkKey };
                                 }
                             }
@@ -1356,10 +1404,19 @@
 
                  for (let p of positions) {
                      // Check if busy at ANY auditorium spot (All Day Key)
-                     if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
+                     if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
+                         // IF checking for a rotational shift ('shiftId' is not 'all')
+                         // AND Relief Mode is ON
+                         // THEN this does NOT count as "busy" (return true effectively for this check)
+                         if (shiftId !== 'all' && rules.auditoriumRotationMode) {
+                             // Continue to check other conflicts, but don't return false yet
+                         } else {
+                             return false;
+                         }
+                     }
 
-                     // Check Shift Keys (Rotational or Auditorium-Rotating)
-                     if ((p.type === 'rotational' || p.type === 'auditorium') && !p.isMirror) {
+                     // Check Shift Keys (Rotational)
+                     if (p.type === 'rotational' && !p.isMirror) {
                         if (shiftId === 'all') {
                             // If checking for 'all day' (Auditorium), must be free ALL shifts
                             for (let s of shifts) {
@@ -1542,123 +1599,45 @@
 
                 const addLog = (msg, type) => logEntries.push({ msg, type });
 
-                // 1. Auditorium First (Standard Mode Only)
-                if (!rules.auditoriumRotationMode) {
-                    addLog("--- Starting Auditorium Fill (All Day Mode) ---", 'auditorium');
-                    positions.filter(p => p.type === 'auditorium').forEach(pos => {
-                        if (!getAssignId(newAssignments[pos.id])) {
-                            let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
-                            candidates = candidates.filter(p => isPersonFree(p.id, 'all', newAssignments));
+                // 1. Auditorium First (Always run - Auditorium is now always "All Day")
+                addLog("--- Starting Auditorium Fill ---", 'auditorium');
+                positions.filter(p => p.type === 'auditorium').forEach(pos => {
+                    if (!getAssignId(newAssignments[pos.id])) {
+                        let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
+                        candidates = candidates.filter(p => isPersonFree(p.id, 'all', newAssignments));
 
-                            if(candidates.length > 0) {
-                                const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-                                newAssignments[pos.id] = { id: chosen.id, isAuto: true };
-                                addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
-                                filledCount++;
-                                audFilled++;
-                            } else {
-                                addLog(`No candidates for ${pos.name}`, 'error');
-                            }
+                        if(candidates.length > 0) {
+                            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                            newAssignments[pos.id] = { id: chosen.id, isAuto: true };
+                            addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
+                            filledCount++;
+                            audFilled++;
+                        } else {
+                            addLog(`No candidates for ${pos.name}`, 'error');
                         }
-                    });
-                } else {
-                    addLog("--- Auditorium Rotation Mode Active (Skipping All Day Fill) ---", 'info');
-                }
+                    }
+                });
 
-                // 2. Rotational (And Auditorium if Rotating)
-                addLog("--- Starting Shift-Based Fill ---", 'rotational');
+                // 2. Rotational
+                addLog("--- Starting Rotational Fill ---", 'rotational');
                 shifts.forEach(shift => {
                     addLog(`>> Processing ${shift.label}`, 'shift');
 
-                    // --- AUDITORIUM ROTATION LOGIC ---
-                    if (rules.auditoriumRotationMode) {
-                        const audPositions = positions.filter(p => p.type === 'auditorium');
-                        // Group by Section
-                        const sections = {};
-                        audPositions.forEach(p => {
-                            const s = p.section || 'General';
-                            if(!sections[s]) sections[s] = [];
-                            sections[s].push(p);
-                        });
+                    // Count Auditorium Relief Usage for this Shift
+                    const audPositions = positions.filter(x => x.type === 'auditorium');
+                    const maxRelief = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
 
-                        const targetPct = (rules.auditoriumCoverage || 75) / 100;
-                        const targetCount = Math.ceil(audPositions.length * targetPct);
-                        let currentAudFilled = 0;
-
-                        // Step A: Ensure 1 per Section
-                        Object.keys(sections).forEach(sect => {
-                            const sectPositions = sections[sect];
-                            // Check if anyone assigned manually
-                            const alreadyManned = sectPositions.some(p => getAssignId(newAssignments[`${p.id}_${shift.id}`]));
-                            if (!alreadyManned) {
-                                // Try to fill one
-                                const availablePos = sectPositions.filter(p => !getAssignId(newAssignments[`${p.id}_${shift.id}`]));
-                                if (availablePos.length > 0) {
-                                    // Shuffle positions to randomise who gets filled
-                                    const randPos = availablePos[Math.floor(Math.random() * availablePos.length)];
-
-                                    // Find candidate
-                                    let candidates = getCandidatesForPosition(randPos, personnel, areas, tags);
-                                    candidates = candidates.filter(p =>
-                                        isPersonFree(p.id, shift.id, newAssignments) &&
-                                        !workedPreviousShift(p.id, shift.id, newAssignments) &&
-                                        !isOverWorkLimit(p.id, newAssignments)
-                                    );
-
-                                    if (candidates.length > 0) {
-                                        // Simple fair pick
-                                        candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
-                                        const minShifts = Math.min(...candidates.map(c => c.shifts));
-                                        const fairPool = candidates.filter(c => c.shifts === minShifts);
-                                        const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
-
-                                        newAssignments[`${randPos.id}_${shift.id}`] = { id: chosen.id, isAuto: true };
-                                        addLog(`[Aud-Rot] Covered Sect ${sect} with ${chosen.name} at ${randPos.name}`, 'auditorium');
-                                        filledCount++;
-                                        audFilled++;
-                                        currentAudFilled++;
-                                    } else {
-                                        addLog(`[Aud-Rot] Failed to cover Sect ${sect} (No candidates)`, 'error');
-                                    }
-                                }
-                            } else {
-                                // Count manual assignments towards total
-                                currentAudFilled += sectPositions.filter(p => getAssignId(newAssignments[`${p.id}_${shift.id}`])).length;
-                            }
-                        });
-
-                        // Step B: Fill remaining up to targetCount
-                        const remainingSlots = audPositions.filter(p => !getAssignId(newAssignments[`${p.id}_${shift.id}`]));
-                        // Shuffle remaining slots
-                        for (let i = remainingSlots.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [remainingSlots[i], remainingSlots[j]] = [remainingSlots[j], remainingSlots[i]];
-                        }
-
-                        for (let pos of remainingSlots) {
-                            if (currentAudFilled >= targetCount) break;
-
-                            let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
-                            candidates = candidates.filter(p =>
-                                isPersonFree(p.id, shift.id, newAssignments) &&
-                                !workedPreviousShift(p.id, shift.id, newAssignments) &&
-                                !isOverWorkLimit(p.id, newAssignments)
-                            );
-
-                            if (candidates.length > 0) {
-                                candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
-                                const minShifts = Math.min(...candidates.map(c => c.shifts));
-                                const fairPool = candidates.filter(c => c.shifts === minShifts);
-                                const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
-
-                                newAssignments[`${pos.id}_${shift.id}`] = { id: chosen.id, isAuto: true };
-                                addLog(`[Aud-Rot] Filled ${pos.name} with ${chosen.name}`, 'auditorium');
-                                filledCount++;
-                                audFilled++;
-                                currentAudFilled++;
+                    let reliefUsedCount = 0;
+                    // Count manually assigned relief first
+                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
+                        const pid = getAssignId(newAssignments[`${rp.id}_${shift.id}`]);
+                        if(pid) {
+                            // Is this person mainly auditorium?
+                            if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === pid)) {
+                                reliefUsedCount++;
                             }
                         }
-                    }
+                    });
 
                     // --- STANDARD ROTATIONAL LOGIC ---
                     positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
@@ -1668,12 +1647,40 @@
                         if (!getAssignId(newAssignments[key])) {
                             let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
 
-                            candidates = candidates.filter(p =>
-                                isPersonFree(p.id, shift.id, newAssignments) &&
-                                !workedPreviousShift(p.id, shift.id, newAssignments) &&
-                                isAnchorAvailableForShift(p, shift.id, newAssignments) &&
-                                !isOverWorkLimit(p.id, newAssignments)
-                            );
+                            candidates = candidates.filter(p => {
+                                // Basic Checks
+                                if (!isPersonFree(p.id, shift.id, newAssignments)) return false;
+                                if (workedPreviousShift(p.id, shift.id, newAssignments)) return false;
+                                if (!isAnchorAvailableForShift(p, shift.id, newAssignments)) return false;
+                                if (isOverWorkLimit(p.id, newAssignments)) return false;
+
+                                // --- RELIEF MODE LOGIC ---
+                                // Check if this candidate is an Auditorium person on Relief
+                                const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
+                                if (myAudPos) {
+                                    if (!rules.auditoriumRotationMode) return false; // Not allowed if mode off
+
+                                    // 1. Max Relief Check
+                                    if (reliefUsedCount >= maxRelief) return false;
+
+                                    // 2. Section Safety Check
+                                    if (myAudPos.section) {
+                                        const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
+                                        for(let m of mates) {
+                                            const mid = getAssignId(newAssignments[m.id]);
+                                            if (mid) {
+                                                // Is mate assigned elsewhere this shift?
+                                                // Check rotational assignments
+                                                for(let otherRP of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                    const assignedId = getAssignId(newAssignments[`${otherRP.id}_${shift.id}`]);
+                                                    if (assignedId === mid) return false; // Mate is gone, I must stay
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                return true;
+                            });
 
                             if (candidates.length === 0) {
                                 addLog(`Slot ${pos.name}: No candidates.`, 'warn');
@@ -1698,7 +1705,14 @@
                             if (fairPool.length > 0) {
                                 const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
-                                addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
+
+                                // Increment relief count if necessary
+                                if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === chosen.id)) {
+                                    reliefUsedCount++;
+                                    addLog(`  > Assigned Relief: ${chosen.name} (from Aud)`, 'success');
+                                } else {
+                                    addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
+                                }
                                 filledCount++;
                                 rotFilled++;
                             }
@@ -1773,11 +1787,10 @@
                                         {positions.filter(p => p.areaId === area.id).map(pos => (
                                             <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}>
                                                 <td className="p-3 pl-6 font-medium sticky left-0 bg-inherit z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] text-gray-700 dark:border-slate-700 dark:text-gray-300">
-                                                    {pos.name} {pos.type === 'auditorium' && !rules.auditoriumRotationMode && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
-                                                    {pos.type === 'auditorium' && rules.auditoriumRotationMode && <span className="ml-2 inline-block text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-purple-900 dark:text-purple-300">ROTATING</span>}
+                                                    {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
                                                 </td>
-                                                {pos.type === 'auditorium' && !rules.auditoriumRotationMode ? (
-                                                    <td colSpan={shifts.length} className="p-0">
+                                                {pos.type === 'auditorium' ? (
+                                                    <td colSpan={4} className="p-0">
                                                         <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
                                                             <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} /></div>
                                                         </div>
@@ -2605,7 +2618,7 @@
                     anchorLimits: true,
                     maxWorkPercent: 50,
                     auditoriumRotationMode: false,
-                    auditoriumCoverage: 75
+                    auditoriumCoverage: 25
                 }
             };
 
