@@ -1504,10 +1504,9 @@
                             const shiftId = parts[parts.length - 1];
                             const shift = shifts.find(s => s.id === shiftId);
                             if (shift) minutesWorked += shift.minutes;
-                        } else {
-                            // Assume 'auditorium' type (all day) = TOTAL_PROGRAM_MINUTES
-                            minutesWorked += TOTAL_PROGRAM_MINUTES;
                         }
+                        // Note: Auditorium assignments (no underscore) do not count towards "Work Load" (Time Away)
+                        // as they are considered "Attending Session" for the purpose of relief calculation.
                     }
                 });
 
@@ -1542,6 +1541,9 @@
 
                     const conflict = getConflict(personId, pos, shiftId, newAssignments);
                     if (conflict && (conflict.type === 'error' || conflict.type === 'warning')) {
+                        // Ignore accepted Auditorium Relief warnings (don't auto-fix them)
+                        if (conflict.msg === "Auditorium Relief") return;
+
                         // 1. Unassign current
                         newAssignments[key] = null;
 
