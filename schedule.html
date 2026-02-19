@@ -906,7 +906,7 @@
             );
         }
 
-        function ScheduleView({ personnel, assignments, setAssignments, onAutoFill, areas, positions, shifts, rules }) {
+        function ScheduleView({ personnel, assignments, setAssignments, onAutoFill, areas, positions, shifts, rules, tags }) {
             const [pendingAction, setPendingAction] = useState(null);
             const [replacementSlot, setReplacementSlot] = useState(null);
 
@@ -939,11 +939,23 @@
                     if (pos.type !== 'auditorium' && requiredCap && (!person.caps || !person.caps.includes(requiredCap))) return { msg: `Qual: Not ${area.name}`, type: sev, key: null };
                 }
 
-                // 2. Check Unavailability
+                // 2. Check Unavailability (Personal & Tags)
                 if (rules.unavailableSeverity !== 'off') {
                     const sev = rules.unavailableSeverity || 'error';
+                    // Personal
                     if (person.unavailable && person.unavailable.includes(currentShiftId)) return { msg: "Marked Unavailable", type: sev, key: null };
                     if (pos.type === 'auditorium' && person.unavailable && person.unavailable.length > 0) return { msg: "Partial Unavailability", type: sev, key: null };
+
+                    // Tags
+                    if (person.tags && tags) {
+                        for (let tid of person.tags) {
+                            const tag = tags.find(t => t.id === tid);
+                            if (tag && tag.restrictedShifts) {
+                                if (tag.restrictedShifts.includes(currentShiftId)) return { msg: `Tag: ${tag.name}`, type: sev, key: null };
+                                if (pos.type === 'auditorium' && tag.restrictedShifts.length > 0) return { msg: `Tag: ${tag.name} (Partial)`, type: sev, key: null };
+                            }
+                        }
+                    }
                 }
 
                 // 3. Check Existing Assignments (Double Booking)
@@ -1025,7 +1037,18 @@
 
             const isPersonFree = (pid, shiftId, currentAssignments) => {
                  const person = personnel.find(p => p.id === pid);
-                 if (person && person.unavailable && person.unavailable.includes(shiftId)) return false;
+                 if (!person) return false;
+
+                 // Personal Unavailable
+                 if (person.unavailable && person.unavailable.includes(shiftId)) return false;
+
+                 // Tag Unavailable
+                 if (person.tags && tags) {
+                     for (let tid of person.tags) {
+                         const tag = tags.find(t => t.id === tid);
+                         if (tag && tag.restrictedShifts && tag.restrictedShifts.includes(shiftId)) return false;
+                     }
+                 }
 
                  for (let p of positions) {
                      // Check if busy at ANY auditorium spot
@@ -1520,6 +1543,193 @@
             );
         }
 
+        function TagsView({ tags, setTags, personnel, setPersonnel, shifts }) {
+            const [newTag, setNewTag] = useState({ name: '', restrictedShifts: [] });
+            const [selectedTagId, setSelectedTagId] = useState('');
+            const [filterName, setFilterName] = useState('');
+
+            // --- TAG MANAGEMENT ---
+            const addTag = () => {
+                if (!newTag.name) return alert("Tag Name is required");
+                const id = 'tag_' + Date.now();
+                setTags([...tags, { id, ...newTag }]);
+                setNewTag({ name: '', restrictedShifts: [] });
+            };
+
+            const deleteTag = (id) => {
+                if (confirm("Delete this tag?")) {
+                    setTags(tags.filter(t => t.id !== id));
+                    // Clean up personnel
+                    const newPersonnel = personnel.map(p => ({
+                        ...p,
+                        tags: p.tags ? p.tags.filter(tid => tid !== id) : []
+                    }));
+                    setPersonnel(newPersonnel);
+                    if (selectedTagId === id) setSelectedTagId('');
+                }
+            };
+
+            const toggleShift = (shiftId) => {
+                const current = newTag.restrictedShifts;
+                if (current.includes(shiftId)) {
+                    setNewTag({ ...newTag, restrictedShifts: current.filter(s => s !== shiftId) });
+                } else {
+                    setNewTag({ ...newTag, restrictedShifts: [...current, shiftId] });
+                }
+            };
+
+            // --- BULK ASSIGNMENT ---
+            const togglePersonTag = (personId, tagId) => {
+                const person = personnel.find(p => p.id === personId);
+                if (!person) return;
+
+                const currentTags = person.tags || [];
+                let newTags;
+                if (currentTags.includes(tagId)) {
+                    newTags = currentTags.filter(t => t !== tagId);
+                } else {
+                    newTags = [...currentTags, tagId];
+                }
+
+                setPersonnel(personnel.map(p => p.id === personId ? { ...p, tags: newTags } : p));
+            };
+
+            const selectedTag = tags.find(t => t.id === selectedTagId);
+            const filteredPersonnel = personnel.filter(p => p.name.toLowerCase().includes(filterName.toLowerCase()));
+
+            return (
+                <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Tags & Constraints</h2>
+
+                    {/* TOP: CREATE TAG */}
+                    <div className="bg-gray-50 p-4 rounded border mb-6">
+                        <h3 className="font-bold text-lg mb-2">Create New Tag</h3>
+                        <div className="flex gap-4 items-start mb-2">
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Tag Name</label>
+                                <input
+                                    type="text"
+                                    value={newTag.name}
+                                    onChange={e => setNewTag({...newTag, name: e.target.value})}
+                                    className="border p-2 rounded w-full"
+                                    placeholder="e.g. Bus Riders"
+                                />
+                            </div>
+                            <div className="flex-1">
+                                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Restricted Shifts (Cannot Work)</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {shifts.map(s => (
+                                        <label key={s.id} className="flex items-center text-sm bg-white border px-2 py-1 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={newTag.restrictedShifts.includes(s.id)}
+                                                onChange={() => toggleShift(s.id)}
+                                                className="mr-2"
+                                            />
+                                            {s.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={addTag} className="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700 h-full mt-5">Create</button>
+                        </div>
+                    </div>
+
+                    {/* MAIN SPLIT: LIST & ASSIGN */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* LEFT: TAG LIST */}
+                        <div className="border rounded p-4">
+                            <h3 className="font-bold text-lg mb-4 border-b pb-2">Existing Tags</h3>
+                            {tags.length === 0 && <p className="text-gray-400 italic">No tags created.</p>}
+                            <ul className="space-y-2">
+                                {tags.map(tag => (
+                                    <li key={tag.id}
+                                        onClick={() => setSelectedTagId(tag.id)}
+                                        className={`p-3 rounded border cursor-pointer flex justify-between items-center transition-colors ${selectedTagId === tag.id ? 'bg-blue-50 border-blue-500' : 'hover:bg-gray-50'}`}
+                                    >
+                                        <div>
+                                            <div className="font-bold">{tag.name}</div>
+                                            <div className="text-xs text-red-600">
+                                                {tag.restrictedShifts.length > 0 ? `Restricts: ${tag.restrictedShifts.length} shifts` : 'No restrictions'}
+                                            </div>
+                                        </div>
+                                        <button onClick={(e) => { e.stopPropagation(); deleteTag(tag.id); }} className="text-gray-400 hover:text-red-500 px-2">
+                                            <i className="fa fa-trash"></i>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* RIGHT: ASSIGNMENT */}
+                        <div className="col-span-2 border rounded p-4 flex flex-col h-[600px]">
+                            <h3 className="font-bold text-lg mb-4 border-b pb-2">
+                                {selectedTag ? `Manage Members: ${selectedTag.name}` : 'Select a Tag to Manage Members'}
+                            </h3>
+
+                            {selectedTag ? (
+                                <>
+                                    <div className="mb-4">
+                                        <input
+                                            type="text"
+                                            placeholder="Search personnel..."
+                                            value={filterName}
+                                            onChange={e => setFilterName(e.target.value)}
+                                            className="w-full border p-2 rounded"
+                                        />
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto border rounded bg-gray-50">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-100 sticky top-0">
+                                                <tr>
+                                                    <th className="p-2 text-left w-10">
+                                                        {/* Header Checkbox logic usually complex, skipping for simplicity */}
+                                                    </th>
+                                                    <th className="p-2 text-left">Name</th>
+                                                    <th className="p-2 text-left">Current Tags</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200">
+                                                {filteredPersonnel.map(p => {
+                                                    const isMember = p.tags && p.tags.includes(selectedTag.id);
+                                                    return (
+                                                        <tr key={p.id} className={`hover:bg-white transition-colors ${isMember ? 'bg-green-50' : ''}`} onClick={() => togglePersonTag(p.id, selectedTag.id)}>
+                                                            <td className="p-2 text-center">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isMember || false}
+                                                                    onChange={() => {}} // Handled by row click
+                                                                    className="w-4 h-4 cursor-pointer"
+                                                                />
+                                                            </td>
+                                                            <td className="p-2 font-medium cursor-pointer">{p.name}</td>
+                                                            <td className="p-2 text-xs text-gray-500">
+                                                                {p.tags && p.tags.map(tid => {
+                                                                    const t = tags.find(tag => tag.id === tid);
+                                                                    return t ? <span key={tid} className="bg-gray-200 px-1 rounded mr-1">{t.name}</span> : null;
+                                                                })}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div className="mt-2 text-xs text-gray-500 text-right">
+                                        Click rows to toggle membership.
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center text-gray-400">
+                                    &larr; Select a tag from the left
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules }) {
             const [activeTab, setActiveTab] = useState('areas');
 
@@ -1732,6 +1942,7 @@
 
             const INITIAL_STATE = {
                 personnel: INITIAL_ROSTER,
+                tags: [],
                 assignments: {},
                 log: [],
                 areas: DEFAULT_AREAS,
@@ -1748,7 +1959,7 @@
             };
 
             const { state, setState, undo, redo, canUndo, canRedo } = useUndoRedo(INITIAL_STATE);
-            const { personnel, assignments, log, areas, positions, shifts, rules } = state;
+            const { personnel, tags, assignments, log, areas, positions, shifts, rules } = state;
 
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [showLoadModal, setShowLoadModal] = useState(false);
@@ -1758,6 +1969,7 @@
             const updateState = (updates) => setState({ ...state, ...updates });
 
             const setPersonnel = (val) => updateState({ personnel: typeof val === 'function' ? val(personnel) : val });
+            const setTags = (val) => updateState({ tags: typeof val === 'function' ? val(tags) : val });
             const setAssignments = (val) => updateState({ assignments: typeof val === 'function' ? val(assignments) : val });
             const setAreas = (val) => updateState({ areas: typeof val === 'function' ? val(areas) : val });
             const setPositions = (val) => updateState({ positions: typeof val === 'function' ? val(positions) : val });
@@ -1850,6 +2062,7 @@
                                 <button onClick={() => setView('stats')} className={`px-3 py-1 rounded ${view==='stats'?'bg-blue-700':'hover:bg-blue-800'}`}>Time Stats</button>
                                 <button onClick={() => setView('dept')} className={`px-3 py-1 rounded ${view==='dept'?'bg-blue-700':'hover:bg-blue-800'}`}>Depts</button>
                                 <button onClick={() => setView('log')} className={`px-3 py-1 rounded ${view==='log'?'bg-blue-700':'hover:bg-blue-800'}`}>Log</button>
+                                <button onClick={() => setView('tags')} className={`px-3 py-1 rounded ${view==='tags'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-tags mr-1"></i> Tags</button>
                                 <button onClick={() => setView('print')} className={`px-3 py-1 rounded ${view==='print'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-print mr-1"></i> Slips</button>
                                 <button onClick={() => setView('config')} className={`px-3 py-1 rounded ${view==='config'?'bg-blue-700':'hover:bg-blue-800'}`}><i className="fa fa-cog mr-1"></i> Config</button>
                             </div>
@@ -1865,9 +2078,10 @@
                          view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
                          view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
                          view === 'log' ? <LogView log={log} /> :
+                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
                          view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} /> :
-                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} />}
+                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
                     </div>
                     {showSaveModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
