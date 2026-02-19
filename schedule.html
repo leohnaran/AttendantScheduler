@@ -1568,6 +1568,24 @@
                             }
 
                             if (fairPool.length > 0) {
+                                    // Tie-breaker: If mixed pool of Rotational (with 0 shifts) vs Auditorium Relief (with 0 shifts),
+                                    // prioritize Auditorium Relief if "Auditorium Rotation Mode" is ON (user preference to rotate them).
+                                    // Otherwise, random.
+                                    if (rules.auditoriumRotationMode) {
+                                        const audReliefCandidates = fairPool.filter(c => c.caps && c.caps.includes('auditorium'));
+                                        if (audReliefCandidates.length > 0 && audReliefCandidates.length < fairPool.length) {
+                                            // Optional: Favor them? Or favor true Rotational?
+                                            // Logic: Auditorium guys are working 100%. Rotational guys with 0 shifts are working 0%.
+                                            // Fairness dictates we should prioritize the Rotational guy to get him to >0.
+                                            // BUT user asked "who will it pick?". Current logic picks randomly.
+                                            // Let's refine to prioritize PURE Rotational if they are at 0 shifts.
+                                            const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
+                                            if (pureRotational.length > 0 && minShifts === 0) {
+                                                fairPool = pureRotational;
+                                            }
+                                        }
+                                    }
+
                                 const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
                                 reassignedCount++;
@@ -1697,6 +1715,16 @@
                                 if (teamMembers.length > 0) {
                                     fairPool = teamMembers;
                                     addLog(`  > Prioritizing Team Members (${teamMembers.length})`, 'info');
+                                }
+                            }
+
+                            // LOGIC: If picking between Brother A (Rotational, 0 shifts) and Brother B (Auditorium Relief, 0 relief shifts)
+                            // Fairness dictates Brother A needs a job more than Brother B needs relief.
+                            if (rules.auditoriumRotationMode && minShifts === 0) {
+                                const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
+                                if (pureRotational.length > 0) {
+                                    fairPool = pureRotational;
+                                    addLog(`  > Prioritizing Idle Rotational Staff (${pureRotational.length})`, 'info');
                                 }
                             }
 
