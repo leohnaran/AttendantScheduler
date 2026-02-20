@@ -609,15 +609,46 @@
                             >
                                 {/* GROUP HEADER */}
                                 <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm dark:bg-slate-800/50 dark:border-slate-700">
-                                    <h3 className="font-bold text-gray-900 flex items-center gap-3 dark:text-white">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
-                                            <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
+                                    {group.keyMan && editingId === group.keyMan.id ? (
+                                        <div className="flex items-center gap-3 w-full">
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                                                <i className="fa fa-user-tie"></i>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                                className="border p-2 rounded-lg text-lg font-bold text-gray-900 w-full max-w-sm shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                autoFocus
+                                                placeholder="Key Man Name"
+                                            />
+                                            <select
+                                                value={formData.role}
+                                                onChange={(e) => setFormData({...formData, role: e.target.value})}
+                                                className="border p-2 rounded-lg text-sm text-gray-700 font-medium bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                            >
+                                                <option value="Exemplary">Exemplary</option>
+                                                <option value="MS">MS</option>
+                                                <option value="Elder">Elder</option>
+                                            </select>
+                                            <div className="flex gap-2 ml-auto">
+                                                <button onClick={savePerson} className="text-white bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 flex items-center gap-1"><i className="fa fa-check"></i> Save</button>
+                                                <button onClick={cancelEdit} className="text-gray-600 hover:text-gray-800 bg-white border border-gray-200 hover:bg-gray-50 px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600">Cancel</button>
+                                            </div>
                                         </div>
-                                        {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
-                                        <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} members</span>
-                                    </h3>
-                                    {group.keyMan && (
-                                        <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit Key Man</button>
+                                    ) : (
+                                        <>
+                                            <h3 className="font-bold text-gray-900 flex items-center gap-3 dark:text-white">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
+                                                    <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
+                                                </div>
+                                                {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
+                                                <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} members</span>
+                                            </h3>
+                                            {group.keyMan && (
+                                                <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit Key Man</button>
+                                            )}
+                                        </>
                                     )}
                                 </div>
 
@@ -655,6 +686,16 @@
                                                                             className="border p-1 rounded w-full text-sm"
                                                                             autoFocus
                                                                         />
+                                                                        <select
+                                                                            value={formData.keyManId}
+                                                                            onChange={(e) => setFormData({...formData, keyManId: e.target.value})}
+                                                                            className="border p-1 rounded w-full text-[10px] text-gray-500 mt-0.5"
+                                                                        >
+                                                                            <option value="">-- No Key Man --</option>
+                                                                            {keyMen.filter(km => km.id !== p.id).map(km => (
+                                                                                <option key={km.id} value={km.id}>{km.name}</option>
+                                                                            ))}
+                                                                        </select>
                                                                         {p.tags && p.tags.length > 0 && (
                                                                             <div className="text-[10px] text-gray-500">
                                                                                 Tags: {p.tags.map(tid => {
@@ -1152,6 +1193,28 @@
                             <input type="checkbox" checked={rules.anchorLimits !== false} onChange={() => toggleRule('anchorLimits')} className="h-5 w-5" />
                         </div>
 
+                        {/* 7. Auditorium Relief Mode */}
+                        <div className="p-4 bg-blue-50 rounded border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
+                            <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <h3 className="font-bold text-blue-900 dark:text-blue-300">Auditorium Relief Mode</h3>
+                                    <p className="text-xs text-blue-700 dark:text-blue-400">Allow Auditorium staff to be double-booked for rotational assignments (Relief Duty).</p>
+                                </div>
+                                <input type="checkbox" checked={rules.auditoriumRotationMode === true} onChange={() => toggleRule('auditoriumRotationMode')} className="h-5 w-5" />
+                            </div>
+
+                            {rules.auditoriumRotationMode && (
+                                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-bold text-gray-700 dark:text-gray-300 text-sm">Max Relief % per Shift</h4>
+                                        <span className="font-bold text-blue-600 dark:text-blue-400">{rules.auditoriumCoverage || 25}%</span>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Limit how many Auditorium brothers can be pulled away at once.</p>
+                                    <input type="range" min="5" max="50" step="5" value={rules.auditoriumCoverage || 25} onChange={e=>setVal('auditoriumCoverage', parseInt(e.target.value))} className="w-full" />
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 </div>
             );
@@ -1228,23 +1291,83 @@
                 if (rules.doubleBookingSeverity !== 'off') {
                     const sev = rules.doubleBookingSeverity || 'error';
                     for (let p of positions) {
-                        if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
-                            if (p.id !== pos.id) return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
-                        }
-                    }
+                        // A. Check for All Day assignments (Auditorium)
+                        if (p.type === 'auditorium') {
+                            if (getAssignId(currentAssignments[p.id]) === pid) {
+                                // Conflict?
+                                if (p.id !== pos.id) {
+                                    // If target is ALSO all day -> Conflict
+                                    if (pos.type === 'auditorium') return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
 
-                    if (pos.type === 'rotational') {
-                        for (let p of positions) {
-                            if (p.id === pos.id) continue;
+                                    // If target is Rotational -> Depends on "Relief Mode"
+                                    if (pos.type === 'rotational') {
+                                        if (!rules.auditoriumRotationMode) {
+                                            return { msg: `Assigned at ${p.name}`, type: sev, key: p.id };
+                                        }
+                                        // Relief Mode is ON: Double booking allowed, BUT check Constraints:
 
-                            if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
-                                return { msg: `Also at ${p.name}`, type: sev, key: p.id };
+                                        // 1. Section Safety: Is the OTHER brother from this section also gone?
+                                        if (p.section) {
+                                            let sectionAbandoned = false;
+                                            // Find all other auditorium positions in this section
+                                            const sectionMates = positions.filter(op => op.type === 'auditorium' && op.section === p.section && op.id !== p.id);
+
+                                            // Check if ANY of them are currently assigned to a rotational shift
+                                            for(let mate of sectionMates) {
+                                                const mateId = getAssignId(currentAssignments[mate.id]);
+                                                if (mateId) {
+                                                    // Is THIS mate assigned to a rotational shift at this time?
+                                                    for (let rp of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                        if (rp.validShifts && !rp.validShifts.includes(currentShiftId)) continue;
+                                                        if (rp.id === pos.id) continue; // Skip the spot we are trying to fill
+                                                        if (getAssignId(currentAssignments[`${rp.id}_${currentShiftId}`]) === mateId) {
+                                                            sectionAbandoned = true;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (sectionAbandoned) return { msg: `Section ${p.section} Abandoned`, type: 'error', key: null };
+                                        }
+
+                                        // 2. Max Relief %
+                                        const audPositions = positions.filter(x => x.type === 'auditorium');
+                                        const totalAud = audPositions.length;
+                                        const maxRelief = Math.floor(totalAud * ((rules.auditoriumCoverage || 25) / 100));
+
+                                        let currentReliefCount = 0;
+                                        // Count how many auditorium brothers are on rotational duty this shift
+                                        for (let ap of audPositions) {
+                                            const apId = getAssignId(currentAssignments[ap.id]);
+                                            if (!apId) continue;
+                                            if (apId === pid) continue; // Don't count self yet
+
+                                            for (let rp of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                if (rp.validShifts && !rp.validShifts.includes(currentShiftId)) continue;
+                                                if (getAssignId(currentAssignments[`${rp.id}_${currentShiftId}`]) === apId) {
+                                                    currentReliefCount++;
+                                                    break; // Counted once per person per shift
+                                                }
+                                            }
+                                        }
+
+                                        if (currentReliefCount >= maxRelief) return { msg: `Max Relief (${maxRelief}) Hit`, type: 'warning', key: null };
+
+                                        // If we pass checks, return INFO
+                                        return { msg: "Auditorium Relief", type: "warning", key: p.id };
+                                    }
+                                }
                             }
+                        }
 
-                            if (p.type === 'rotational' && !p.isMirror) {
-                                if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
-                                    const checkKey = `${p.id}_${currentShiftId}`;
-                                    if (getAssignId(currentAssignments[checkKey]) === pid) return { msg: `Busy at ${p.name}`, type: sev, key: checkKey };
+                        // B. Check for Rotational assignments (Standard)
+                        if (p.type === 'rotational' && !p.isMirror) {
+                            if (p.id === pos.id) continue; // Skip self check
+
+                            if (!p.validShifts || p.validShifts.includes(currentShiftId)) {
+                                const checkKey = `${p.id}_${currentShiftId}`;
+                                if (getAssignId(currentAssignments[checkKey]) === pid) {
+                                    return { msg: `Busy at ${p.name}`, type: sev, key: checkKey };
                                 }
                             }
                         }
@@ -1321,9 +1444,19 @@
                  }
 
                  for (let p of positions) {
-                     // Check if busy at ANY auditorium spot
-                     if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) return false;
+                     // Check if busy at ANY auditorium spot (All Day Key)
+                     if (p.type === 'auditorium' && getAssignId(currentAssignments[p.id]) === pid) {
+                         // IF checking for a rotational shift ('shiftId' is not 'all')
+                         // AND Relief Mode is ON
+                         // THEN this does NOT count as "busy" (return true effectively for this check)
+                         if (shiftId !== 'all' && rules.auditoriumRotationMode) {
+                             // Continue to check other conflicts, but don't return false yet
+                         } else {
+                             return false;
+                         }
+                     }
 
+                     // Check Shift Keys (Rotational)
                      if (p.type === 'rotational' && !p.isMirror) {
                         if (shiftId === 'all') {
                             // If checking for 'all day' (Auditorium), must be free ALL shifts
@@ -1407,15 +1540,14 @@
                 Object.keys(currentAssignments).forEach(key => {
                     if (getAssignId(currentAssignments[key]) === pid) {
                         // Check if key has a shift ID suffix (e.g. pos_morning)
-                        if (key.includes('_') && !key.includes('pos12')) { // pos12 is special keyman exception
+                        if (key.includes('_')) {
                             const parts = key.split('_');
                             const shiftId = parts[parts.length - 1];
                             const shift = shifts.find(s => s.id === shiftId);
                             if (shift) minutesWorked += shift.minutes;
-                        } else {
-                            // Assume 'auditorium' type (all day) = TOTAL_PROGRAM_MINUTES
-                            minutesWorked += TOTAL_PROGRAM_MINUTES;
                         }
+                        // Note: Auditorium assignments (no underscore) do not count towards "Work Load" (Time Away)
+                        // as they are considered "Attending Session" for the purpose of relief calculation.
                     }
                 });
 
@@ -1450,6 +1582,9 @@
 
                     const conflict = getConflict(personId, pos, shiftId, newAssignments);
                     if (conflict && (conflict.type === 'error' || conflict.type === 'warning')) {
+                        // Ignore accepted Auditorium Relief warnings (don't auto-fix them)
+                        if (conflict.msg === "Auditorium Relief") return;
+
                         // 1. Unassign current
                         newAssignments[key] = null;
 
@@ -1476,6 +1611,24 @@
                             }
 
                             if (fairPool.length > 0) {
+                                    // Tie-breaker: If mixed pool of Rotational (with 0 shifts) vs Auditorium Relief (with 0 shifts),
+                                    // prioritize Auditorium Relief if "Auditorium Rotation Mode" is ON (user preference to rotate them).
+                                    // Otherwise, random.
+                                    if (rules.auditoriumRotationMode) {
+                                        const audReliefCandidates = fairPool.filter(c => c.caps && c.caps.includes('auditorium'));
+                                        if (audReliefCandidates.length > 0 && audReliefCandidates.length < fairPool.length) {
+                                            // Optional: Favor them? Or favor true Rotational?
+                                            // Logic: Auditorium guys are working 100%. Rotational guys with 0 shifts are working 0%.
+                                            // Fairness dictates we should prioritize the Rotational guy to get him to >0.
+                                            // BUT user asked "who will it pick?". Current logic picks randomly.
+                                            // Let's refine to prioritize PURE Rotational if they are at 0 shifts.
+                                            const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
+                                            if (pureRotational.length > 0 && minShifts === 0) {
+                                                fairPool = pureRotational;
+                                            }
+                                        }
+                                    }
+
                                 const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
                                 reassignedCount++;
@@ -1507,7 +1660,7 @@
 
                 const addLog = (msg, type) => logEntries.push({ msg, type });
 
-                // 1. Auditorium First
+                // 1. Auditorium First (Always run - Auditorium is now always "All Day")
                 addLog("--- Starting Auditorium Fill ---", 'auditorium');
                 positions.filter(p => p.type === 'auditorium').forEach(pos => {
                     if (!getAssignId(newAssignments[pos.id])) {
@@ -1530,6 +1683,24 @@
                 addLog("--- Starting Rotational Fill ---", 'rotational');
                 shifts.forEach(shift => {
                     addLog(`>> Processing ${shift.label}`, 'shift');
+
+                    // Count Auditorium Relief Usage for this Shift
+                    const audPositions = positions.filter(x => x.type === 'auditorium');
+                    const maxRelief = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
+
+                    let reliefUsedCount = 0;
+                    // Count manually assigned relief first
+                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
+                        const pid = getAssignId(newAssignments[`${rp.id}_${shift.id}`]);
+                        if(pid) {
+                            // Is this person mainly auditorium?
+                            if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === pid)) {
+                                reliefUsedCount++;
+                            }
+                        }
+                    });
+
+                    // --- STANDARD ROTATIONAL LOGIC ---
                     positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
                         if (pos.validShifts && !pos.validShifts.includes(shift.id)) return;
                         const key = `${pos.id}_${shift.id}`;
@@ -1537,12 +1708,40 @@
                         if (!getAssignId(newAssignments[key])) {
                             let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
 
-                            candidates = candidates.filter(p =>
-                                isPersonFree(p.id, shift.id, newAssignments) &&
-                                !workedPreviousShift(p.id, shift.id, newAssignments) &&
-                                isAnchorAvailableForShift(p, shift.id, newAssignments) &&
-                                !isOverWorkLimit(p.id, newAssignments)
-                            );
+                            candidates = candidates.filter(p => {
+                                // Basic Checks
+                                if (!isPersonFree(p.id, shift.id, newAssignments)) return false;
+                                if (workedPreviousShift(p.id, shift.id, newAssignments)) return false;
+                                if (!isAnchorAvailableForShift(p, shift.id, newAssignments)) return false;
+                                if (isOverWorkLimit(p.id, newAssignments)) return false;
+
+                                // --- RELIEF MODE LOGIC ---
+                                // Check if this candidate is an Auditorium person on Relief
+                                const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
+                                if (myAudPos) {
+                                    if (!rules.auditoriumRotationMode) return false; // Not allowed if mode off
+
+                                    // 1. Max Relief Check
+                                    if (reliefUsedCount >= maxRelief) return false;
+
+                                    // 2. Section Safety Check
+                                    if (myAudPos.section) {
+                                        const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
+                                        for(let m of mates) {
+                                            const mid = getAssignId(newAssignments[m.id]);
+                                            if (mid) {
+                                                // Is mate assigned elsewhere this shift?
+                                                // Check rotational assignments
+                                                for(let otherRP of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                    const assignedId = getAssignId(newAssignments[`${otherRP.id}_${shift.id}`]);
+                                                    if (assignedId === mid) return false; // Mate is gone, I must stay
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                return true;
+                            });
 
                             if (candidates.length === 0) {
                                 addLog(`Slot ${pos.name}: No candidates.`, 'warn');
@@ -1562,12 +1761,29 @@
                                 }
                             }
 
+                            // LOGIC: If picking between Brother A (Rotational, 0 shifts) and Brother B (Auditorium Relief, 0 relief shifts)
+                            // Fairness dictates Brother A needs a job more than Brother B needs relief.
+                            if (rules.auditoriumRotationMode && minShifts === 0) {
+                                const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
+                                if (pureRotational.length > 0) {
+                                    fairPool = pureRotational;
+                                    addLog(`  > Prioritizing Idle Rotational Staff (${pureRotational.length})`, 'info');
+                                }
+                            }
+
                             addLog(`Slot ${pos.name}: Candidates ${candidates.length}, Fair (${minShifts}) ${fairPool.length}`, 'info');
 
                             if (fairPool.length > 0) {
                                 const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
                                 newAssignments[key] = { id: chosen.id, isAuto: true };
-                                addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
+
+                                // Increment relief count if necessary
+                                if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === chosen.id)) {
+                                    reliefUsedCount++;
+                                    addLog(`  > Assigned Relief: ${chosen.name} (from Aud)`, 'success');
+                                } else {
+                                    addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
+                                }
                                 filledCount++;
                                 rotFilled++;
                             }
@@ -2199,12 +2415,12 @@
             };
 
             // --- POSITION MANAGEMENT ---
-            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '' });
+            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '', section: '' });
             const addPosition = () => {
                 if (!posForm.id || !posForm.name || !posForm.areaId) return alert("ID, Name, and Area are required");
                 if (positions.find(p => p.id === posForm.id)) return alert("ID must be unique");
                 setPositions([...positions, { ...posForm, teamKeyManId: posForm.teamKeyManId ? parseInt(posForm.teamKeyManId) : null }]);
-                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '' });
+                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '', section: '' });
             };
             const deletePosition = (id) => {
                 if (confirm("Delete this position?")) {
@@ -2312,6 +2528,7 @@
                                         <option value="rotational">Rotational</option>
                                         <option value="auditorium">Auditorium (All Day)</option>
                                     </select>
+                                    <input placeholder="Section (e.g. A)" value={posForm.section || ''} onChange={e => setPosForm({...posForm, section: e.target.value})} className="border p-2 rounded w-24 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                     <select value={posForm.teamKeyManId} onChange={e => setPosForm({...posForm, teamKeyManId: e.target.value})} className="border p-2 rounded w-48 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
                                         <option value="">-- Any Team --</option>
                                         {keyMen.map(km => <option key={km.id} value={km.id}>Team: {km.name}</option>)}
@@ -2325,7 +2542,7 @@
                             </div>
                              <div className="h-96 overflow-y-auto border rounded dark:border-slate-700">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
+                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Sect</th><th className="p-2 text-left">Type</th><th className="p-2">Action</th></tr></thead>
                                     <tbody>
                                         {positions.map(p => (
                                             <tr key={p.id} className="border-b hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-gray-200">
@@ -2333,6 +2550,7 @@
                                                 <td className="p-2">{p.name} {p.keyMan && <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1 rounded border border-yellow-200 dark:bg-yellow-900 dark:text-yellow-100 dark:border-yellow-700">KM</span>}</td>
                                                 <td className="p-2">{areas.find(a => a.id === p.areaId)?.name || p.areaId}</td>
                                                 <td className="p-2 text-xs text-gray-500 dark:text-gray-400">{p.teamKeyManId ? (keyMen.find(k=>k.id===p.teamKeyManId)?.name || 'Unknown') : '-'}</td>
+                                                <td className="p-2 text-xs">{p.section || '-'}</td>
                                                 <td className="p-2">{p.type}</td>
                                                 <td className="p-2 text-center"><button onClick={() => deletePosition(p.id)} className="text-red-500"><i className="fa fa-trash"></i></button></td>
                                             </tr>
@@ -2469,7 +2687,9 @@
                     unavailableSeverity: 'error',
                     avoidConsecutive: true,
                     anchorLimits: true,
-                    maxWorkPercent: 50
+                    maxWorkPercent: 50,
+                    auditoriumRotationMode: false,
+                    auditoriumCoverage: 25
                 }
             };
 
