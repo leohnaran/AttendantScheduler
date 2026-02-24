@@ -2674,6 +2674,8 @@
 
             const saveAreaUpdate = () => {
                 if (!editAreaForm.name) return alert("Name is required");
+
+                // Update Area
                 setAreas(areas.map(a => a.id === editingAreaId ? {
                     id: a.id, // ID remains immutable
                     name: editAreaForm.name,
@@ -2682,6 +2684,21 @@
                     limitType: editAreaForm.limitType,
                     limitValue: editAreaForm.limitValue
                 } : a));
+
+                // Auto-apply to all positions in this area (Bulk Update)
+                if (editAreaForm.limitType) {
+                    setPositions(prev => prev.map(p => {
+                        if (p.areaId === editingAreaId) {
+                            return {
+                                ...p,
+                                limitType: editAreaForm.limitType,
+                                limitValue: editAreaForm.limitValue
+                            };
+                        }
+                        return p;
+                    }));
+                }
+
                 cancelEditArea();
             };
 
@@ -2710,6 +2727,20 @@
                 setPositions([...positions, { ...posForm }]);
                 setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, limitType: '', limitValue: '', section: '' });
             };
+
+            // Auto-fill restriction when Area is selected
+            useEffect(() => {
+                if (posForm.areaId) {
+                    const area = areas.find(a => a.id === posForm.areaId);
+                    if (area && area.limitType) {
+                        setPosForm(prev => ({
+                            ...prev,
+                            limitType: area.limitType,
+                            limitValue: area.limitValue
+                        }));
+                    }
+                }
+            }, [posForm.areaId, areas]);
             const deletePosition = (id) => {
                 if (confirm("Delete this position?")) {
                     setPositions(positions.filter(p => p.id !== id));
