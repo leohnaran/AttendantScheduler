@@ -234,6 +234,24 @@
             const area = areas.find(a => a.id === pos.areaId);
             if(!area) return [];
             const requiredCap = area.capability;
+
+            // Determine effective restriction
+            // Position restriction takes precedence, then Area restriction
+            let limitType = pos.limitType;
+            let limitValue = pos.limitValue;
+
+            // Legacy backward compatibility for Position
+            if (!limitType && pos.teamKeyManId) {
+                limitType = 'keyman';
+                limitValue = pos.teamKeyManId;
+            }
+
+            // Fallback to Area restriction if none on Position
+            if (!limitType && area.limitType) {
+                limitType = area.limitType;
+                limitValue = area.limitValue;
+            }
+
             return personnel.filter(p => {
                 if (!p.caps || !p.caps.includes(requiredCap)) return false;
                 if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) return false;
@@ -243,6 +261,17 @@
                     for (let tid of p.tags) {
                         const tag = tags.find(t => t.id === tid);
                         if (tag && tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) return false;
+                    }
+                }
+
+                // Check Assignment Constraints
+                if (limitType && limitValue) {
+                    if (limitType === 'keyman') {
+                        if (p.keyManId !== parseInt(limitValue)) return false;
+                    } else if (limitType === 'congregation') {
+                        if (p.congregation !== limitValue) return false;
+                    } else if (limitType === 'tag') {
+                        if (!p.tags || !p.tags.includes(limitValue)) return false;
                     }
                 }
 
@@ -983,12 +1012,25 @@
                 const area = areas.find(a => a.id === pos.areaId);
                 const requiredCap = area ? area.capability : '';
 
+                // Determine effective restriction (Inheritance: Pos > Legacy > Area)
+                let limitType = pos.limitType;
+                let limitValue = pos.limitValue;
+                if (!limitType && pos.teamKeyManId) {
+                    limitType = 'keyman';
+                    limitValue = pos.teamKeyManId;
+                }
+                if (!limitType && area && area.limitType) {
+                    limitType = area.limitType;
+                    limitValue = area.limitValue;
+                }
+
                 // Create a list of ALL personnel, but mark if they are recommended or not
                 let candidates = personnel.map(p => {
                     let qualified = true;
                     if (!p.caps || !p.caps.includes(requiredCap)) qualified = false;
                     if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) qualified = false;
 
+                    // Tag Restrictions
                     if (tags && p.tags) {
                         for (let tid of p.tags) {
                             const tag = tags.find(t => t.id === tid);
@@ -996,16 +1038,27 @@
                         }
                     }
 
+                    // Assignment Constraints
+                    if (limitType && limitValue) {
+                        if (limitType === 'keyman') {
+                            if (p.keyManId !== parseInt(limitValue)) qualified = false;
+                        } else if (limitType === 'congregation') {
+                            if (p.congregation !== limitValue) qualified = false;
+                        } else if (limitType === 'tag') {
+                            if (!p.tags || !p.tags.includes(limitValue)) qualified = false;
+                        }
+                    }
+
                     return { ...p, qualified };
                 });
 
-                // Sort: Qualified first, then Team-Match, then Alphabetical
+                // Sort: Qualified first, then Team-Match (Legacy), then Alphabetical
                 candidates.sort((a,b) => {
                     if (a.qualified && !b.qualified) return -1;
                     if (!a.qualified && b.qualified) return 1;
 
-                    // Prioritize Team Match
-                    if (pos.teamKeyManId) {
+                    // Prioritize Team Match (Legacy support for highlighting if no strict constraint)
+                    if (pos.teamKeyManId && !limitType) {
                         const aTeam = a.keyManId === pos.teamKeyManId;
                         const bTeam = b.keyManId === pos.teamKeyManId;
                         if(aTeam && !bTeam) return -1;
@@ -2535,13 +2588,49 @@
             );
         }
 
-        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules }) {
+        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules, tags }) {
             const [activeTab, setActiveTab] = useState('areas');
 
             const keyMen = useMemo(() => personnel.filter(p => p.caps && p.caps.includes('keyman')), [personnel]);
+            const uniqueCongregations = useMemo(() => {
+                return [...new Set(personnel.map(p => p.congregation).filter(c => c && c.trim() !== ''))].sort();
+            }, [personnel]);
+
+            const renderConstraintSelector = (form, setForm, prefix) => (
+                <div className="flex gap-2 items-center">
+                    <select value={form.limitType || ''} onChange={e => setForm({...form, limitType: e.target.value, limitValue: ''})} className={`border p-1 rounded text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white ${prefix ? 'w-full' : 'w-24'}`}>
+                        <option value="">Any</option>
+                        <option value="keyman">Key Man</option>
+                        <option value="congregation">Congregation</option>
+                        <option value="tag">Tag</option>
+                    </select>
+                    {form.limitType && (
+                        <select value={form.limitValue || ''} onChange={e => setForm({...form, limitValue: e.target.value})} className={`border p-1 rounded text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white ${prefix ? 'w-full' : 'w-32'}`}>
+                            <option value="">-- Select --</option>
+                            {form.limitType === 'keyman' && keyMen.map(km => <option key={km.id} value={km.id}>{km.name}</option>)}
+                            {form.limitType === 'congregation' && uniqueCongregations.map(c => <option key={c} value={c}>{c}</option>)}
+                            {form.limitType === 'tag' && tags.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                    )}
+                </div>
+            );
+
+            const getConstraintLabel = (obj) => {
+                if (!obj.limitType) return '-';
+                if (obj.limitType === 'keyman') {
+                    const km = keyMen.find(k => k.id == obj.limitValue);
+                    return `KM: ${km ? km.name : 'Unknown'}`;
+                }
+                if (obj.limitType === 'congregation') return `Cong: ${obj.limitValue}`;
+                if (obj.limitType === 'tag') {
+                    const t = tags.find(tag => tag.id === obj.limitValue);
+                    return `Tag: ${t ? t.name : 'Unknown'}`;
+                }
+                return '-';
+            };
 
             // --- AREA MANAGEMENT ---
-            const [areaForm, setAreaForm] = useState({ id: '', name: '', capability: '', color: '#ffffff', textColor: '#000000' });
+            const [areaForm, setAreaForm] = useState({ id: '', name: '', capability: '', color: '#ffffff', textColor: '#000000', limitType: '', limitValue: '' });
             const [editingAreaId, setEditingAreaId] = useState(null);
             const [editAreaForm, setEditAreaForm] = useState(null);
 
@@ -2552,9 +2641,11 @@
                     id: areaForm.id,
                     name: areaForm.name,
                     capability: areaForm.capability || areaForm.id,
-                    style: { backgroundColor: areaForm.color, color: areaForm.textColor }
+                    style: { backgroundColor: areaForm.color, color: areaForm.textColor },
+                    limitType: areaForm.limitType,
+                    limitValue: areaForm.limitValue
                 }]);
-                setAreaForm({ id: '', name: '', capability: '', color: '#ffffff', textColor: '#000000' });
+                setAreaForm({ id: '', name: '', capability: '', color: '#ffffff', textColor: '#000000', limitType: '', limitValue: '' });
             };
             const deleteArea = (id) => {
                 if (confirm("Delete this area? This may break positions linked to it.")) {
@@ -2570,7 +2661,9 @@
                     name: area.name,
                     capability: area.capability,
                     color: area.style.backgroundColor,
-                    textColor: area.style.color
+                    textColor: area.style.color,
+                    limitType: area.limitType || '',
+                    limitValue: area.limitValue || ''
                 });
             };
 
@@ -2585,7 +2678,9 @@
                     id: a.id, // ID remains immutable
                     name: editAreaForm.name,
                     capability: editAreaForm.capability,
-                    style: { backgroundColor: editAreaForm.color, color: editAreaForm.textColor }
+                    style: { backgroundColor: editAreaForm.color, color: editAreaForm.textColor },
+                    limitType: editAreaForm.limitType,
+                    limitValue: editAreaForm.limitValue
                 } : a));
                 cancelEditArea();
             };
@@ -2605,15 +2700,15 @@
             };
 
             // --- POSITION MANAGEMENT ---
-            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '', section: '' });
+            const [posForm, setPosForm] = useState({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, limitType: '', limitValue: '', section: '' });
             const [editingPosId, setEditingPosId] = useState(null);
             const [editPosForm, setEditPosForm] = useState(null);
 
             const addPosition = () => {
                 if (!posForm.id || !posForm.name || !posForm.areaId) return alert("ID, Name, and Area are required");
                 if (positions.find(p => p.id === posForm.id)) return alert("ID must be unique");
-                setPositions([...positions, { ...posForm, teamKeyManId: posForm.teamKeyManId ? parseInt(posForm.teamKeyManId) : null }]);
-                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, teamKeyManId: '', section: '' });
+                setPositions([...positions, { ...posForm }]);
+                setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, limitType: '', limitValue: '', section: '' });
             };
             const deletePosition = (id) => {
                 if (confirm("Delete this position?")) {
@@ -2624,13 +2719,22 @@
 
             const startEditPos = (pos) => {
                 setEditingPosId(pos.id);
+                // Backward compatibility: map teamKeyManId to limitType='keyman' if present
+                let lType = pos.limitType || '';
+                let lVal = pos.limitValue || '';
+                if (!lType && pos.teamKeyManId) {
+                    lType = 'keyman';
+                    lVal = pos.teamKeyManId;
+                }
+
                 setEditPosForm({
                     id: pos.id,
                     name: pos.name,
                     areaId: pos.areaId,
                     type: pos.type,
                     keyMan: pos.keyMan || false,
-                    teamKeyManId: pos.teamKeyManId ? pos.teamKeyManId.toString() : '',
+                    limitType: lType,
+                    limitValue: lVal,
                     section: pos.section || ''
                 });
             };
@@ -2648,7 +2752,8 @@
                     areaId: editPosForm.areaId,
                     type: editPosForm.type,
                     keyMan: editPosForm.keyMan,
-                    teamKeyManId: editPosForm.teamKeyManId ? parseInt(editPosForm.teamKeyManId) : null,
+                    limitType: editPosForm.limitType,
+                    limitValue: editPosForm.limitValue,
                     section: editPosForm.section
                 } : p));
                 cancelEditPos();
@@ -2686,8 +2791,12 @@
                                     <button onClick={addArea} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">Add Area</button>
                                 </div>
                             </div>
-                            <table className="w-full text-sm">
-                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Capability</th><th className="p-2 text-left">Preview</th><th className="p-2 w-24">Action</th></tr></thead>
+                            <div className="mt-2 bg-white p-2 rounded border dark:bg-slate-700 dark:border-slate-600">
+                                <span className="text-xs font-bold text-gray-500 uppercase mr-2 dark:text-gray-400">Restriction:</span>
+                                {renderConstraintSelector(areaForm, setAreaForm, false)}
+                            </div>
+                            <table className="w-full text-sm mt-4">
+                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Capability</th><th className="p-2 text-left">Restriction</th><th className="p-2 text-left">Preview</th><th className="p-2 w-24">Action</th></tr></thead>
                                 <tbody>
                                     {areas.map(a => {
                                         const isEditing = editingAreaId === a.id;
@@ -2703,6 +2812,9 @@
                                                     {isEditing ? (
                                                         <input value={editAreaForm.capability} onChange={e => setEditAreaForm({...editAreaForm, capability: e.target.value})} className="border p-1 rounded w-full text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                                     ) : a.capability}
+                                                </td>
+                                                <td className="p-2 text-xs">
+                                                    {isEditing ? renderConstraintSelector(editAreaForm, setEditAreaForm, true) : getConstraintLabel(a)}
                                                 </td>
                                                 <td className="p-2">
                                                     {isEditing ? (
@@ -2787,10 +2899,7 @@
                                         <option value="auditorium">Auditorium (All Day)</option>
                                     </select>
                                     <input placeholder="Section (e.g. A)" value={posForm.section || ''} onChange={e => setPosForm({...posForm, section: e.target.value})} className="border p-2 rounded w-24 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                                    <select value={posForm.teamKeyManId} onChange={e => setPosForm({...posForm, teamKeyManId: e.target.value})} className="border p-2 rounded w-48 dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                        <option value="">-- Any Team --</option>
-                                        {keyMen.map(km => <option key={km.id} value={km.id}>Team: {km.name}</option>)}
-                                    </select>
+                                    {renderConstraintSelector(posForm, setPosForm, false)}
                                     <label className="flex items-center cursor-pointer dark:text-gray-300">
                                         <input type="checkbox" checked={posForm.keyMan} onChange={e => setPosForm({...posForm, keyMan: e.target.checked})} className="mr-2" />
                                         <span className="text-sm font-bold">Key Man Only</span>
@@ -2800,10 +2909,19 @@
                             </div>
                              <div className="h-96 overflow-y-auto border rounded dark:border-slate-700">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Team</th><th className="p-2 text-left">Sect</th><th className="p-2 text-left">Type</th><th className="p-2 w-24">Action</th></tr></thead>
+                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Restriction</th><th className="p-2 text-left">Sect</th><th className="p-2 text-left">Type</th><th className="p-2 w-24">Action</th></tr></thead>
                                     <tbody>
                                         {positions.map(p => {
                                             const isEditing = editingPosId === p.id;
+                                            // Back compat display
+                                            let displayConstraint = '-';
+                                            if (p.limitType) {
+                                                displayConstraint = getConstraintLabel(p);
+                                            } else if (p.teamKeyManId) {
+                                                const km = keyMen.find(k => k.id === p.teamKeyManId);
+                                                displayConstraint = `KM: ${km ? km.name : 'Unknown'}`;
+                                            }
+
                                             return (
                                                 <tr key={p.id} className={`border-b dark:border-slate-700 dark:text-gray-200 ${isEditing ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'hover:bg-gray-50 dark:hover:bg-slate-800'}`}>
                                                     <td className="p-2 font-mono text-xs text-gray-500">{p.id}</td>
@@ -2827,13 +2945,8 @@
                                                             </select>
                                                         ) : (areas.find(a => a.id === p.areaId)?.name || p.areaId)}
                                                     </td>
-                                                    <td className="p-2">
-                                                        {isEditing ? (
-                                                            <select value={editPosForm.teamKeyManId} onChange={e => setEditPosForm({...editPosForm, teamKeyManId: e.target.value})} className="border p-1 rounded w-full text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                                                <option value="">-- Any --</option>
-                                                                {keyMen.map(km => <option key={km.id} value={km.id}>{km.name}</option>)}
-                                                            </select>
-                                                        ) : <span className="text-xs text-gray-500 dark:text-gray-400">{p.teamKeyManId ? (keyMen.find(k=>k.id===p.teamKeyManId)?.name || 'Unknown') : '-'}</span>}
+                                                    <td className="p-2 text-xs">
+                                                        {isEditing ? renderConstraintSelector(editPosForm, setEditPosForm, true) : displayConstraint}
                                                     </td>
                                                     <td className="p-2">
                                                         {isEditing ? (
@@ -3173,7 +3286,7 @@
                          view === 'log' ? <LogView log={log} /> :
                          view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} areas={areas} onDeleteTag={handleDeleteTag} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
-                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} /> :
+                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} tags={tags} /> :
                          <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
                     </div>
                     {showSaveModal && (
