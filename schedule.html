@@ -261,6 +261,7 @@
 
             const [formData, setFormData] = useState({
                 name: '',
+                congregation: '',
                 role: 'Exemplary',
                 caps: initialCaps,
                 keyManId: '',
@@ -306,6 +307,7 @@
                 person.caps.forEach(c => { newCaps[c] = true; });
                 setFormData({
                     name: person.name,
+                    congregation: person.congregation || '',
                     role: person.role || 'Exemplary',
                     caps: newCaps,
                     keyManId: person.keyManId ? person.keyManId.toString() : '',
@@ -317,7 +319,7 @@
             const cancelEdit = () => {
                 setEditingId(null);
                 setFormData({
-                    name: '', role: 'Exemplary',
+                    name: '', congregation: '', role: 'Exemplary',
                     caps: initialCaps,
                     keyManId: '',
                     unavailable: [],
@@ -332,6 +334,7 @@
 
                 const newPerson = {
                     name: formData.name,
+                    congregation: formData.congregation,
                     role: formData.role,
                     caps: capabilityList,
                     keyManId: newKeyManId,
@@ -345,7 +348,7 @@
                 } else {
                     const maxId = personnel.reduce((max, p) => (p.id > max ? p.id : max), 0);
                     setPersonnel([...personnel, { id: maxId + 1, ...newPerson }]);
-                    setFormData({ name: '', role: 'Exemplary', caps: initialCaps, keyManId: '', unavailable: [], tags: [] });
+                    setFormData({ name: '', congregation: '', role: 'Exemplary', caps: initialCaps, keyManId: '', unavailable: [], tags: [] });
                 }
             };
 
@@ -499,6 +502,10 @@
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                                 </div>
                                 <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
+                                    <input type="text" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                                </div>
+                                <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
                                     <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                         <option value="Exemplary">Exemplary</option>
@@ -578,6 +585,10 @@
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                             </div>
                             <div className="mb-2">
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
+                                    <input type="text" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                            </div>
+                            <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
                                     <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="Exemplary">Exemplary</option>
@@ -652,6 +663,13 @@
                                                         className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                                         placeholder="Key Man Name"
                                                         autoFocus
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={formData.congregation}
+                                                        onChange={(e) => setFormData({...formData, congregation: e.target.value})}
+                                                        className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 text-xs mt-2 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                        placeholder="Congregation"
                                                     />
                                                 </div>
                                                 <div>
@@ -770,6 +788,13 @@
                                                                             className="border p-1 rounded w-full text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                                                                             autoFocus
                                                                         />
+                                                                        <input
+                                                                            type="text"
+                                                                            value={formData.congregation}
+                                                                            onChange={(e) => setFormData({...formData, congregation: e.target.value})}
+                                                                            className="border p-1 rounded w-full text-[10px] text-gray-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                                                                            placeholder="Congregation"
+                                                                        />
                                                                         <select
                                                                             value={formData.keyManId}
                                                                             onChange={(e) => setFormData({...formData, keyManId: e.target.value})}
@@ -801,13 +826,16 @@
                                                                         </div>
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
-                                                                        {p.name}
-                                                                        {p.tags && p.tags.map(tid => {
-                                                                            const t = tags ? tags.find(tag => tag.id === tid) : null;
-                                                                            return t ? <span key={tid} className="ml-1 text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200"><i className="fa fa-tag mr-1"></i>{t.name}</span> : null;
-                                                                        })}
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
+                                                                            {p.name}
+                                                                            {p.tags && p.tags.map(tid => {
+                                                                                const t = tags ? tags.find(tag => tag.id === tid) : null;
+                                                                                return t ? <span key={tid} className="ml-1 text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200"><i className="fa fa-tag mr-1"></i>{t.name}</span> : null;
+                                                                            })}
+                                                                        </div>
+                                                                        {p.congregation && <div className="text-[10px] text-gray-400 ml-5 dark:text-gray-500">{p.congregation}</div>}
                                                                     </div>
                                                                 )}
                                                             </td>
@@ -2263,7 +2291,8 @@
             // FILTER & SORT
             const filteredPersonnel = personnel.filter(p =>
                 p.name.toLowerCase().includes(filterName.toLowerCase()) ||
-                (p.role && p.role.toLowerCase().includes(filterName.toLowerCase()))
+                (p.role && p.role.toLowerCase().includes(filterName.toLowerCase())) ||
+                (p.congregation && p.congregation.toLowerCase().includes(filterName.toLowerCase()))
             );
             filteredPersonnel.sort((a,b) => a.name.localeCompare(b.name));
 
