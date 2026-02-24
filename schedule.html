@@ -272,6 +272,10 @@
             const [draggedPersonId, setDraggedPersonId] = useState(null);
             const [dragOverGroup, setDragOverGroup] = useState(null);
 
+            const uniqueCongregations = useMemo(() => {
+                return [...new Set(personnel.map(p => p.congregation).filter(c => c && c.trim() !== ''))].sort();
+            }, [personnel]);
+
             // --- FORM HANDLERS ---
             const handleCapChange = (cap, checked) => {
                 setFormData(prev => ({ ...prev, caps: { ...prev.caps, [cap]: checked } }));
@@ -503,7 +507,10 @@
                                 </div>
                                 <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
-                                    <input type="text" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                                    <input type="text" list="congregation-list" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                                    <datalist id="congregation-list">
+                                        {uniqueCongregations.map(c => <option key={c} value={c} />)}
+                                    </datalist>
                                 </div>
                                 <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
@@ -586,7 +593,10 @@
                             </div>
                             <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
-                                    <input type="text" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                                    <input type="text" list="congregation-list" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
+                                    <datalist id="congregation-list">
+                                        {uniqueCongregations.map(c => <option key={c} value={c} />)}
+                                    </datalist>
                             </div>
                             <div className="mb-2">
                                     <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
@@ -666,6 +676,7 @@
                                                     />
                                                     <input
                                                         type="text"
+                                                        list="congregation-list"
                                                         value={formData.congregation}
                                                         onChange={(e) => setFormData({...formData, congregation: e.target.value})}
                                                         className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 text-xs mt-2 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
@@ -790,6 +801,7 @@
                                                                         />
                                                                         <input
                                                                             type="text"
+                                                                            list="congregation-list"
                                                                             value={formData.congregation}
                                                                             onChange={(e) => setFormData({...formData, congregation: e.target.value})}
                                                                             className="border p-1 rounded w-full text-[10px] text-gray-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
