@@ -20,6 +20,42 @@ export default function ConfigView({
 }) {
   const [activeTab, setActiveTab] = useState('areas')
 
+  const handleExportBlueprint = (blueprint) => {
+    try {
+      const data = JSON.stringify(blueprint, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${blueprint.name.replace(/\s+/g, '_')}.assemblyhall`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Export failed: " + err.message);
+    }
+  }
+
+  const handleImportBlueprint = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const blueprint = JSON.parse(event.target.result);
+        if (!blueprint.areas || !blueprint.positions || !blueprint.shifts) {
+          throw new Error("Invalid blueprint format.");
+        }
+        // Ensure unique ID
+        blueprint.id = "bp_" + Date.now();
+        setBlueprints([...blueprints, blueprint]);
+        alert(`Blueprint "${blueprint.name}" imported successfully!`);
+      } catch (err) {
+        alert("Import failed: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
   const [areaForm, setAreaForm] = useState({
     name: '',
     capability: '',
@@ -238,6 +274,21 @@ export default function ConfigView({
       shifts,
     }
     setBlueprints([...blueprints, newBp])
+
+    // Automatically trigger unprotected download
+    try {
+      const data = JSON.stringify(newBp, null, 2)
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${name.replace(/\s+/g, '_')}.assemblyhall`
+      a.click()
+      window.URL.revokeObjectURL(url)
+      alert(`Blueprint "${name}" saved and downloaded!`)
+    } catch (err) {
+      console.error('Auto-download failed', err)
+    }
   }
 
   const loadBlueprint = (bp) => {
@@ -814,12 +865,20 @@ export default function ConfigView({
             <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">
               {t('save_layout_desc', language)}
             </p>
-            <button
-              onClick={saveBlueprint}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95"
-            >
-              {t('btn_save_blueprint', language)}
-            </button>
+            <div className="flex gap-3">
+                <button
+                onClick={saveBlueprint}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center gap-2"
+                >
+                <i className="fa fa-save"></i>
+                {t('btn_save_blueprint', language)}
+                </button>
+                <label className="bg-white border border-blue-200 text-blue-700 px-6 py-2.5 rounded-xl font-bold cursor-pointer hover:bg-blue-50 transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400">
+                    <i className="fa fa-file-import"></i>
+                    Import .assemblyhall
+                    <input type="file" accept=".assemblyhall" onChange={handleImportBlueprint} className="hidden" />
+                </label>
+            </div>
           </div>
 
           <h3 className="font-bold mb-4 dark:text-white">Saved Blueprints</h3>
@@ -856,13 +915,21 @@ export default function ConfigView({
                     <button
                       onClick={() => loadBlueprint(bp)}
                       className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+                      title="Apply this template"
                     >
                       {t('btn_load_template', language)}
+                    </button>
+                    <button
+                      onClick={() => handleExportBlueprint(bp)}
+                      className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-100 dark:bg-slate-700 dark:text-gray-300"
+                      title="Export as .assemblyhall"
+                    >
+                      <i className="fa fa-share-nodes"></i>
                     </button>
                     {bp.id !== 'bp_default_assembly' && (
                       <button
                         onClick={() => deleteBlueprint(bp.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors"
+                        className="text-red-400 hover:text-red-600 transition-colors px-2"
                       >
                         <i className="fa fa-trash"></i>
                       </button>

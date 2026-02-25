@@ -20,6 +20,7 @@ import ScheduleView from './components/ScheduleView'
 import PrintView from './components/PrintView'
 import QuickStartModal from './components/QuickStartModal'
 import Wizard from './components/Wizard'
+import { saveToDatabase, loadFromDatabase, clearDatabase } from './utils/persistence'
 
 const WIZARD_STEPS = [
   {
@@ -82,12 +83,14 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
+  console.log("Attendant Scheduler v2.5.3 - Reset Fix Active");
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
   const [language, setLanguage] = useState(
     () => localStorage.getItem('app_language') || 'en',
   )
+  const [showLangDropdown, setShowLangDropdown] = useState(false)
 
   const INITIAL_STATE = useMemo(() => ({
     personnel: INITIAL_ROSTER,
@@ -118,17 +121,16 @@ export default function App() {
     },
   }), [])
 
-  // Load from localStorage on initialization
+  // Load from database OR localStorage on initialization
   const [initialData] = useState(() => {
     try {
       const saved = localStorage.getItem('circuit_scheduler_data')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Basic migration/merging check
         return { ...INITIAL_STATE, ...parsed }
       }
-    } catch (e) {
-      console.error('Error loading initial data:', e)
+    } catch (err) {
+      console.error('Error loading initial data:', err)
     }
     return INITIAL_STATE
   })
@@ -161,6 +163,16 @@ export default function App() {
   )
   const [password, setPassword] = useState('')
 
+  // 1. ASYNC LOAD FROM INDEXEDDB (High Reliability)
+  useEffect(() => {
+    loadFromDatabase().then(dbData => {
+        if (dbData) {
+            console.log("Restored state from robust local database.");
+            setState(dbData);
+        }
+    });
+  }, []);
+
   useEffect(() => {
     const wizardComplete = localStorage.getItem('wizard_complete')
     if (!wizardComplete) {
@@ -181,10 +193,15 @@ export default function App() {
     localStorage.setItem('app_language', language)
   }, [language])
 
+  // --- PERSISTENCE: IndexedDB Auto-Save ---
   useEffect(() => {
-    if (state) {
-      localStorage.setItem('circuit_scheduler_data', JSON.stringify(state))
-    }
+    if (!state) return
+
+    // Mirror to localStorage for dual-layer safety
+    localStorage.setItem('circuit_scheduler_data', JSON.stringify(state))
+
+    // Primary Auto-Save to Database
+    saveToDatabase(state);
   }, [state])
 
   // --- WIZARD HANDLERS ---
@@ -252,12 +269,22 @@ export default function App() {
     updateState({ assignments: newAssignments, log: newLog })
   }
 
-  const resetAll = () => {
+  const resetAll = async () => {
     if (
       confirm('Are you sure you want to clear EVERYTHING? This cannot be undone.')
     ) {
-      localStorage.removeItem('circuit_scheduler_data')
-      window.location.reload()
+      // 1. Clear localStorage
+      localStorage.removeItem('circuit_scheduler_data');
+      
+      // 2. Clear IndexedDB
+      try {
+        await clearDatabase();
+      } catch (err) {
+        console.error("Database reset failed", err);
+      }
+
+      // 3. Reload
+      window.location.reload();
     }
   }
 
@@ -314,9 +341,14 @@ export default function App() {
                   <i className="fa fa-clipboard-user"></i>
                 </div>
                 <span className="tracking-tight">{t('app_title', language)}</span>
+                <span className="ml-2 text-[10px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-400">
+                  v2.5.3
+                </span>
               </h1>
-              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-              <div className="flex gap-1">
+                                                                
+                                                                              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
+                                                                
+                                                                              <div className="flex gap-1">
                 <button
                   onClick={undo}
                   disabled={!canUndo}
@@ -377,21 +409,42 @@ export default function App() {
             </nav>
 
             <div className="flex gap-3 items-center">
-              <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700 mr-2">
-                {['en', 'es', 'fr', 'pt', 'tl', 'it'].map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLanguage(l)}
-                    className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase transition-all ${
-                      language === l
-                        ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm'
-                        : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                    }`}
-                  >
-                    {l}
-                  </button>
-                ))}
+              {/* Modern Language Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowLangDropdown(!showLangDropdown)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
+                >
+                  <i className="fa fa-language text-blue-500 text-sm"></i>
+                  <span>{t('label_language', language)}: {t(`lang_${language}`, language)}</span>
+                  <i className={`fa fa-chevron-down text-[8px] transition-transform ${showLangDropdown ? 'rotate-180' : ''}`}></i>
+                </button>
+
+                {showLangDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-[60]" onClick={() => setShowLangDropdown(false)}></div>
+                    <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl z-[70] overflow-hidden py-2 animate-in fade-in zoom-in duration-200 origin-top-right">
+                      {['en', 'es', 'fr', 'pt', 'tl', 'it'].map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => {
+                            setLanguage(l);
+                            setShowLangDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${
+                            language === l 
+                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' 
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          {t(`lang_${l}`, language)}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
+
               <button
                 onClick={() => setDarkMode(!darkMode)}
                 className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
@@ -421,14 +474,15 @@ export default function App() {
                 onClick={() => setShowSaveModal(true)}
                 className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
               >
-                <i className="fa fa-download text-blue-500"></i>{' '}
-                {t('btn_save', language)}
+                <i className="fa fa-shield-halved text-blue-500"></i>{' '}
+                {t('btn_export', language) || 'Backup'}
               </button>
               <button
                 onClick={() => setShowLoadModal(true)}
                 className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm shadow-blue-200 transition-all flex items-center gap-2"
               >
-                <i className="fa fa-upload"></i> {t('btn_load', language)}
+                <i className="fa fa-rotate-left"></i>{' '}
+                {t('btn_import', language) || 'Restore'}
               </button>
             </div>
           </div>
@@ -555,7 +609,18 @@ export default function App() {
                   className="w-full p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all mb-4"
                   placeholder="Password"
                 />
-                <input type="file" onChange={handleImport} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-blue-400 mb-4" />
+                <div className={`transition-all ${!password ? 'opacity-50 grayscale pointer-events-none' : 'opacity-100'}`}>
+                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">
+                        {!password ? 'Enter password above to unlock file selection' : 'Select your backup file:'}
+                    </label>
+                    <input 
+                        type="file" 
+                        onChange={handleImport} 
+                        disabled={!password}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-blue-400 mb-4" 
+                    />
+                </div>
+                
                 <div className="flex justify-end gap-3">
                   <button onClick={() => setShowLoadModal(false)} className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Cancel</button>
                 </div>
