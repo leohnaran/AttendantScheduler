@@ -1080,7 +1080,7 @@
             return (
                 <td className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-colors duration-300 relative group-hover:bg-opacity-50 ${conflictMsg ? (isWarning ? 'bg-yellow-50/80 dark:bg-yellow-900/40' : 'bg-red-50/80 dark:bg-red-900/40') : (isAuto ? 'bg-green-50/30 dark:bg-green-900/20' : '')}`}>
                     <div className="flex items-center gap-2">
-                        {isAuto && <i className="fa fa-magic text-green-600 dark:text-green-400 text-[10px]" title="Auto-Assigned"></i>}
+                        {isAuto && <i className="fa fa-robot text-green-600 dark:text-green-400 text-[10px]" title="Auto-Assigned"></i>}
                         <div className="relative w-full">
                             <select
                                 className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm appearance-none outline-none focus:ring-2 focus:ring-opacity-50 transition-shadow cursor-pointer
@@ -1127,7 +1127,7 @@
                 const area = areas.find(a => a.id === pos.areaId);
                 const requiredCap = area ? area.capability : '';
 
-                // Logic similar to auto-fill but purely filtering
+                // Logic similar to Auto-Fill but purely filtering
                 const potential = personnel.filter(p => {
                     // 1. Capabilities
                     if (!p.caps || !p.caps.includes(requiredCap)) return false;
@@ -1382,7 +1382,7 @@
                                 <h3 className="font-bold text-gray-800 dark:text-white">Max Work Load (Program Watch %)</h3>
                                 <span className="font-bold text-blue-600 dark:text-blue-400">{rules.maxWorkPercent || 50}%</span>
                             </div>
-                            <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Auto-fill will skip brothers who have worked more than this % of the day.</p>
+                            <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Auto-Fill will skip brothers who have worked more than this % of the day.</p>
                             <input type="range" min="10" max="100" step="5" value={rules.maxWorkPercent || 50} onChange={e=>setVal('maxWorkPercent', parseInt(e.target.value))} className="w-full" />
                         </div>
 
@@ -1872,7 +1872,7 @@
                 const addLog = (msg, type) => logEntries.push({ msg, type });
 
                 // 1. Auditorium First (Always run - Auditorium is now always "All Day")
-                addLog("--- Starting Auditorium Fill ---", 'auditorium');
+                addLog("--- Starting Auditorium Auto-Fill ---", 'auditorium');
                 positions.filter(p => p.type === 'auditorium').forEach(pos => {
                     if (!getAssignId(newAssignments[pos.id])) {
                         let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
@@ -1891,7 +1891,7 @@
                 });
 
                 // 2. Rotational
-                addLog("--- Starting Rotational Fill ---", 'rotational');
+                addLog("--- Starting Rotational Auto-Fill ---", 'rotational');
                 shifts.forEach(shift => {
                     addLog(`>> Processing ${shift.label}`, 'shift');
 
@@ -2037,7 +2037,7 @@
                         <div className="flex flex-wrap gap-3">
                             <button onClick={clearAutoAssignments} className="bg-white border border-gray-200 text-orange-600 px-5 py-2 rounded-full hover:bg-orange-50 hover:border-orange-200 font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-700 dark:border-slate-600 dark:text-orange-400 dark:hover:bg-slate-600"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
                             <button onClick={fixConflicts} className="bg-yellow-100 text-yellow-800 px-5 py-2 rounded-full hover:bg-yellow-200 font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
-                            <button onClick={autoFill} className={`text-white px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-magic"></i> Fill in Unassigned</button>
+                            <button onClick={autoFill} className={`text-white px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-robot"></i> Auto-Fill</button>
                         </div>
                     </div>
 
@@ -2047,7 +2047,7 @@
                                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
                                 <div>
                                     <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
-                                    <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Fill in Unassigned" to automatically generate a schedule.</p>
+                                    <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Auto-Fill" to automatically generate a schedule.</p>
                                 </div>
                             </div>
                             <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
@@ -2738,7 +2738,7 @@
                 setPosForm({ id: '', name: '', areaId: '', type: 'rotational', keyMan: false, limitType: '', limitValue: '', section: '' });
             };
 
-            // Auto-fill restriction when Area is selected
+            // Auto-Fill restriction when Area is selected
             useEffect(() => {
                 if (posForm.areaId) {
                     const area = areas.find(a => a.id === posForm.areaId);
@@ -3081,7 +3081,7 @@
                     title: "3. Create Schedule",
                     icon: "fa-calendar-alt",
                     color: "text-green-600",
-                    content: "Head to the <b>Schedule</b> tab. Use <b>Fill in Unassigned</b> to automatically fill empty slots based on qualifications and fairness. You can also click any cell to manually assign."
+                    content: "Head to the <b>Schedule</b> tab. Use <b>Auto-Fill</b> to automatically fill empty slots based on qualifications and fairness. You can also click any cell to manually assign."
                 },
                 {
                     title: "4. Review & Print",
