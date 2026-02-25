@@ -167,6 +167,369 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
+        // ---------------- LOCALIZATION ----------------
+
+        const TRANSLATIONS = {
+            en: {
+                app_title: "Circuit Attendant Scheduler",
+                nav_schedule: "Schedule",
+                nav_roster: "Roster",
+                nav_stats: "Time Stats",
+                nav_depts: "Depts",
+                nav_log: "Log",
+                nav_tags: "Tags",
+                nav_slips: "Slips",
+                nav_config: "Config",
+                btn_auto_fill: "Auto-Fill",
+                btn_clear_all: "Clear All",
+                btn_clear_auto: "Clear Auto-Fills",
+                btn_fix_conflicts: "Fix Conflicts",
+                btn_save: "Save",
+                btn_load: "Load",
+                btn_reset: "Reset",
+                sidebar_volunteers: "Volunteers",
+                search_placeholder: "Search...",
+                role_elder: "Elder",
+                role_ms: "MS",
+                role_exemplary: "Exemplary",
+                grid_position: "Position",
+                grid_all_day: "ALL DAY",
+                grid_unassigned: "Unassigned",
+                grid_conflict: "Conflict Detected",
+                grid_suggestions: "Suggestions",
+                roster_title: "Personnel Roster",
+                roster_import: "Import CSV",
+                roster_add_person: "Add Person",
+                roster_empty: "Your Roster is Empty",
+                config_areas: "Areas",
+                config_shifts: "Shifts",
+                config_positions: "Positions",
+                config_blueprints: "Blueprints",
+                config_rules: "Rules",
+                rule_capabilities: "Enforce Capabilities",
+                rule_double_booking: "Prevent Double Booking",
+                rule_unavailability: "Respect Unavailability",
+                rule_max_load: "Max Work Load",
+                rule_consecutive: "Avoid Consecutive Shifts",
+                rule_relief_mode: "Auditorium Relief Mode",
+                stats_title: "Time Statistics",
+                stats_name: "Brother Name",
+                stats_assignments: "Assignments",
+                stats_missed: "% Missed",
+                stats_load: "Visual Load",
+                wizard_welcome: "Welcome to Scheduler",
+                wizard_step1: "Step 1: Configuration",
+                wizard_step2: "Step 2: Build Roster",
+                wizard_step3: "Step 3: Generate",
+                wizard_start: "Start Setup",
+                wizard_next: "Next",
+                wizard_back: "Back",
+                wizard_finish: "Finish",
+                wizard_skip: "Skip Wizard",
+                csv_map_title: "Map CSV Columns",
+                csv_map_preview: "Import Preview"
+            },
+            es: {
+                app_title: "Programador de Acomodadores",
+                nav_schedule: "Horario",
+                nav_roster: "Nómina",
+                nav_stats: "Estadísticas",
+                nav_depts: "Deptos",
+                nav_log: "Registro",
+                nav_tags: "Etiquetas",
+                nav_slips: "Notas",
+                nav_config: "Config",
+                btn_auto_fill: "Auto-completar",
+                btn_clear_all: "Borrar todo",
+                btn_clear_auto: "Borrar autos",
+                btn_fix_conflicts: "Arreglar conflictos",
+                btn_save: "Guardar",
+                btn_load: "Cargar",
+                btn_reset: "Reiniciar",
+                sidebar_volunteers: "Voluntarios",
+                search_placeholder: "Buscar...",
+                role_elder: "Anciano",
+                role_ms: "Siervo Min.",
+                role_exemplary: "Ejemplar",
+                grid_position: "Posición",
+                grid_all_day: "TODO EL DÍA",
+                grid_unassigned: "Sin asignar",
+                grid_conflict: "Conflicto detectado",
+                grid_suggestions: "Sugerencias",
+                roster_title: "Nómina de Personal",
+                roster_import: "Importar CSV",
+                roster_add_person: "Añadir persona",
+                roster_empty: "La nómina está vacía",
+                config_areas: "Áreas",
+                config_shifts: "Turnos",
+                config_positions: "Puestos",
+                config_blueprints: "Plantillas",
+                config_rules: "Reglas",
+                rule_capabilities: "Exigir habilidades",
+                rule_double_booking: "Evitar doble asignación",
+                rule_unavailability: "Respetar indisponibilidad",
+                rule_max_load: "Carga máx. de trabajo",
+                rule_consecutive: "Evitar turnos seguidos",
+                rule_relief_mode: "Modo de relevo del auditorio",
+                stats_title: "Estadísticas de tiempo",
+                stats_name: "Nombre del hermano",
+                stats_assignments: "Asignaciones",
+                stats_missed: "% Perdido",
+                stats_load: "Carga visual",
+                wizard_welcome: "Bienvenido al Programador",
+                wizard_step1: "Paso 1: Configuración",
+                wizard_step2: "Paso 2: Crear Nómina",
+                wizard_step3: "Paso 3: Generar",
+                wizard_start: "Comenzar",
+                wizard_next: "Siguiente",
+                wizard_back: "Atrás",
+                wizard_finish: "Terminar",
+                wizard_skip: "Omitir guía",
+                csv_map_title: "Mapear columnas CSV",
+                csv_map_preview: "Vista previa"
+            },
+            fr: {
+                app_title: "Planificateur d'Accueil",
+                nav_schedule: "Planning",
+                nav_roster: "Liste",
+                nav_stats: "Stats",
+                nav_depts: "Secteurs",
+                nav_log: "Journal",
+                nav_tags: "Tags",
+                nav_slips: "Fiches",
+                nav_config: "Config",
+                btn_auto_fill: "Remplissage auto",
+                btn_clear_all: "Tout effacer",
+                btn_clear_auto: "Effacer auto",
+                btn_fix_conflicts: "Corriger conflits",
+                btn_save: "Enregistrer",
+                btn_load: "Charger",
+                btn_reset: "Réinitialiser",
+                sidebar_volunteers: "Volontaires",
+                search_placeholder: "Chercher...",
+                role_elder: "Ancien",
+                role_ms: "Assistant min.",
+                role_exemplary: "Exemplaire",
+                grid_position: "Poste",
+                grid_all_day: "TOUTE LA JOURNÉE",
+                grid_unassigned: "Non assigné",
+                grid_conflict: "Conflit détecté",
+                grid_suggestions: "Suggestions",
+                roster_title: "Registre du personnel",
+                roster_import: "Importer CSV",
+                roster_add_person: "Ajouter",
+                roster_empty: "Votre liste est vide",
+                config_areas: "Zones",
+                config_shifts: "Tranches",
+                config_positions: "Postes",
+                config_blueprints: "Modèles",
+                config_rules: "Règles",
+                rule_capabilities: "Vérifier aptitudes",
+                rule_double_booking: "Éviter doublons",
+                rule_unavailability: "Indisponibilités",
+                rule_max_load: "Charge max.",
+                rule_consecutive: "Éviter successifs",
+                rule_relief_mode: "Mode relève auditorium",
+                stats_title: "Statistiques de temps",
+                stats_name: "Nom du frère",
+                stats_assignments: "Attributions",
+                stats_missed: "% Manqué",
+                stats_load: "Charge visuelle",
+                wizard_welcome: "Bienvenue",
+                wizard_step1: "Étape 1: Config",
+                wizard_step2: "Étape 2: Liste",
+                wizard_step3: "Étape 3: Générer",
+                wizard_start: "Démarrer",
+                wizard_next: "Suivant",
+                wizard_back: "Retour",
+                wizard_finish: "Terminer",
+                wizard_skip: "Passer",
+                csv_map_title: "Mapper colonnes CSV",
+                csv_map_preview: "Aperçu"
+            },
+            pt: {
+                app_title: "Programador de Indicadores",
+                nav_schedule: "Programação",
+                nav_roster: "Relação",
+                nav_stats: "Estatísticas",
+                nav_depts: "Depts",
+                nav_log: "Log",
+                nav_tags: "Etiquetas",
+                nav_slips: "Designações",
+                nav_config: "Config",
+                btn_auto_fill: "Preencher auto",
+                btn_clear_all: "Limpar tudo",
+                btn_clear_auto: "Limpar auto",
+                btn_fix_conflicts: "Corrigir conflitos",
+                btn_save: "Salvar",
+                btn_load: "Carregar",
+                btn_reset: "Resetar",
+                sidebar_volunteers: "Voluntários",
+                search_placeholder: "Buscar...",
+                role_elder: "Ancião",
+                role_ms: "Servo Min.",
+                role_exemplary: "Exemplar",
+                grid_position: "Posto",
+                grid_all_day: "DIA TODO",
+                grid_unassigned: "Não designado",
+                grid_conflict: "Conflito detectado",
+                grid_suggestions: "Sugestões",
+                roster_title: "Relação de Pessoal",
+                roster_import: "Importar CSV",
+                roster_add_person: "Adicionar",
+                roster_empty: "Sua relação está vazia",
+                config_areas: "Áreas",
+                config_shifts: "Turnos",
+                config_positions: "Postos",
+                config_blueprints: "Modelos",
+                config_rules: "Regras",
+                rule_capabilities: "Exigir aptidão",
+                rule_double_booking: "Evitar conflitos",
+                rule_unavailability: "Indisponibilidade",
+                rule_max_load: "Carga máx. trabalho",
+                rule_consecutive: "Evitar turnos seguidos",
+                rule_relief_mode: "Modo de alívio auditório",
+                stats_title: "Estatísticas de Tempo",
+                stats_name: "Nome do irmão",
+                stats_assignments: "Designações",
+                stats_missed: "% Perdido",
+                stats_load: "Carga visual",
+                wizard_welcome: "Bem-vindo",
+                wizard_step1: "Passo 1: Config",
+                wizard_step2: "Passo 2: Relação",
+                wizard_step3: "Passo 3: Gerar",
+                wizard_start: "Iniciar",
+                wizard_next: "Próximo",
+                wizard_back: "Voltar",
+                wizard_finish: "Finalizar",
+                wizard_skip: "Pular guia",
+                csv_map_title: "Mapear colunas CSV",
+                csv_map_preview: "Prévia"
+            },
+            tl: {
+                app_title: "Scheduler ng mga Attendant",
+                nav_schedule: "Schedule",
+                nav_roster: "Roster",
+                nav_stats: "Stats",
+                nav_depts: "Depts",
+                nav_log: "Log",
+                nav_tags: "Tags",
+                nav_slips: "Slips",
+                nav_config: "Config",
+                btn_auto_fill: "Auto-Fill",
+                btn_clear_all: "I-clear Lahat",
+                btn_clear_auto: "I-clear ang Auto",
+                btn_fix_conflicts: "Ayusin ang Conflict",
+                btn_save: "I-save",
+                btn_load: "I-load",
+                btn_reset: "I-reset",
+                sidebar_volunteers: "Mga Volunteer",
+                search_placeholder: "Maghanap...",
+                role_elder: "Elder",
+                role_ms: "MS",
+                role_exemplary: "Exemplary",
+                grid_position: "Posisyon",
+                grid_all_day: "BUONG ARAW",
+                grid_unassigned: "Walang assign",
+                grid_conflict: "May Conflict",
+                grid_suggestions: "Mga Suggestion",
+                roster_title: "Roster ng Personnel",
+                roster_import: "I-import ang CSV",
+                roster_add_person: "Magdagdag",
+                roster_empty: "Walang laman ang roster",
+                config_areas: "Mga Area",
+                config_shifts: "Mga Shift",
+                config_positions: "Mga Posisyon",
+                config_blueprints: "Mga Blueprint",
+                config_rules: "Mga Rule",
+                rule_capabilities: "I-enforce ang Kakayahan",
+                rule_double_booking: "Iwasan ang Double Booking",
+                rule_unavailability: "Igalang ang Unavailability",
+                rule_max_load: "Max Work Load",
+                rule_consecutive: "Iwasan ang Sunod-sunod",
+                rule_relief_mode: "Auditorium Relief Mode",
+                stats_title: "Statistics ng Oras",
+                stats_name: "Pangalan",
+                stats_assignments: "Mga Assignment",
+                stats_missed: "% Napalampas",
+                stats_load: "Visual Load",
+                wizard_welcome: "Welcome sa Scheduler",
+                wizard_step1: "Hakbang 1: Config",
+                wizard_step2: "Hakbang 2: Roster",
+                wizard_step3: "Hakbang 3: Generate",
+                wizard_start: "Magsimula",
+                wizard_next: "Susunod",
+                wizard_back: "Bumalik",
+                wizard_finish: "Tapusin",
+                wizard_skip: "Laktawan",
+                csv_map_title: "I-map ang CSV",
+                csv_map_preview: "Preview"
+            },
+            it: {
+                app_title: "Pianificatore Assistenti",
+                nav_schedule: "Programma",
+                nav_roster: "Elenco",
+                nav_stats: "Statistiche",
+                nav_depts: "Reparti",
+                nav_log: "Log",
+                nav_tags: "Tag",
+                nav_slips: "Cedolini",
+                nav_config: "Config",
+                btn_auto_fill: "Auto-riempimento",
+                btn_clear_all: "Cancella tutto",
+                btn_clear_auto: "Cancella auto",
+                btn_fix_conflicts: "Risolvi conflitti",
+                btn_save: "Salva",
+                btn_load: "Carica",
+                btn_reset: "Reset",
+                sidebar_volunteers: "Volontari",
+                search_placeholder: "Cerca...",
+                role_elder: "Anziano",
+                role_ms: "Servitore Min.",
+                role_exemplary: "Esemplare",
+                grid_position: "Postazione",
+                grid_all_day: "TUTTO IL GIORNO",
+                grid_unassigned: "Non assegnato",
+                grid_conflict: "Conflitto rilevato",
+                grid_suggestions: "Suggerimenti",
+                roster_title: "Elenco Personale",
+                roster_import: "Importa CSV",
+                roster_add_person: "Aggiungi",
+                roster_empty: "L'elenco è vuoto",
+                config_areas: "Aree",
+                config_shifts: "Turni",
+                config_positions: "Postazioni",
+                config_blueprints: "Modelli",
+                config_rules: "Regole",
+                rule_capabilities: "Verifica idoneità",
+                rule_double_booking: "Evita doppi turni",
+                rule_unavailability: "Rispetta indisponibilità",
+                rule_max_load: "Carico max lavoro",
+                rule_consecutive: "Evita turni seguiti",
+                rule_relief_mode: "Modalità sollievo uditorio",
+                stats_title: "Statistiche tempo",
+                stats_name: "Nome fratello",
+                stats_assignments: "Incarichi",
+                stats_missed: "% Perso",
+                stats_load: "Carico visivo",
+                wizard_welcome: "Benvenuto",
+                wizard_step1: "Passo 1: Config",
+                wizard_step2: "Passo 2: Elenco",
+                wizard_step3: "Passo 3: Genera",
+                wizard_start: "Inizia",
+                wizard_next: "Avanti",
+                wizard_back: "Indietro",
+                wizard_finish: "Fine",
+                wizard_skip: "Salta guida",
+                csv_map_title: "Mappa colonne CSV",
+                csv_map_preview: "Anteprima"
+            }
+        };
+
+        const t = (key, lang = 'en') => {
+            return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
+        };
+
         // ---------------- DATA CONSTANTS (DEFAULTS) ----------------
 
         const DEFAULT_SHIFTS = [
@@ -358,7 +721,7 @@
 
         // ---------------- COMPONENTS ----------------
 
-        function CSVMapperModal({ data, onImport, onClose }) {
+        function CSVMapperModal({ data, onImport, onClose, language }) {
             const headers = data[0] || [];
             const [mapping, setMapping] = useState({
                 nameIdx: -1,
@@ -395,7 +758,7 @@
                     <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-slate-800">
                         <div className="p-6 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center">
                             <div>
-                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Map CSV Columns</h3>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('csv_map_title', language)}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Match your spreadsheet columns to our roster fields.</p>
                             </div>
                             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"><i className="fa fa-times text-gray-400"></i></button>
@@ -429,7 +792,7 @@
 
                             <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800">
                                 <h4 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
-                                    <i className="fa fa-eye"></i> Import Preview (Top 3 Rows)
+                                    <i className="fa fa-eye"></i> {t('csv_map_preview', language)} (Top 3 Rows)
                                 </h4>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-[10px] text-left">
@@ -1431,7 +1794,7 @@
             );
         }
 
-        function PersonnelSidebar({ personnel, shifts, assignments, positions }) {
+        function PersonnelSidebar({ personnel, shifts, assignments, positions, language }) {
             const [search, setSearch] = useState("");
             const [filterRole, setFilterRole] = useState("all");
 
@@ -1457,14 +1820,14 @@
                 <div className="w-64 flex-shrink-0 flex flex-col h-full border-r border-gray-200 dark:border-slate-700 bg-gray-50/30 dark:bg-slate-900/30 backdrop-blur-sm sticky left-0 z-30">
                     <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
                         <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
-                            <i className="fa fa-users"></i> Volunteers
+                            <i className="fa fa-users"></i> {t('sidebar_volunteers', language)}
                         </h3>
                         <div className="relative mb-2">
                             <i className="fa fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
                             <input
                                 type="text"
                                 className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="Search..."
+                                placeholder={t('search_placeholder', language)}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
@@ -1475,9 +1838,9 @@
                             className="w-full p-1.5 text-[10px] font-bold uppercase border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none"
                         >
                             <option value="all">All Roles</option>
-                            <option value="Elder">Elders</option>
-                            <option value="MS">MS</option>
-                            <option value="Exemplary">Exemplary</option>
+                            <option value="Elder">{t('role_elder', language)}</option>
+                            <option value="MS">{t('role_ms', language)}</option>
+                            <option value="Exemplary">{t('role_exemplary', language)}</option>
                         </select>
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
@@ -1513,7 +1876,7 @@
             );
         }
 
-        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas, tags, hoveredMirrorKey, setHoveredMirrorKey }) {
+        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas, tags, hoveredMirrorKey, setHoveredMirrorKey, language }) {
             const [isDragOver, setIsDragOver] = useState(false);
 
             if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all') return <td className="p-3 bg-gray-50/50 border-l border-dashed border-gray-200 dark:bg-slate-800/50 dark:border-slate-700 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-not-allowed">N/A</td>;
@@ -1662,7 +2025,7 @@
                                 value={assignedId || ""}
                                 onChange={(val) => onAssign(assignmentKey, val)}
                                 options={filteredCandidates}
-                                placeholder="Select..."
+                                placeholder={t('grid_unassigned', language)}
                                 conflictMsg={conflictMsg}
                                 isWarning={isWarning}
                                 isAuto={isAuto}
@@ -1670,6 +2033,7 @@
                                 pos={pos}
                                 shiftId={shiftId}
                                 assignments={assignments}
+                                language={language}
                             />
                         </div>
                         <button onClick={() => onFindReplacement(pos, shiftId)} className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Find Replacement"><i className="fa fa-search text-xs"></i></button>
@@ -1681,7 +2045,7 @@
                             </div>
                             {quickFixes.length > 0 && (
                                 <div className="flex flex-wrap gap-1">
-                                    <span className="text-[8px] font-black uppercase text-gray-400 w-full mb-0.5">Suggestions:</span>
+                                    <span className="text-[8px] font-black uppercase text-gray-400 w-full mb-0.5">{t('grid_suggestions', language)}:</span>
                                     {quickFixes.map(p => (
                                         <button
                                             key={p.id}
@@ -1803,7 +2167,7 @@
             );
         }
 
-        function StatsView({ personnel, assignments, shifts, positions }) {
+        function StatsView({ personnel, assignments, shifts, positions, language }) {
             const formatMinutesToHHMM = (totalMinutes) => {
                 const hours = Math.floor(totalMinutes / 60);
                 const minutes = totalMinutes % 60;
@@ -1837,7 +2201,7 @@
                                 if (pos.type !== 'auditorium') {
                                     if (shift) minutesAway += shift.minutes;
                                 }
-                                assignmentLabels.push(`${pos.name} (${shift ? shift.label : 'All Day'})`);
+                                assignmentLabels.push(`${pos.name} (${shift ? shift.label : (language === 'en' ? 'All Day' : t('grid_all_day', language))})`);
                             }
                         }
                     });
@@ -1866,17 +2230,17 @@
 
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">Time Statistics (Balance Check)</h2>
+                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">{t('stats_title', language)} (Balance Check)</h2>
                     <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm dark:border-slate-700">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="bg-gray-50/50 border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
-                                    <th className="p-4">Brother Name</th>
+                                    <th className="p-4">{t('stats_name', language)}</th>
                                     <th className="p-4">Role</th>
-                                    <th className="p-4">Assignments</th>
+                                    <th className="p-4">{t('stats_assignments', language)}</th>
                                     <th className="p-4">Out-of-Auditorium Time</th>
-                                    <th className="p-4">% Missed</th>
-                                    <th className="p-4 w-1/3">Visual Load</th>
+                                    <th className="p-4">{t('stats_missed', language)}</th>
+                                    <th className="p-4 w-1/3">{t('stats_load', language)}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-slate-700">
@@ -2985,7 +3349,7 @@
         }
 
         // --- UNDO/REDO HOOK ---
-        function DepartmentView({ personnel, assignments, areas, positions, shifts }) {
+        function DepartmentView({ personnel, assignments, areas, positions, shifts, language }) {
             const [selectedAreaId, setSelectedAreaId] = useState(areas.length > 0 ? areas[0].id : '');
 
             const areaPositions = positions.filter(p => p.areaId === selectedAreaId);
@@ -2999,7 +3363,7 @@
                             <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                 {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                             </select>
-                            <button onClick={() => window.print()} className="bg-gray-800 text-white px-5 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> Print</button>
+                            <button onClick={() => window.print()} className="bg-gray-800 text-white px-5 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> {t('nav_slips', language)}</button>
                         </div>
                     </div>
 
@@ -3014,7 +3378,7 @@
                         <table className="w-full border-collapse text-sm">
                             <thead>
                                 <tr className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-500 print:bg-gray-200 print:text-black print:border-black dark:bg-slate-800 dark:border-slate-700 dark:text-gray-400">
-                                    <th className="p-3 text-left w-48 border-r border-gray-100 print:border-black dark:border-slate-700">Position</th>
+                                    <th className="p-3 text-left w-48 border-r border-gray-100 print:border-black dark:border-slate-700">{t('grid_position', language)}</th>
                                     {shifts.map(s => <th key={s.id} className="p-3 text-center w-32 border-l border-gray-100 print:border-black dark:border-slate-700">{s.label}</th>)}
                                 </tr>
                             </thead>
@@ -3029,7 +3393,7 @@
                                                     const person = personnel.find(p => p.id === pid);
                                                     return person ? <span className="font-bold text-blue-700 print:text-black dark:text-blue-300">{person.name}</span> : <span className="text-gray-300 italic dark:text-gray-600">Empty</span>;
                                                 })()}
-                                                <div className="text-[10px] uppercase text-blue-400 font-bold mt-1 tracking-wider print:text-gray-500 dark:text-blue-500">All Day</div>
+                                                <div className="text-[10px] uppercase text-blue-400 font-bold mt-1 tracking-wider print:text-gray-500 dark:text-blue-500">{t('grid_all_day', language)}</div>
                                             </td>
                                         ) : (
                                             shifts.map(shift => {
@@ -3063,7 +3427,7 @@
             );
         }
 
-        function PrintView({ personnel, assignments, positions, shifts }) {
+        function PrintView({ personnel, assignments, positions, shifts, language }) {
             const getBrotherAssignments = (p) => {
                 const myAssignments = [];
                 Object.keys(assignments).forEach(key => {
@@ -3083,7 +3447,7 @@
                         if (pos) {
                             myAssignments.push({
                                 posName: pos.name,
-                                time: shift ? shift.label : "Full Day",
+                                time: shift ? shift.label : (language === 'en' ? 'Full Day' : t('grid_all_day', language)),
                                 shiftId: shiftId
                             });
                         }
@@ -3105,7 +3469,7 @@
                 <div className="glass-panel p-8 rounded-3xl shadow-sm print:shadow-none print:border-none print:bg-white">
                     <div className="flex justify-between items-center mb-8 print:hidden">
                         <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Assignment Slips</h2>
-                        <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> Print Now</button>
+                        <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> {t('btn_print', language)}</button>
                     </div>
                     <div className="grid grid-cols-2 gap-4 print:block print:gap-0">
                         {brothersWithAssignments.map(p => (
@@ -3114,8 +3478,8 @@
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-gray-200 print:bg-gray-300 dark:bg-slate-700 dark:text-white">
-                                            <th className="p-2 text-left w-1/2">Position</th>
-                                            <th className="p-2 text-right w-1/2">Time</th>
+                                            <th className="p-2 text-left w-1/2">{t('grid_position', language)}</th>
+                                            <th className="p-2 text-right w-1/2">{t('stats_time', language)}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -3458,7 +3822,7 @@
             );
         }
 
-        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules, tags, onConfigUpdate }) {
+        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules, tags, blueprints, setBlueprints, onConfigUpdate }) {
             const [activeTab, setActiveTab] = useState('areas');
 
             const keyMen = useMemo(() => personnel.filter(p => p.caps && p.caps.includes('keyman')), [personnel]);
@@ -3670,6 +4034,50 @@
                 cancelEditPos();
             };
 
+            // --- BLUEPRINT MANAGEMENT ---
+            const [blueprintName, setBlueprintName] = useState('');
+
+            const saveBlueprint = () => {
+                if (!blueprintName.trim()) return alert("Please enter a name for the blueprint.");
+                const newBlueprint = {
+                    id: 'bp_' + Date.now(),
+                    name: blueprintName,
+                    areas: [...areas],
+                    positions: [...positions],
+                    shifts: [...shifts]
+                };
+                setBlueprints([...blueprints, newBlueprint]);
+                setBlueprintName('');
+                alert("Blueprint saved!");
+            };
+
+            const loadBlueprint = (bp) => {
+                if (!confirm(`Load "${bp.name}"? This will overwrite your current configuration AND clear all current assignments.`)) return;
+                
+                // Atomic update to overwrite layout and wipe assignments
+                if (onConfigUpdate) {
+                    onConfigUpdate({ 
+                        areas: bp.areas, 
+                        positions: bp.positions, 
+                        shifts: bp.shifts,
+                        assignments: {},
+                        log: []
+                    });
+                } else {
+                    setAreas(bp.areas);
+                    setPositions(bp.positions);
+                    setShifts(bp.shifts);
+                }
+                
+                alert(`Blueprint "${bp.name}" loaded successfully.`);
+            };
+
+            const deleteBlueprint = (id) => {
+                if (confirm("Delete this blueprint?")) {
+                    setBlueprints(blueprints.filter(b => b.id !== id));
+                }
+            };
+
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
                     <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Configuration</h2>
@@ -3678,6 +4086,7 @@
                         <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Areas</button>
                         <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Shifts</button>
                         <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Positions</button>
+                        <button onClick={() => setActiveTab('blueprints')} className={`px-4 py-2 ${activeTab === 'blueprints' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Blueprints</button>
                         <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Rules</button>
                     </div>
 
@@ -3893,6 +4302,67 @@
                             </div>
                         </div>
                     )}
+
+                    {/* BLUEPRINTS TAB */}
+                    {activeTab === 'blueprints' && (
+                        <div>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800 mb-8">
+                                <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">Save Current Layout</h3>
+                                <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">Save your current Areas, Shifts, and Positions as a reusable template. This does not include personnel or assignments.</p>
+                                <div className="flex gap-3">
+                                    <input 
+                                        type="text" 
+                                        placeholder="e.g. Standard 1-Day Assembly" 
+                                        value={blueprintName} 
+                                        onChange={e => setBlueprintName(e.target.value)}
+                                        className="flex-1 border border-blue-200 dark:border-blue-800 p-2.5 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <button onClick={saveBlueprint} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95">Save Blueprint</button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {blueprints.length === 0 ? (
+                                    <div className="col-span-full py-12 text-center border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-3xl text-gray-400">
+                                        <i className="fa fa-map-location-dot text-4xl mb-4 opacity-20"></i>
+                                        <p>No blueprints saved yet.</p>
+                                    </div>
+                                ) : (
+                                    blueprints.map(bp => (
+                                        <div key={bp.id} className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{bp.name}</h4>
+                                                    <p className="text-[10px] text-gray-400 uppercase font-black">{new Date(parseInt(bp.id.split('_')[1])).toLocaleDateString()}</p>
+                                                </div>
+                                                <button onClick={() => deleteBlueprint(bp.id)} className="text-gray-300 hover:text-red-500 transition-colors"><i className="fa fa-trash-can text-sm"></i></button>
+                                            </div>
+                                            <div className="flex gap-4 mb-6">
+                                                <div className="text-center">
+                                                    <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.areas.length}</div>
+                                                    <div className="text-[8px] font-bold uppercase text-gray-400">Areas</div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.positions.length}</div>
+                                                    <div className="text-[8px] font-bold uppercase text-gray-400">Posts</div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.shifts.length}</div>
+                                                    <div className="text-[8px] font-bold uppercase text-gray-400">Shifts</div>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                onClick={() => loadBlueprint(bp)} 
+                                                className="w-full py-2 bg-gray-50 dark:bg-slate-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-gray-600 dark:text-gray-300 font-bold rounded-xl transition-all border border-gray-100 dark:border-slate-600"
+                                            >
+                                                Load Template
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -3918,11 +4388,11 @@
             return { state, setState, undo, redo, canUndo: index > 0, canRedo: index < history.length - 1 };
         }
 
-        function QuickStartModal({ onClose }) {
+        function QuickStartModal({ onClose, language }) {
             const [step, setStep] = useState(0);
             const steps = [
                 {
-                    title: "Welcome to Scheduler",
+                    title: t('wizard_welcome', language),
                     icon: "fa-hand-sparkles",
                     color: "text-blue-600",
                     content: (
@@ -3936,19 +4406,19 @@
                     )
                 },
                 {
-                    title: "1. Configure Layout",
+                    title: t('wizard_step1', language),
                     icon: "fa-cog",
                     color: "text-gray-600",
                     content: "Go to the <b>Config</b> tab to customize your Departments (Areas), Time Slots (Shifts), and specific Posts (Positions). We've started you off with a standard template."
                 },
                 {
-                    title: "2. Build Your Roster",
+                    title: t('wizard_step2', language),
                     icon: "fa-users",
                     color: "text-purple-600",
                     content: "Go to the <b>Roster</b> tab. You can manually add brothers or use the <b>Import CSV</b> button for bulk entry. Drag and drop names to assign them to Key Man teams."
                 },
                 {
-                    title: "3. Create Schedule",
+                    title: t('wizard_step3', language),
                     icon: "fa-calendar-alt",
                     color: "text-green-600",
                     content: "Head to the <b>Schedule</b> tab. Use <b>Auto-Fill</b> to automatically fill empty slots based on qualifications and fairness. You can also click any cell to manually assign."
@@ -3994,7 +4464,7 @@
                                     ))}
                                 </div>
                                 <button onClick={handleNext} className="bg-blue-600 text-white px-6 py-2 rounded-full font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95 dark:shadow-none">
-                                    {step === steps.length - 1 ? "Get Started" : "Next"} <i className="fa fa-arrow-right ml-2"></i>
+                                    {step === steps.length - 1 ? t('wizard_start', language) : t('wizard_next', language)} <i className="fa fa-arrow-right ml-2"></i>
                                 </button>
                             </div>
                         </div>
@@ -4006,35 +4476,35 @@
         const WIZARD_STEPS = [
             {
                 id: 'welcome',
-                title: "Welcome to Scheduler",
+                title: "wizard_welcome",
                 description: "Let's get your assembly set up in 3 easy steps.",
                 view: 'schedule', // Background view
                 isModal: true
             },
             {
                 id: 'config',
-                title: "Step 1: Configuration",
+                title: "wizard_step1",
                 description: "Review the default Areas, Shifts, and Positions. Customize them to match your assembly hall layout.",
                 view: 'config',
                 isModal: false
             },
             {
                 id: 'roster',
-                title: "Step 2: Build Roster",
+                title: "wizard_step2",
                 description: "Add your brothers here. You can Import a CSV or add them manually. Don't forget to assign Capabilities!",
                 view: 'roster',
                 isModal: false
             },
             {
                 id: 'schedule',
-                title: "Step 3: Generate",
+                title: "wizard_step3",
                 description: "You are ready! Click the 'Auto-Fill' button to generate your first schedule instantly.",
                 view: 'schedule',
                 isModal: false
             }
         ];
 
-        function Wizard({ step, steps, onNext, onBack, onClose }) {
+        function Wizard({ step, steps, onNext, onBack, onClose, language }) {
             const current = steps[step];
             const isLast = step === steps.length - 1;
 
@@ -4046,12 +4516,12 @@
                             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-4xl shadow-md dark:bg-slate-700 dark:text-blue-400">
                                 <i className="fa fa-wand-magic-sparkles"></i>
                             </div>
-                            <h2 className="text-3xl font-bold text-gray-900 mb-4 dark:text-white">{current.title}</h2>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-4 dark:text-white">{t(current.title, language)}</h2>
                             <p className="text-gray-600 text-lg mb-8 dark:text-gray-300">{current.description}</p>
                             <button onClick={onNext} className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold text-lg hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all transform hover:scale-105 active:scale-95 dark:shadow-none">
-                                Start Setup <i className="fa fa-arrow-right ml-2"></i>
+                                {t('wizard_start', language)} <i className="fa fa-arrow-right ml-2"></i>
                             </button>
-                            <button onClick={onClose} className="block w-full mt-6 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">Skip Wizard</button>
+                            <button onClick={onClose} className="block w-full mt-6 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">{t('wizard_skip', language)}</button>
                         </div>
                     </div>
                 );
@@ -4064,7 +4534,7 @@
                         <div className="flex justify-between items-start mb-3">
                             <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
                                 <span className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">{step}</span>
-                                {current.title}
+                                {t(current.title, language)}
                             </h3>
                             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><i className="fa fa-times"></i></button>
                         </div>
@@ -4080,9 +4550,9 @@
                                 })}
                             </div>
                             <div className="flex gap-2">
-                                {step > 1 && <button onClick={onBack} className="text-gray-500 hover:text-gray-800 px-3 py-1.5 text-sm font-medium dark:text-gray-400 dark:hover:text-white">Back</button>}
+                                {step > 1 && <button onClick={onBack} className="text-gray-500 hover:text-gray-800 px-3 py-1.5 text-sm font-medium dark:text-gray-400 dark:hover:text-white">{t('wizard_back', language)}</button>}
                                 <button onClick={onNext} className="bg-blue-600 text-white px-5 py-1.5 rounded-full text-sm font-bold hover:bg-blue-700 shadow-md transition-transform active:scale-95">
-                                    {isLast ? "Finish" : "Next"} <i className={`fa ${isLast ? 'fa-check' : 'fa-chevron-right'} ml-1`}></i>
+                                    {isLast ? t('wizard_finish', language) : t('wizard_next', language)} <i className={`fa ${isLast ? 'fa-check' : 'fa-chevron-right'} ml-1`}></i>
                                 </button>
                             </div>
                         </div>
@@ -4095,6 +4565,7 @@
             const [view, setView] = useState('schedule');
             const [showWizard, setShowWizard] = useState(false);
             const [wizardStep, setWizardStep] = useState(0);
+            const [language, setLanguage] = useState(() => localStorage.getItem('app_language') || 'en');
 
             const INITIAL_STATE = {
                 personnel: INITIAL_ROSTER,
@@ -4104,6 +4575,15 @@
                 areas: DEFAULT_AREAS,
                 positions: DEFAULT_POSITIONS,
                 shifts: DEFAULT_SHIFTS,
+                blueprints: [
+                    {
+                        id: 'bp_default_assembly',
+                        name: 'Standard Assembly Hall',
+                        areas: DEFAULT_AREAS,
+                        positions: DEFAULT_POSITIONS,
+                        shifts: DEFAULT_SHIFTS
+                    }
+                ],
                 rules: {
                     capabilitySeverity: 'error',
                     doubleBookingSeverity: 'error',
@@ -4117,7 +4597,7 @@
             };
 
             const { state, setState, undo, redo, canUndo, canRedo } = useUndoRedo(INITIAL_STATE);
-            const { personnel, tags, assignments, log, areas, positions, shifts, rules } = state;
+            const { personnel, tags, assignments, log, areas, positions, shifts, blueprints, rules } = state;
 
             const [showSaveModal, setShowSaveModal] = useState(false);
             const [showLoadModal, setShowLoadModal] = useState(false);
@@ -4140,6 +4620,10 @@
                 }
                 localStorage.setItem('dark_mode', darkMode);
             }, [darkMode]);
+
+            useEffect(() => {
+                localStorage.setItem('app_language', language);
+            }, [language]);
 
             // --- WIZARD HANDLERS ---
             const handleWizardNext = () => {
@@ -4175,6 +4659,7 @@
             const setAreas = (val) => updateState({ areas: typeof val === 'function' ? val(areas) : val });
             const setPositions = (val) => updateState({ positions: typeof val === 'function' ? val(positions) : val });
             const setShifts = (val) => updateState({ shifts: typeof val === 'function' ? val(shifts) : val });
+            const setBlueprints = (val) => updateState({ blueprints: typeof val === 'function' ? val(blueprints) : val });
             const setRules = (val) => updateState({ rules: typeof val === 'function' ? val(rules) : val });
 
             const handleAutoFill = (newAssignments, newLog) => {
@@ -4267,7 +4752,7 @@
                                     <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-blue-500 to-blue-700">
                                         <i className="fa fa-clipboard-user"></i>
                                     </div>
-                                    <span className="tracking-tight">Circuit Attendant Scheduler</span>
+                                    <span className="tracking-tight">{t('app_title', language)}</span>
                                 </h1>
                                 <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
                                 <div className="flex gap-1">
@@ -4283,39 +4768,50 @@
                                         onClick={() => setView(v)}
                                         className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${view===v ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' : 'text-gray-500 hover:text-gray-800'}`}
                                     >
-                                        {v === 'schedule' ? 'Schedule' :
-                                         v === 'roster' ? 'Roster' :
-                                         v === 'stats' ? 'Time Stats' :
-                                         v === 'dept' ? 'Depts' :
-                                         v === 'log' ? 'Log' :
-                                         v === 'tags' ? 'Tags' :
-                                         v === 'print' ? 'Slips' : 'Config'}
+                                        {v === 'schedule' ? t('nav_schedule', language) :
+                                         v === 'roster' ? t('nav_roster', language) :
+                                         v === 'stats' ? t('nav_stats', language) :
+                                         v === 'dept' ? t('nav_depts', language) :
+                                         v === 'log' ? t('nav_log', language) :
+                                         v === 'tags' ? t('nav_tags', language) :
+                                         v === 'print' ? t('nav_slips', language) : t('nav_config', language)}
                                     </button>
                                 ))}
                             </nav>
 
                             <div className="flex gap-3 items-center">
+                                <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700 mr-2">
+                                    {['en', 'es', 'fr', 'pt', 'tl', 'it'].map(l => (
+                                        <button 
+                                            key={l} 
+                                            onClick={() => setLanguage(l)} 
+                                            className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase transition-all ${language === l ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                        >
+                                            {l}
+                                        </button>
+                                    ))}
+                                </div>
                                 <button onClick={() => setDarkMode(!darkMode)} className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${darkMode ? 'text-yellow-400 hover:bg-white/10' : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'}`} title="Toggle Dark Mode">
                                     <i className={`fa ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
                                 </button>
                                 <button onClick={() => setShowQuickStart(true)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-white/10 dark:text-gray-500 dark:hover:text-blue-400 transition-all" title="Help / Quick Start"><i className="fa fa-circle-question text-lg"></i></button>
                                 <div className="w-px h-6 bg-gray-200 dark:bg-gray-700"></div>
-                                <button onClick={resetAll} className="text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">Reset</button>
-                                <button onClick={() => setShowSaveModal(true)} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"><i className="fa fa-download text-blue-500"></i> Save</button>
-                                <button onClick={() => setShowLoadModal(true)} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm shadow-blue-200 transition-all flex items-center gap-2"><i className="fa fa-upload"></i> Load</button>
+                                <button onClick={resetAll} className="text-gray-400 hover:text-red-600 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors">{t('btn_reset', language)}</button>
+                                <button onClick={() => setShowSaveModal(true)} className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"><i className="fa fa-download text-blue-500"></i> {t('btn_save', language)}</button>
+                                <button onClick={() => setShowLoadModal(true)} className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-1.5 rounded-full text-xs font-semibold shadow-sm shadow-blue-200 transition-all flex items-center gap-2"><i className="fa fa-upload"></i> {t('btn_load', language)}</button>
                             </div>
                         </div>
                     </header>
-                    {showQuickStart && <QuickStartModal onClose={() => setShowQuickStart(false)} />}
+                    {showQuickStart && <QuickStartModal onClose={() => setShowQuickStart(false)} language={language} />}
                     <div className="container mx-auto mt-6 px-4">
-                        {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} areas={areas} shifts={shifts} tags={tags} /> :
-                         view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} /> :
-                         view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} /> :
-                         view === 'log' ? <LogView log={log} /> :
-                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} areas={areas} onDeleteTag={handleDeleteTag} /> :
-                         view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
-                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} tags={tags} onConfigUpdate={updateState} /> :
-                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
+                        {view === 'roster' ? <RosterView personnel={personnel} setPersonnel={setPersonnel} areas={areas} shifts={shifts} tags={tags} language={language} /> :
+                         view === 'stats' ? <StatsView personnel={personnel} assignments={assignments} shifts={shifts} positions={positions} language={language} /> :
+                         view === 'dept' ? <DepartmentView personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} language={language} /> :
+                         view === 'log' ? <LogView log={log} language={language} /> :
+                         view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} areas={areas} onDeleteTag={handleDeleteTag} language={language} /> :
+                         view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} language={language} /> :
+                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} tags={tags} blueprints={blueprints} setBlueprints={setBlueprints} onConfigUpdate={updateState} language={language} /> :
+                         <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} language={language} />}
                     </div>
                     {showSaveModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -4342,7 +4838,7 @@
                             </div>
                         </div>
                     )}
-                    {showWizard && <Wizard step={wizardStep} steps={WIZARD_STEPS} onNext={handleWizardNext} onBack={handleWizardBack} onClose={handleWizardClose} />}
+                    {showWizard && <Wizard step={wizardStep} steps={WIZARD_STEPS} onNext={handleWizardNext} onBack={handleWizardBack} onClose={handleWizardClose} language={language} />}
                 </div>
             );
         }
