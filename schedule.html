@@ -187,6 +187,11 @@
                 btn_save: "Save",
                 btn_load: "Load",
                 btn_reset: "Reset",
+                btn_print: "Print",
+                btn_add: "Add",
+                btn_cancel: "Cancel",
+                btn_save_blueprint: "Save Blueprint",
+                btn_load_template: "Load Template",
                 sidebar_volunteers: "Volunteers",
                 search_placeholder: "Search...",
                 role_elder: "Elder",
@@ -197,10 +202,18 @@
                 grid_unassigned: "Unassigned",
                 grid_conflict: "Conflict Detected",
                 grid_suggestions: "Suggestions",
+                grid_find_replacement: "Find Replacement",
+                grid_clear_assignment: "Clear Assignment",
                 roster_title: "Personnel Roster",
                 roster_import: "Import CSV",
                 roster_add_person: "Add Person",
                 roster_empty: "Your Roster is Empty",
+                roster_name: "Name",
+                roster_cong: "Congregation",
+                roster_role: "Role",
+                roster_keyman: "Key Man",
+                roster_perms: "Permissions",
+                roster_unavail: "Unavailability",
                 config_areas: "Areas",
                 config_shifts: "Shifts",
                 config_positions: "Positions",
@@ -212,11 +225,13 @@
                 rule_max_load: "Max Work Load",
                 rule_consecutive: "Avoid Consecutive Shifts",
                 rule_relief_mode: "Auditorium Relief Mode",
+                rule_anchor_limits: "Enforce Anchor Limits",
                 stats_title: "Time Statistics",
                 stats_name: "Brother Name",
                 stats_assignments: "Assignments",
                 stats_missed: "% Missed",
                 stats_load: "Visual Load",
+                stats_time: "Time",
                 wizard_welcome: "Welcome to Scheduler",
                 wizard_step1: "Step 1: Configuration",
                 wizard_step2: "Step 2: Build Roster",
@@ -227,7 +242,51 @@
                 wizard_finish: "Finish",
                 wizard_skip: "Skip Wizard",
                 csv_map_title: "Map CSV Columns",
-                csv_map_preview: "Import Preview"
+                csv_map_desc: "Match your spreadsheet columns to our roster fields.",
+                csv_map_preview: "Import Preview",
+                ready_to_schedule: "Ready to Schedule?",
+                ready_to_schedule_desc: "You have {count} people in your roster. Click \"Auto-Fill\" to automatically generate a schedule.",
+                save_current_layout: "Save Current Layout",
+                save_layout_desc: "Save your current Areas, Shifts, and Positions as a reusable template.",
+                no_blueprints: "No blueprints saved yet.",
+                log_title: "Auto-Assign Logic Log",
+                rule_relief_desc: "Allow Auditorium staff to be double-booked for rotational assignments (Relief Duty).",
+                rule_anchor_desc: "Limit how many 'All Day' staff can be pulled for temporary relief (Max 1 per section).",
+                rule_max_load_desc: "Auto-Fill will skip brothers who have worked more than this % of the day.",
+                rule_capabilities_desc: "Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned.",
+                rule_double_booking_desc: "Ensure a brother is not in two places at once.",
+                rule_unavailability_desc: "Do not assign if brother has program part or marked unavailable.",
+                rule_consecutive_desc: "Try to give a break between shifts.",
+                severity_block: "Block (Red)",
+                severity_warn: "Warn (Yellow)",
+                severity_off: "Off",
+                unassigned_no_keyman: "Unassigned / No Key Man",
+                members: "members",
+                edit_key_man: "Edit Key Man",
+                drop_members_hint: "Drop members here to assign",
+                grid_actions: "Actions",
+                no_logs: "No logs available. Run Auto-Fill first.",
+                no_candidates_found: "No qualified, available candidates found.",
+                btn_assign: "Assign",
+                roster_start_desc: "Start by adding your team",
+                roster_empty_desc: "Add brothers manually using the form above, or import your existing list to get started quickly.",
+                brothers_available: "brothers available",
+                add_new_area: "Add New Area",
+                area: "Area",
+                bg_color: "Bg Color",
+                text_color: "Text Color",
+                restriction: "Restriction",
+                preview: "Preview",
+                action: "Action",
+                label: "Label",
+                minutes: "Minutes",
+                shift: "Shift",
+                position: "Position",
+                select_area: "Select Area",
+                rotational: "Rotational",
+                auditorium: "Auditorium",
+                sect: "Section",
+                key_man_only: "Key Man Only"
             },
             es: {
                 app_title: "Programador de Acomodadores",
@@ -246,6 +305,11 @@
                 btn_save: "Guardar",
                 btn_load: "Cargar",
                 btn_reset: "Reiniciar",
+                btn_print: "Imprimir",
+                btn_add: "Añadir",
+                btn_cancel: "Cancelar",
+                btn_save_blueprint: "Guardar Plantilla",
+                btn_load_template: "Cargar Plantilla",
                 sidebar_volunteers: "Voluntarios",
                 search_placeholder: "Buscar...",
                 role_elder: "Anciano",
@@ -256,10 +320,18 @@
                 grid_unassigned: "Sin asignar",
                 grid_conflict: "Conflicto detectado",
                 grid_suggestions: "Sugerencias",
+                grid_find_replacement: "Buscar reemplazo",
+                grid_clear_assignment: "Quitar asignación",
                 roster_title: "Nómina de Personal",
                 roster_import: "Importar CSV",
                 roster_add_person: "Añadir persona",
                 roster_empty: "La nómina está vacía",
+                roster_name: "Nombre",
+                roster_cong: "Congregación",
+                roster_role: "Nombramiento",
+                roster_keyman: "Hermano Clave",
+                roster_perms: "Permisos",
+                roster_unavail: "Indisponibilidad",
                 config_areas: "Áreas",
                 config_shifts: "Turnos",
                 config_positions: "Puestos",
@@ -271,11 +343,13 @@
                 rule_max_load: "Carga máx. de trabajo",
                 rule_consecutive: "Evitar turnos seguidos",
                 rule_relief_mode: "Modo de relevo del auditorio",
+                rule_anchor_limits: "Límites de anclaje",
                 stats_title: "Estadísticas de tiempo",
                 stats_name: "Nombre del hermano",
                 stats_assignments: "Asignaciones",
                 stats_missed: "% Perdido",
                 stats_load: "Carga visual",
+                stats_time: "Tiempo",
                 wizard_welcome: "Bienvenido al Programador",
                 wizard_step1: "Paso 1: Configuración",
                 wizard_step2: "Paso 2: Crear Nómina",
@@ -286,7 +360,51 @@
                 wizard_finish: "Terminar",
                 wizard_skip: "Omitir guía",
                 csv_map_title: "Mapear columnas CSV",
-                csv_map_preview: "Vista previa"
+                csv_map_desc: "Haga coincidir las columnas de su hoja de cálculo con nuestros campos de la nómina.",
+                csv_map_preview: "Vista previa",
+                ready_to_schedule: "¿Listo para programar?",
+                ready_to_schedule_desc: "Tienes {count} personas en tu nómina. Haz clic en \"Auto-completar\" para generar un horario automáticamente.",
+                save_current_layout: "Guardar diseño actual",
+                save_layout_desc: "Guarde sus áreas, turnos y puestos actuales como una plantilla reutilizable.",
+                no_blueprints: "No hay plantillas guardadas.",
+                log_title: "Registro de lógica de asignación auto.",
+                rule_relief_desc: "Permitir que el personal del auditorio sea asignado a otros puestos (Relevo).",
+                rule_anchor_desc: "Limitar cuántos hermanos de 'Todo el día' pueden ser relevados (Máx. 1 por sección).",
+                rule_max_load_desc: "El auto-completar omitirá a los hermanos que hayan trabajado más de este % del día.",
+                rule_capabilities_desc: "Permitir solo hermanos calificados (ej. 'Auditorio', 'Hermano Clave') para ser asignados.",
+                rule_double_booking_desc: "Asegurarse de que un hermano no esté en dos lugares a la vez.",
+                rule_unavailability_desc: "No asignar si el hermano tiene una parte del programa o está marcado como no disponible.",
+                rule_consecutive_desc: "Tratar de dar un descanso entre turnos.",
+                severity_block: "Bloquear (Rojo)",
+                severity_warn: "Advertir (Amarillo)",
+                severity_off: "Apagado",
+                unassigned_no_keyman: "Sin asignar / Sin Hermano Clave",
+                members: "miembros",
+                edit_key_man: "Editar Hermano Clave",
+                drop_members_hint: "Arrastre miembros aquí para asignar",
+                grid_actions: "Acciones",
+                no_logs: "Sin registros. Ejecute auto-completar primero.",
+                no_candidates_found: "No se encontraron candidatos calificados.",
+                btn_assign: "Asignar",
+                roster_start_desc: "Comience añadiendo a su equipo",
+                roster_empty_desc: "Añada hermanos manualmente o importe su lista para comenzar.",
+                brothers_available: "hermanos disponibles",
+                add_new_area: "Añadir área",
+                area: "Área",
+                bg_color: "Color fondo",
+                text_color: "Color texto",
+                restriction: "Restricción",
+                preview: "Previsualizar",
+                action: "Acción",
+                label: "Etiqueta",
+                minutes: "Minutos",
+                shift: "Turno",
+                position: "Puesto",
+                select_area: "Seleccionar área",
+                rotational: "Rotativo",
+                auditorium: "Auditorio",
+                sect: "Sección",
+                key_man_only: "Solo Hermano Clave"
             },
             fr: {
                 app_title: "Planificateur d'Accueil",
@@ -305,6 +423,11 @@
                 btn_save: "Enregistrer",
                 btn_load: "Charger",
                 btn_reset: "Réinitialiser",
+                btn_print: "Imprimer",
+                btn_add: "Ajouter",
+                btn_cancel: "Annuler",
+                btn_save_blueprint: "Enregistrer modèle",
+                btn_load_template: "Charger modèle",
                 sidebar_volunteers: "Volontaires",
                 search_placeholder: "Chercher...",
                 role_elder: "Ancien",
@@ -315,10 +438,18 @@
                 grid_unassigned: "Non assigné",
                 grid_conflict: "Conflit détecté",
                 grid_suggestions: "Suggestions",
+                grid_find_replacement: "Remplaçant",
+                grid_clear_assignment: "Effacer",
                 roster_title: "Registre du personnel",
                 roster_import: "Importer CSV",
                 roster_add_person: "Ajouter",
                 roster_empty: "Votre liste est vide",
+                roster_name: "Nom",
+                roster_cong: "Congrégation",
+                roster_role: "Fonction",
+                roster_keyman: "Frère clé",
+                roster_perms: "Aptitudes",
+                roster_unavail: "Indisponibilité",
                 config_areas: "Zones",
                 config_shifts: "Tranches",
                 config_positions: "Postes",
@@ -330,11 +461,13 @@
                 rule_max_load: "Charge max.",
                 rule_consecutive: "Éviter successifs",
                 rule_relief_mode: "Mode relève auditorium",
+                rule_anchor_limits: "Limites ancrage",
                 stats_title: "Statistiques de temps",
                 stats_name: "Nom du frère",
                 stats_assignments: "Attributions",
                 stats_missed: "% Manqué",
                 stats_load: "Charge visuelle",
+                stats_time: "Heure",
                 wizard_welcome: "Bienvenue",
                 wizard_step1: "Étape 1: Config",
                 wizard_step2: "Étape 2: Liste",
@@ -345,7 +478,11 @@
                 wizard_finish: "Terminer",
                 wizard_skip: "Passer",
                 csv_map_title: "Mapper colonnes CSV",
-                csv_map_preview: "Aperçu"
+                csv_map_preview: "Aperçu",
+                ready_to_schedule: "Prêt à planifier ?",
+                save_current_layout: "Sauvegarder la structure",
+                save_layout_desc: "Enregistrez vos zones et postes comme modèle réutilisable.",
+                no_blueprints: "Aucun modèle enregistré."
             },
             pt: {
                 app_title: "Programador de Indicadores",
@@ -364,6 +501,11 @@
                 btn_save: "Salvar",
                 btn_load: "Carregar",
                 btn_reset: "Resetar",
+                btn_print: "Imprimir",
+                btn_add: "Adicionar",
+                btn_cancel: "Cancelar",
+                btn_save_blueprint: "Salvar Modelo",
+                btn_load_template: "Carregar Modelo",
                 sidebar_volunteers: "Voluntários",
                 search_placeholder: "Buscar...",
                 role_elder: "Ancião",
@@ -374,10 +516,18 @@
                 grid_unassigned: "Não designado",
                 grid_conflict: "Conflito detectado",
                 grid_suggestions: "Sugestões",
+                grid_find_replacement: "Buscar substituto",
+                grid_clear_assignment: "Limpar designação",
                 roster_title: "Relação de Pessoal",
                 roster_import: "Importar CSV",
                 roster_add_person: "Adicionar",
                 roster_empty: "Sua relação está vazia",
+                roster_name: "Nome",
+                roster_cong: "Congregação",
+                roster_role: "Cargo",
+                roster_keyman: "Irmão Chave",
+                roster_perms: "Habilidades",
+                roster_unavail: "Indisponibilidade",
                 config_areas: "Áreas",
                 config_shifts: "Turnos",
                 config_positions: "Postos",
@@ -389,11 +539,13 @@
                 rule_max_load: "Carga máx. trabalho",
                 rule_consecutive: "Evitar turnos seguidos",
                 rule_relief_mode: "Modo de alívio auditório",
+                rule_anchor_limits: "Limites de âncora",
                 stats_title: "Estatísticas de Tempo",
                 stats_name: "Nome do irmão",
                 stats_assignments: "Designações",
                 stats_missed: "% Perdido",
                 stats_load: "Carga visual",
+                stats_time: "Horário",
                 wizard_welcome: "Bem-vindo",
                 wizard_step1: "Passo 1: Config",
                 wizard_step2: "Passo 2: Relação",
@@ -404,7 +556,11 @@
                 wizard_finish: "Finalizar",
                 wizard_skip: "Pular guia",
                 csv_map_title: "Mapear colunas CSV",
-                csv_map_preview: "Prévia"
+                csv_map_preview: "Prévia",
+                ready_to_schedule: "Pronto para agendar?",
+                save_current_layout: "Salvar estrutura atual",
+                save_layout_desc: "Salve suas áreas e postos como um modelo reutilizável.",
+                no_blueprints: "Nenhum modelo salvo."
             },
             tl: {
                 app_title: "Scheduler ng mga Attendant",
@@ -423,6 +579,11 @@
                 btn_save: "I-save",
                 btn_load: "I-load",
                 btn_reset: "I-reset",
+                btn_print: "I-print",
+                btn_add: "Idagdag",
+                btn_cancel: "I-cancel",
+                btn_save_blueprint: "I-save ang Blueprint",
+                btn_load_template: "I-load ang Template",
                 sidebar_volunteers: "Mga Volunteer",
                 search_placeholder: "Maghanap...",
                 role_elder: "Elder",
@@ -433,10 +594,18 @@
                 grid_unassigned: "Walang assign",
                 grid_conflict: "May Conflict",
                 grid_suggestions: "Mga Suggestion",
+                grid_find_replacement: "Maghanap ng kapalit",
+                grid_clear_assignment: "I-clear ang assignment",
                 roster_title: "Roster ng Personnel",
                 roster_import: "I-import ang CSV",
                 roster_add_person: "Magdagdag",
                 roster_empty: "Walang laman ang roster",
+                roster_name: "Pangalan",
+                roster_cong: "Kongregasyon",
+                roster_role: "Tungkulin",
+                roster_keyman: "Key Man",
+                roster_perms: "Kakayahan",
+                roster_unavail: "Unavailability",
                 config_areas: "Mga Area",
                 config_shifts: "Mga Shift",
                 config_positions: "Mga Posisyon",
@@ -448,11 +617,13 @@
                 rule_max_load: "Max Work Load",
                 rule_consecutive: "Iwasan ang Sunod-sunod",
                 rule_relief_mode: "Auditorium Relief Mode",
+                rule_anchor_limits: "Anchor Limits",
                 stats_title: "Statistics ng Oras",
                 stats_name: "Pangalan",
                 stats_assignments: "Mga Assignment",
                 stats_missed: "% Napalampas",
                 stats_load: "Visual Load",
+                stats_time: "Oras",
                 wizard_welcome: "Welcome sa Scheduler",
                 wizard_step1: "Hakbang 1: Config",
                 wizard_step2: "Hakbang 2: Roster",
@@ -463,7 +634,11 @@
                 wizard_finish: "Tapusin",
                 wizard_skip: "Laktawan",
                 csv_map_title: "I-map ang CSV",
-                csv_map_preview: "Preview"
+                csv_map_preview: "Preview",
+                ready_to_schedule: "Handa nang mag-schedule?",
+                save_current_layout: "I-save ang layout",
+                save_layout_desc: "I-save ang mga area at posisyon bilang reusable template.",
+                no_blueprints: "Wala pang blueprint."
             },
             it: {
                 app_title: "Pianificatore Assistenti",
@@ -482,6 +657,11 @@
                 btn_save: "Salva",
                 btn_load: "Carica",
                 btn_reset: "Reset",
+                btn_print: "Stampa",
+                btn_add: "Aggiungi",
+                btn_cancel: "Annulla",
+                btn_save_blueprint: "Salva modello",
+                btn_load_template: "Carica modello",
                 sidebar_volunteers: "Volontari",
                 search_placeholder: "Cerca...",
                 role_elder: "Anziano",
@@ -492,10 +672,18 @@
                 grid_unassigned: "Non assegnato",
                 grid_conflict: "Conflitto rilevato",
                 grid_suggestions: "Suggerimenti",
+                grid_find_replacement: "Trova sostituto",
+                grid_clear_assignment: "Rimuovi",
                 roster_title: "Elenco Personale",
                 roster_import: "Importa CSV",
                 roster_add_person: "Aggiungi",
                 roster_empty: "L'elenco è vuoto",
+                roster_name: "Nome",
+                roster_cong: "Congregazione",
+                roster_role: "Nomina",
+                roster_keyman: "Fratello Chiave",
+                roster_perms: "Idoneità",
+                roster_unavail: "Indisponibilità",
                 config_areas: "Aree",
                 config_shifts: "Turni",
                 config_positions: "Postazioni",
@@ -507,11 +695,13 @@
                 rule_max_load: "Carico max lavoro",
                 rule_consecutive: "Evita turni seguiti",
                 rule_relief_mode: "Modalità sollievo uditorio",
+                rule_anchor_limits: "Limiti ancora",
                 stats_title: "Statistiche tempo",
                 stats_name: "Nome fratello",
                 stats_assignments: "Incarichi",
                 stats_missed: "% Perso",
                 stats_load: "Carico visivo",
+                stats_time: "Ora",
                 wizard_welcome: "Benvenuto",
                 wizard_step1: "Passo 1: Config",
                 wizard_step2: "Passo 2: Elenco",
@@ -522,7 +712,11 @@
                 wizard_finish: "Fine",
                 wizard_skip: "Salta guida",
                 csv_map_title: "Mappa colonne CSV",
-                csv_map_preview: "Anteprima"
+                csv_map_preview: "Anteprima",
+                ready_to_schedule: "Pronto per programmare?",
+                save_current_layout: "Salva struttura",
+                save_layout_desc: "Salva aree e postazioni come modello riutilizzabile.",
+                no_blueprints: "Nessun modello salvato."
             }
         };
 
@@ -759,7 +953,7 @@
                         <div className="p-6 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center">
                             <div>
                                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{t('csv_map_title', language)}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Match your spreadsheet columns to our roster fields.</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{t('csv_map_desc', language) || "Match your spreadsheet columns to our roster fields."}</p>
                             </div>
                             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"><i className="fa fa-times text-gray-400"></i></button>
                         </div>
@@ -828,7 +1022,7 @@
             );
         }
 
-        function RosterView({ personnel, setPersonnel, areas, shifts, tags }) {
+        function RosterView({ personnel, setPersonnel, areas, shifts, tags, language }) {
             const initialCaps = useMemo(() => {
                 const c = { keyman: false };
                 areas.forEach(a => c[a.capability] = (['stairs', 'backstage', 'dining', 'lobby', 'exterior'].includes(a.capability)));
@@ -1075,14 +1269,14 @@
             if (personnel.length === 0) {
                 return (
                     <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                        {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} />}
+                        {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} language={language} />}
                         <div className="flex justify-between items-center mb-8">
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
-                                <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">Start by adding your team</p>
+                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">{t('roster_title', language)}</h2>
+                                <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">{t('roster_start_desc', language) || "Start by adding your team"}</p>
                             </div>
                             <div className="relative overflow-hidden inline-block group">
-                                <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2 dark:bg-purple-600 dark:hover:bg-purple-700"><i className="fa fa-file-csv"></i> Import CSV</button>
+                                <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2 dark:bg-purple-600 dark:hover:bg-purple-700"><i className="fa fa-file-csv"></i> {t('roster_import', language)}</button>
                                 <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
                             </div>
                         </div>
@@ -1090,44 +1284,44 @@
                         {/* EDIT FORM */}
                         <div className={`p-6 rounded-2xl border mb-8 bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700`}>
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Add New Personnel</h3>
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">{t('roster_add_person', language)}</h3>
                             </div>
                             <div className="flex flex-wrap gap-4 items-end">
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_name', language)}</label>
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                                 </div>
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_cong', language)}</label>
                                     <input type="text" list="congregation-list" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
                                     <datalist id="congregation-list">
                                         {uniqueCongregations.map(c => <option key={c} value={c} />)}
                                     </datalist>
                                 </div>
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_role', language)}</label>
                                     <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
-                                        <option value="Exemplary">Exemplary</option>
-                                        <option value="MS">MS</option>
-                                        <option value="Elder">Elder</option>
+                                        <option value="Exemplary">{t('role_exemplary', language)}</option>
+                                        <option value="MS">{t('role_ms', language)}</option>
+                                        <option value="Elder">{t('role_elder', language)}</option>
                                     </select>
                                 </div>
                                 <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_keyman', language)}</label>
                                     <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" disabled>
                                         <option value="">-- None --</option>
                                     </select>
                                 </div>
 
                                 <div className="w-full">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_perms', language)}</label>
                                     <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                         {areas.map(area => renderCheckbox(area.capability, area.name))}
-                                        {renderCheckbox('keyman', 'KEY MAN')}
+                                        {renderCheckbox('keyman', t('roster_keyman', language).toUpperCase())}
                                     </div>
                                 </div>
                                 <div className="w-full mb-4">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_unavail', language)}</label>
                                     <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                         {shifts.map(s => (
                                             <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
@@ -1137,7 +1331,7 @@
                                         ))}
                                     </div>
                                 </div>
-                                <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none`}>Add Person</button>
+                                <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none`}>{t('roster_add_person', language)}</button>
                             </div>
                         </div>
 
@@ -1145,11 +1339,11 @@
                             <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm dark:bg-slate-700 dark:text-blue-400">
                                 <i className="fa fa-user-plus"></i>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-800 mb-2 dark:text-white">Your Roster is Empty</h3>
-                            <p className="text-gray-500 max-w-sm mb-6 dark:text-gray-400">Add brothers manually using the form above, or import your existing list to get started quickly.</p>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2 dark:text-white">{t('roster_empty', language)}</h3>
+                            <p className="text-gray-500 max-w-sm mb-6 dark:text-gray-400">{t('roster_empty_desc', language) || "Add brothers manually using the form above, or import your existing list to get started quickly."}</p>
                             <div className="relative overflow-hidden inline-block group">
                                 <button className="bg-white border border-gray-200 text-gray-700 py-2.5 px-6 rounded-full font-semibold shadow-sm hover:bg-gray-50 transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-800 dark:border-slate-600 dark:text-gray-200 dark:hover:bg-slate-700">
-                                    <i className="fa fa-file-csv text-green-600 dark:text-green-400"></i> Import CSV Roster
+                                    <i className="fa fa-file-csv text-green-600 dark:text-green-400"></i> {t('roster_import', language)}
                                 </button>
                                 <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
                             </div>
@@ -1160,15 +1354,15 @@
 
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                    {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} />}
+                    {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} language={language} />}
                     {/* HEADER & IMPORT */}
                     <div className="flex justify-between items-center mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
-                            <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">{personnel.length} brothers available</p>
+                            <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">{t('roster_title', language)}</h2>
+                            <p className="text-gray-500 text-sm mt-1 dark:text-gray-400">{personnel.length} {t('brothers_available', language) || 'brothers available'}</p>
                         </div>
                         <div className="relative overflow-hidden inline-block group">
-                            <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2"><i className="fa fa-file-csv"></i> Import CSV</button>
+                            <button className="bg-purple-500 text-white py-2 px-5 rounded-full font-semibold shadow-sm hover:bg-purple-600 hover:shadow-md transition-all active:scale-95 flex items-center gap-2"><i className="fa fa-file-csv"></i> {t('roster_import', language)}</button>
                             <input type="file" accept=".csv" onChange={handleCSVUpload} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" />
                         </div>
                     </div>
@@ -1176,31 +1370,31 @@
                     {/* EDIT FORM */}
                         <div className={`p-6 rounded-2xl border mb-8 transition-colors ${editingId ? 'bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-700' : 'bg-gray-50/50 border-gray-200 dark:bg-slate-800/50 dark:border-slate-700'}`}>
                         <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">{editingId ? 'Editing Personnel' : 'Add New Personnel'}</h3>
-                            {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium dark:text-red-400 dark:hover:text-red-300">Cancel Edit</button>}
+                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">{editingId ? 'Editing Personnel' : t('roster_add_person', language)}</h3>
+                            {editingId && <button onClick={cancelEdit} className="text-xs text-red-500 hover:text-red-700 font-medium dark:text-red-400 dark:hover:text-red-300">{t('btn_cancel', language)}</button>}
                         </div>
                         <div className="flex flex-wrap gap-4 items-end">
                             <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Name</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_name', language)}</label>
                                     <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Full Name" />
                             </div>
                             <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Congregation</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_cong', language)}</label>
                                     <input type="text" list="congregation-list" value={formData.congregation} onChange={(e) => setFormData({...formData, congregation: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800" placeholder="Congregation" />
                                     <datalist id="congregation-list">
                                         {uniqueCongregations.map(c => <option key={c} value={c} />)}
                                     </datalist>
                             </div>
                             <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Role</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_role', language)}</label>
                                     <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-32 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
-                                    <option value="Exemplary">Exemplary</option>
-                                    <option value="MS">MS</option>
-                                    <option value="Elder">Elder</option>
+                                    <option value="Exemplary">{t('role_exemplary', language)}</option>
+                                    <option value="MS">{t('role_ms', language)}</option>
+                                    <option value="Elder">{t('role_elder', language)}</option>
                                 </select>
                             </div>
                             <div className="mb-2">
-                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Key Man</label>
+                                    <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_keyman', language)}</label>
                                     <select value={formData.keyManId} onChange={(e) => setFormData({...formData, keyManId: e.target.value})} className="border border-gray-300 p-2.5 rounded-xl w-48 bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm cursor-pointer dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                     <option value="">-- None --</option>
                                     {personnel.filter(p => p.caps && p.caps.includes('keyman') && p.id !== editingId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -1208,14 +1402,14 @@
                             </div>
 
                             <div className="w-full">
-                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Permissions</label>
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_perms', language)}</label>
                                 <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 mb-4 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {areas.map(area => renderCheckbox(area.capability, area.name))}
-                                    {renderCheckbox('keyman', 'KEY MAN')}
+                                    {renderCheckbox('keyman', t('roster_keyman', language).toUpperCase())}
                                 </div>
                             </div>
                             <div className="w-full mb-4">
-                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">Unavailability</label>
+                                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">{t('roster_unavail', language)}</label>
                                 <div className="flex flex-wrap bg-white p-4 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
                                     {shifts.map(s => (
                                         <label key={s.id} className="flex items-center cursor-pointer mr-6 select-none">
@@ -1225,7 +1419,7 @@
                                     ))}
                                 </div>
                             </div>
-                            <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-200 dark:shadow-none' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none'}`}>{editingId ? 'Update Person' : 'Add Person'}</button>
+                            <button onClick={savePerson} className={`px-6 py-2.5 rounded-full font-bold shadow-md transition-all active:scale-95 text-white ${editingId ? 'bg-yellow-500 hover:bg-yellow-600 shadow-yellow-200 dark:shadow-none' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-none'}`}>{editingId ? 'Update Person' : t('roster_add_person', language)}</button>
                         </div>
                     </div>
 
@@ -1348,11 +1542,11 @@
                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${group.keyMan ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'}`}>
                                                     <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
                                                 </div>
-                                                {group.keyMan ? group.keyMan.name : "Unassigned / No Key Man"}
-                                                <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} members</span>
+                                                {group.keyMan ? group.keyMan.name : (t('unassigned_no_keyman', language) || "Unassigned / No Key Man")}
+                                                <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">{group.members.length} {t('members', language) || 'members'}</span>
                                             </h3>
                                             {group.keyMan && (
-                                                <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Edit Key Man</button>
+                                                <button onClick={() => startEdit(group.keyMan)} className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300">{t('edit_key_man', language) || 'Edit Key Man'}</button>
                                             )}
                                         </>
                                     )}
@@ -1363,15 +1557,15 @@
                                     <table className="w-full text-sm text-left">
                                         <thead>
                                             <tr className="bg-white border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-500">
-                                                <th className="px-6 py-3 w-1/3">Name</th>
-                                                <th className="px-6 py-3 w-1/6">Role</th>
-                                                <th className="px-6 py-3">Capabilities</th>
-                                                <th className="px-6 py-3 w-24 text-center">Actions</th>
+                                                <th className="px-6 py-3 w-1/3">{t('roster_name', language)}</th>
+                                                <th className="px-6 py-3 w-1/6">{t('roster_role', language)}</th>
+                                                <th className="px-6 py-3">{t('roster_perms', language)}</th>
+                                                <th className="px-6 py-3 w-24 text-center">{t('grid_actions', language) || 'Actions'}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
                                             {group.members.length === 0 ? (
-                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30">Drop members here to assign</td></tr>
+                                                <tr><td colSpan="4" className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30">{t('drop_members_hint', language) || 'Drop members here to assign'}</td></tr>
                                             ) : (
                                                 group.members.map(p => {
                                                     const isEditing = editingId === p.id;
@@ -1835,9 +2029,9 @@
                         <select
                             value={filterRole}
                             onChange={(e) => setFilterRole(e.target.value)}
-                            className="w-full p-1.5 text-[10px] font-bold uppercase border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none"
+                            className="w-full p-1.5 text-[10px] font-black uppercase border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none"
                         >
-                            <option value="all">All Roles</option>
+                            <option value="all">{t('all_roles', language) || 'All Roles'}</option>
                             <option value="Elder">{t('role_elder', language)}</option>
                             <option value="MS">{t('role_ms', language)}</option>
                             <option value="Exemplary">{t('role_exemplary', language)}</option>
@@ -2064,7 +2258,7 @@
             );
         }
 
-        function FindReplacementModal({ slot, personnel, assignments, areas, positions, shifts, tags, onAssign, onClose }) {
+        function FindReplacementModal({ slot, personnel, assignments, areas, positions, shifts, tags, onAssign, onClose, language }) {
             const [candidates, setCandidates] = useState([]);
 
             useEffect(() => {
@@ -2125,20 +2319,20 @@
                     <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg h-3/4 flex flex-col border border-gray-100 transform transition-all scale-100 dark:bg-slate-900 dark:border-slate-800">
                         <div className="flex justify-between items-center mb-6">
                             <div>
-                                <h3 className="font-bold text-xl text-gray-900 tracking-tight dark:text-white">Find Replacement</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{slot.pos.name} • {slot.shiftId === 'all' ? 'All Day' : shifts.find(s=>s.id===slot.shiftId)?.label}</p>
+                                <h3 className="font-bold text-xl text-gray-900 tracking-tight dark:text-white">{t('grid_find_replacement', language)}</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">{slot.pos.name} • {slot.shiftId === 'all' ? (t('grid_all_day', language)) : shifts.find(s=>s.id===slot.shiftId)?.label}</p>
                             </div>
                             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors dark:bg-slate-800 dark:text-gray-400 dark:hover:text-white"><i className="fa fa-times"></i></button>
                         </div>
                         <div className="overflow-y-auto flex-1 border border-gray-100 rounded-2xl p-2 bg-gray-50/50 shadow-inner dark:bg-slate-800/50 dark:border-slate-800">
-                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10 dark:text-gray-400">No qualified, available candidates found.</div> : (
+                            {candidates.length === 0 ? <div className="text-center text-gray-500 mt-10 dark:text-gray-400">{t('no_candidates_found', language) || "No qualified, available candidates found."}</div> : (
                                 <table className="w-full text-sm">
                                     <tbody>
                                         {candidates.map(p => (
                                             <tr key={p.id} className="bg-white border-b hover:bg-blue-50 cursor-pointer dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-gray-200" onClick={() => onAssign(p.id)}>
                                                 <td className="p-3 font-medium">{p.name}</td>
                                                 <td className="p-3 text-right text-xs text-gray-500 dark:text-gray-400">{p.role}</td>
-                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 shadow-sm shadow-green-200 dark:shadow-none">Assign</button></td>
+                                                <td className="p-3 text-right"><button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 shadow-sm shadow-green-200 dark:shadow-none">{t('btn_assign', language) || 'Assign'}</button></td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -2151,11 +2345,11 @@
         }
 
         // --- LOG VIEW COMPONENT ---
-        function LogView({ log }) {
-            if (!log || log.length === 0) return <div className="glass-panel p-8 rounded-3xl text-gray-500 text-center italic dark:text-gray-400">No logs available. Run Auto-Fill first.</div>;
+        function LogView({ log, language }) {
+            if (!log || log.length === 0) return <div className="glass-panel p-8 rounded-3xl text-gray-500 text-center italic dark:text-gray-400">{t('no_logs', language) || "No logs available. Run Auto-Fill first."}</div>;
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
-                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">Auto-Assign Logic Log</h2>
+                    <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">{t('log_title', language)}</h2>
                     <div className="h-96 overflow-y-auto border border-gray-100 p-4 rounded-xl bg-gray-50/50 text-xs font-mono shadow-inner dark:bg-slate-900/50 dark:border-slate-800">
                         {log.map((entry, i) => (
                             <div key={i} className={`log-entry ${entry.type === 'auditorium' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -2238,7 +2432,7 @@
                                     <th className="p-4">{t('stats_name', language)}</th>
                                     <th className="p-4">Role</th>
                                     <th className="p-4">{t('stats_assignments', language)}</th>
-                                    <th className="p-4">Out-of-Auditorium Time</th>
+                                    <th className="p-4">{t('out_of_auditorium_time', language) || 'Out-of-Auditorium Time'}</th>
                                     <th className="p-4">{t('stats_missed', language)}</th>
                                     <th className="p-4 w-1/3">{t('stats_load', language)}</th>
                                 </tr>
@@ -2271,7 +2465,7 @@
             );
         }
 
-        function RulesView({ rules, setRules }) {
+        function RulesView({ rules, setRules, language }) {
             const toggleRule = (key) => setRules({ ...rules, [key]: !rules[key] });
             const setSeverity = (key, val) => setRules({ ...rules, [key]: val });
             const setVal = (key, val) => setRules({ ...rules, [key]: val });
@@ -2284,14 +2478,14 @@
                         {/* 1. Capabilities */}
                         <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-white">Enforce Capabilities</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_capabilities', language)}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('rule_capabilities_desc', language) || "Only allow qualified brothers (e.g. 'Auditorium', 'Key Man') to be assigned."}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <select value={rules.capabilitySeverity || 'error'} onChange={e=>setSeverity('capabilitySeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                    <option value="error">Block (Red)</option>
-                                    <option value="warning">Warn (Yellow)</option>
-                                    <option value="off">Off</option>
+                                    <option value="error">{t('severity_block', language)}</option>
+                                    <option value="warning">{t('severity_warn', language)}</option>
+                                    <option value="off">{t('severity_off', language)}</option>
                                 </select>
                             </div>
                         </div>
@@ -2299,44 +2493,44 @@
                         {/* 2. Double Booking */}
                         <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-white">Prevent Double Booking</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Ensure a brother is not in two places at once.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_double_booking', language)}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('rule_double_booking_desc', language) || "Ensure a brother is not in two places at once."}</p>
                             </div>
                             <select value={rules.doubleBookingSeverity || 'error'} onChange={e=>setSeverity('doubleBookingSeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                <option value="error">Block (Red)</option>
-                                <option value="warning">Warn (Yellow)</option>
-                                <option value="off">Off</option>
+                                <option value="error">{t('severity_block', language)}</option>
+                                <option value="warning">{t('severity_warn', language)}</option>
+                                <option value="off">{t('severity_off', language)}</option>
                             </select>
                         </div>
 
                         {/* 3. Unavailability */}
                         <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-white">Respect Unavailability</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Do not assign if brother has program part or marked unavailable.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_unavailability', language)}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('rule_unavailability_desc', language) || "Do not assign if brother has program part or marked unavailable."}</p>
                             </div>
                             <select value={rules.unavailableSeverity || 'error'} onChange={e=>setSeverity('unavailableSeverity', e.target.value)} className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white">
-                                <option value="error">Block (Red)</option>
-                                <option value="warning">Warn (Yellow)</option>
-                                <option value="off">Off</option>
+                                <option value="error">{t('severity_block', language)}</option>
+                                <option value="warning">{t('severity_warn', language)}</option>
+                                <option value="off">{t('severity_off', language)}</option>
                             </select>
                         </div>
 
                         {/* 4. Max Work Percentage */}
                         <div className="p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-bold text-gray-800 dark:text-white">Max Work Load (Program Watch %)</h3>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_max_load', language)} (Program Watch %)</h3>
                                 <span className="font-bold text-blue-600 dark:text-blue-400">{rules.maxWorkPercent || 50}%</span>
                             </div>
-                            <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">Auto-Fill will skip brothers who have worked more than this % of the day.</p>
+                            <p className="text-xs text-gray-500 mb-2 dark:text-gray-400">{t('rule_max_load_desc', language)}</p>
                             <input type="range" min="10" max="100" step="5" value={rules.maxWorkPercent || 50} onChange={e=>setVal('maxWorkPercent', parseInt(e.target.value))} className="w-full" />
                         </div>
 
                         {/* 5. Consecutive Shifts */}
                         <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-white">Avoid Consecutive Shifts (Auto-Fill)</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Try to give a break between shifts.</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_consecutive', language)} (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('rule_consecutive_desc', language) || "Try to give a break between shifts."}</p>
                             </div>
                             <input type="checkbox" checked={rules.avoidConsecutive !== false} onChange={() => toggleRule('avoidConsecutive')} className="h-5 w-5" />
                         </div>
@@ -2344,8 +2538,8 @@
                         {/* 6. Anchor Limits */}
                         <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
                             <div>
-                                <h3 className="font-bold text-gray-800 dark:text-white">Enforce Anchor Limits (Auto-Fill)</h3>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Limit how many "All Day" staff can be pulled for temporary relief (Max 1 per section).</p>
+                                <h3 className="font-bold text-gray-800 dark:text-white">{t('rule_anchor_limits', language)} (Auto-Fill)</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">{t('rule_anchor_desc', language)}</p>
                             </div>
                             <input type="checkbox" checked={rules.anchorLimits !== false} onChange={() => toggleRule('anchorLimits')} className="h-5 w-5" />
                         </div>
@@ -2354,8 +2548,8 @@
                         <div className="p-4 bg-blue-50 rounded border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
                             <div className="flex justify-between items-center mb-4">
                                 <div>
-                                    <h3 className="font-bold text-blue-900 dark:text-blue-300">Auditorium Relief Mode</h3>
-                                    <p className="text-xs text-blue-700 dark:text-blue-400">Allow Auditorium staff to be double-booked for rotational assignments (Relief Duty).</p>
+                                    <h3 className="font-bold text-blue-900 dark:text-blue-300">{t('rule_relief_mode', language)}</h3>
+                                    <p className="text-xs text-blue-700 dark:text-blue-400">{t('rule_relief_desc', language)}</p>
                                 </div>
                                 <input type="checkbox" checked={rules.auditoriumRotationMode === true} onChange={() => toggleRule('auditoriumRotationMode')} className="h-5 w-5" />
                             </div>
@@ -3245,8 +3439,8 @@
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
                                     <div>
-                                        <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
-                                        <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Auto-Fill" to automatically generate a schedule.</p>
+                                        <h4 className="font-bold text-blue-900">{t('ready_to_schedule', language)}</h4>
+                                        <p className="text-sm text-blue-700">{t('ready_to_schedule_desc', language).replace('{count}', personnel.length)}</p>
                                     </div>
                                 </div>
                                 <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
@@ -3262,7 +3456,7 @@
                                 <table className="w-full border-collapse text-sm">
                                     <thead>
                                         <tr className="sticky-header-row border-b border-gray-200 dark:border-slate-700">
-                                            <th className="p-4 text-left w-64 sticky-header-corner font-semibold text-gray-500 uppercase tracking-wider text-xs dark:text-gray-400">Position</th>
+                                            <th className="p-4 text-left w-64 sticky-header-corner font-semibold text-gray-500 uppercase tracking-wider text-xs dark:text-gray-400">{t('grid_position', language)}</th>
                                             {shifts.map(s => (
                                                 <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200 dark:border-slate-700 dark:text-gray-400">
                                                     <div className="flex items-center justify-center">
@@ -3358,7 +3552,7 @@
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
                     <div className="flex justify-between items-center mb-8 print:hidden">
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Department Report</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">{t('dept_report_title', language) || 'Department Report'}</h2>
                         <div className="flex gap-3">
                             <select value={selectedAreaId} onChange={e => setSelectedAreaId(e.target.value)} className="border border-gray-200 p-2 rounded-lg bg-white shadow-sm focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800">
                                 {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -3468,7 +3662,7 @@
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm print:shadow-none print:border-none print:bg-white">
                     <div className="flex justify-between items-center mb-8 print:hidden">
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Assignment Slips</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">{t('nav_slips', language)}</h2>
                         <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-2 rounded-full hover:bg-gray-900 font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"><i className="fa fa-print"></i> {t('btn_print', language)}</button>
                     </div>
                     <div className="grid grid-cols-2 gap-4 print:block print:gap-0">
@@ -4083,11 +4277,11 @@
                     <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">Configuration</h2>
 
                     <div className="flex border-b mb-6 overflow-x-auto dark:border-slate-700">
-                        <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Areas</button>
-                        <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Shifts</button>
-                        <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Positions</button>
-                        <button onClick={() => setActiveTab('blueprints')} className={`px-4 py-2 ${activeTab === 'blueprints' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Blueprints</button>
-                        <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>Rules</button>
+                        <button onClick={() => setActiveTab('areas')} className={`px-4 py-2 ${activeTab === 'areas' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{t('config_areas', language)}</button>
+                        <button onClick={() => setActiveTab('shifts')} className={`px-4 py-2 ${activeTab === 'shifts' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{t('config_shifts', language)}</button>
+                        <button onClick={() => setActiveTab('positions')} className={`px-4 py-2 ${activeTab === 'positions' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{t('config_positions', language)}</button>
+                        <button onClick={() => setActiveTab('blueprints')} className={`px-4 py-2 ${activeTab === 'blueprints' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{t('config_blueprints', language)}</button>
+                        <button onClick={() => setActiveTab('rules')} className={`px-4 py-2 ${activeTab === 'rules' ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>{t('config_rules', language)}</button>
                     </div>
 
                     {/* RULES TAB */}
@@ -4097,26 +4291,26 @@
                     {activeTab === 'areas' && (
                         <div>
                             <div className="bg-gray-50 p-4 rounded border mb-4 dark:bg-slate-800 dark:border-slate-700">
-                                <h3 className="font-bold mb-2 dark:text-white">Add New Area</h3>
+                                <h3 className="font-bold mb-2 dark:text-white">{t('add_new_area', language) || 'Add New Area'}</h3>
                                 <div className="flex gap-2 mb-2">
                                     <input placeholder="ID (e.g. parking)" value={areaForm.id} onChange={e => setAreaForm({...areaForm, id: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                                    <input placeholder="Name (e.g. Parking Lot)" value={areaForm.name} onChange={e => setAreaForm({...areaForm, name: e.target.value})} className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
-                                    <input placeholder="Capability (opt)" value={areaForm.capability} onChange={e => setAreaForm({...areaForm, capability: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <input placeholder={t('roster_name', language)} value={areaForm.name} onChange={e => setAreaForm({...areaForm, name: e.target.value})} className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
+                                    <input placeholder={t('roster_perms', language)} value={areaForm.capability} onChange={e => setAreaForm({...areaForm, capability: e.target.value})} className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                 </div>
                                 <div className="flex gap-2 items-center">
-                                    <label className="text-sm dark:text-gray-300">Bg Color:</label>
+                                    <label className="text-sm dark:text-gray-300">{t('bg_color', language) || 'Bg Color'}:</label>
                                     <input type="color" value={areaForm.color} onChange={e => setAreaForm({...areaForm, color: e.target.value})} />
-                                    <label className="text-sm ml-2 dark:text-gray-300">Text Color:</label>
+                                    <label className="text-sm ml-2 dark:text-gray-300">{t('text_color', language) || 'Text Color'}:</label>
                                     <input type="color" value={areaForm.textColor} onChange={e => setAreaForm({...areaForm, textColor: e.target.value})} />
-                                    <button onClick={addArea} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">Add Area</button>
+                                    <button onClick={addArea} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">{t('btn_add', language)} {t('area', language) || 'Area'}</button>
                                 </div>
                             </div>
                             <div className="mt-2 bg-white p-2 rounded border dark:bg-slate-700 dark:border-slate-600">
-                                <span className="text-xs font-bold text-gray-500 uppercase mr-2 dark:text-gray-400">Restriction:</span>
+                                <span className="text-xs font-bold text-gray-500 uppercase mr-2 dark:text-gray-400">{t('restriction', language) || 'Restriction'}:</span>
                                 {renderConstraintSelector(areaForm, setAreaForm, false)}
                             </div>
                             <table className="w-full text-sm mt-4">
-                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Capability</th><th className="p-2 text-left">Restriction</th><th className="p-2 text-left">Preview</th><th className="p-2 w-24">Action</th></tr></thead>
+                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">{t('roster_name', language)}</th><th className="p-2 text-left">{t('roster_perms', language)}</th><th className="p-2 text-left">{t('restriction', language) || 'Restriction'}</th><th className="p-2 text-left">{t('preview', language) || 'Preview'}</th><th className="p-2 w-24">{t('action', language) || 'Action'}</th></tr></thead>
                                 <tbody>
                                     {areas.map(a => {
                                         const isEditing = editingAreaId === a.id;
@@ -4186,7 +4380,7 @@
                                 <button onClick={addShift} className="bg-blue-600 text-white px-4 py-2 rounded h-10">Add Shift</button>
                             </div>
                             <table className="w-full text-sm">
-                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Label</th><th className="p-2 text-left">Minutes</th><th className="p-2">Action</th></tr></thead>
+                                <thead><tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">{t('label', language) || 'Label'}</th><th className="p-2 text-left">{t('minutes', language) || 'Minutes'}</th><th className="p-2">{t('action', language) || 'Action'}</th></tr></thead>
                                 <tbody>
                                     {shifts.map(s => (
                                         <tr key={s.id} className="border-b dark:border-slate-700 dark:text-gray-200">
@@ -4222,14 +4416,14 @@
                                     {renderConstraintSelector(posForm, setPosForm, false)}
                                     <label className="flex items-center cursor-pointer dark:text-gray-300">
                                         <input type="checkbox" checked={posForm.keyMan} onChange={e => setPosForm({...posForm, keyMan: e.target.checked})} className="mr-2" />
-                                        <span className="text-sm font-bold">Key Man Only</span>
+                                        <span className="text-sm font-bold">{t('key_man_only', language)}</span>
                                     </label>
                                     <button onClick={addPosition} className="ml-auto bg-blue-600 text-white px-4 py-1 rounded">Add Position</button>
                                 </div>
                             </div>
                              <div className="h-96 overflow-y-auto border rounded dark:border-slate-700">
                                 <table className="w-full text-sm">
-                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Area</th><th className="p-2 text-left">Restriction</th><th className="p-2 text-left">Sect</th><th className="p-2 text-left">Type</th><th className="p-2 w-24">Action</th></tr></thead>
+                                    <thead><tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300"><th className="p-2 text-left">ID</th><th className="p-2 text-left">{t('roster_name', language)}</th><th className="p-2 text-left">{t('area', language) || 'Area'}</th><th className="p-2 text-left">{t('restriction', language) || 'Restriction'}</th><th className="p-2 text-left">{t('sect', language) || 'Sect'}</th><th className="p-2 text-left">{t('type', language) || 'Type'}</th><th className="p-2 w-24">{t('action', language) || 'Action'}</th></tr></thead>
                                     <tbody>
                                         {positions.map(p => {
                                             const isEditing = editingPosId === p.id;
@@ -4251,7 +4445,7 @@
                                                                 <input value={editPosForm.name} onChange={e => setEditPosForm({...editPosForm, name: e.target.value})} className="border p-1 rounded w-full text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white" />
                                                                 <label className="flex items-center text-xs dark:text-gray-400">
                                                                     <input type="checkbox" checked={editPosForm.keyMan} onChange={e => setEditPosForm({...editPosForm, keyMan: e.target.checked})} className="mr-1" />
-                                                                    Key Man Only
+                                                                    {t('key_man_only', language)}
                                                                 </label>
                                                             </div>
                                                         ) : (
@@ -4307,8 +4501,8 @@
                     {activeTab === 'blueprints' && (
                         <div>
                             <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800 mb-8">
-                                <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">Save Current Layout</h3>
-                                <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">Save your current Areas, Shifts, and Positions as a reusable template. This does not include personnel or assignments.</p>
+                                <h3 className="font-bold text-blue-900 dark:text-blue-300 mb-2">{t('save_current_layout', language)}</h3>
+                                <p className="text-sm text-blue-700 dark:text-blue-400 mb-4">{t('save_layout_desc', language)}</p>
                                 <div className="flex gap-3">
                                     <input 
                                         type="text" 
@@ -4317,7 +4511,7 @@
                                         onChange={e => setBlueprintName(e.target.value)}
                                         className="flex-1 border border-blue-200 dark:border-blue-800 p-2.5 rounded-xl bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500"
                                     />
-                                    <button onClick={saveBlueprint} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95">Save Blueprint</button>
+                                    <button onClick={saveBlueprint} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95">{t('btn_save_blueprint', language)}</button>
                                 </div>
                             </div>
 
@@ -4325,7 +4519,7 @@
                                 {blueprints.length === 0 ? (
                                     <div className="col-span-full py-12 text-center border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-3xl text-gray-400">
                                         <i className="fa fa-map-location-dot text-4xl mb-4 opacity-20"></i>
-                                        <p>No blueprints saved yet.</p>
+                                        <p>{t('no_blueprints', language)}</p>
                                     </div>
                                 ) : (
                                     blueprints.map(bp => (
@@ -4340,7 +4534,7 @@
                                             <div className="flex gap-4 mb-6">
                                                 <div className="text-center">
                                                     <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.areas.length}</div>
-                                                    <div className="text-[8px] font-bold uppercase text-gray-400">Areas</div>
+                                                    <div className="text-[8px] font-bold uppercase text-gray-400">{t('config_areas', language)}</div>
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.positions.length}</div>
@@ -4348,14 +4542,14 @@
                                                 </div>
                                                 <div className="text-center">
                                                     <div className="text-lg font-black text-gray-700 dark:text-gray-200">{bp.shifts.length}</div>
-                                                    <div className="text-[8px] font-bold uppercase text-gray-400">Shifts</div>
+                                                    <div className="text-[8px] font-bold uppercase text-gray-400">{t('config_shifts', language)}</div>
                                                 </div>
                                             </div>
                                             <button 
                                                 onClick={() => loadBlueprint(bp)} 
                                                 className="w-full py-2 bg-gray-50 dark:bg-slate-700 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-gray-600 dark:text-gray-300 font-bold rounded-xl transition-all border border-gray-100 dark:border-slate-600"
                                             >
-                                                Load Template
+                                                {t('btn_load_template', language)}
                                             </button>
                                         </div>
                                     ))
