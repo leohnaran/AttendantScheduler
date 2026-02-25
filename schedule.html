@@ -2588,7 +2588,7 @@
             );
         }
 
-        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules, tags }) {
+        function ConfigView({ areas, setAreas, positions, setPositions, shifts, setShifts, personnel, rules, setRules, tags, onConfigUpdate }) {
             const [activeTab, setActiveTab] = useState('areas');
 
             const keyMen = useMemo(() => personnel.filter(p => p.caps && p.caps.includes('keyman')), [personnel]);
@@ -2676,18 +2676,19 @@
                 if (!editAreaForm.name) return alert("Name is required");
 
                 // Update Area
-                setAreas(areas.map(a => a.id === editingAreaId ? {
+                const updatedAreas = areas.map(a => a.id === editingAreaId ? {
                     id: a.id, // ID remains immutable
                     name: editAreaForm.name,
                     capability: editAreaForm.capability,
                     style: { backgroundColor: editAreaForm.color, color: editAreaForm.textColor },
                     limitType: editAreaForm.limitType,
                     limitValue: editAreaForm.limitValue
-                } : a));
+                } : a);
 
                 // Auto-apply to all positions in this area (Bulk Update)
+                let updatedPositions = positions;
                 if (editAreaForm.limitType) {
-                    setPositions(prev => prev.map(p => {
+                    updatedPositions = positions.map(p => {
                         if (p.areaId === editingAreaId) {
                             return {
                                 ...p,
@@ -2696,7 +2697,16 @@
                             };
                         }
                         return p;
-                    }));
+                    });
+                }
+
+                // Atomic update to avoid race conditions
+                if (onConfigUpdate) {
+                    onConfigUpdate({ areas: updatedAreas, positions: updatedPositions });
+                } else {
+                    // Fallback
+                    setAreas(updatedAreas);
+                    if (updatedPositions !== positions) setPositions(updatedPositions);
                 }
 
                 cancelEditArea();
@@ -3317,7 +3327,7 @@
                          view === 'log' ? <LogView log={log} /> :
                          view === 'tags' ? <TagsView tags={tags} setTags={setTags} personnel={personnel} setPersonnel={setPersonnel} shifts={shifts} areas={areas} onDeleteTag={handleDeleteTag} /> :
                          view === 'print' ? <PrintView personnel={personnel} assignments={assignments} positions={positions} shifts={shifts} /> :
-                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} tags={tags} /> :
+                         view === 'config' ? <ConfigView areas={areas} setAreas={setAreas} positions={positions} setPositions={setPositions} shifts={shifts} setShifts={setShifts} personnel={personnel} rules={rules} setRules={setRules} tags={tags} onConfigUpdate={updateState} /> :
                          <ScheduleView personnel={personnel} assignments={assignments} setAssignments={setAssignments} onAutoFill={handleAutoFill} areas={areas} positions={positions} shifts={shifts} rules={rules} tags={tags} />}
                     </div>
                     {showSaveModal && (
