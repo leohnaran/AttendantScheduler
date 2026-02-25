@@ -53,12 +53,70 @@
         .log-entry { border-bottom: 1px solid #e5e7eb; padding: 8px 0; font-family: monospace; font-size: 0.85rem; }
         .dark .log-entry { border-color: #334155; }
 
+        @keyframes pulse-blue {
+            0%, 100% { border-color: #3b82f6; box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+            50% { border-color: #60a5fa; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2); }
+        }
+        .mirror-highlight {
+            animation: pulse-blue 2s infinite;
+            border: 2px solid #3b82f6 !important;
+            z-index: 20;
+        }
+
         /* Drag and Drop Styles */
         .draggable-row { cursor: grab; }
         .draggable-row:active { cursor: grabbing; }
         .droppable-group { transition: background-color 0.2s; }
         .droppable-group.drag-over { background-color: #e0f2fe; border-color: #3b82f6; }
         .dark .droppable-group.drag-over { background-color: rgba(59, 130, 246, 0.2); border-color: #3b82f6; }
+
+        /* Schedule Drag and Drop */
+        .schedule-drop-zone.drag-over {
+            background-color: #dbeafe !important;
+            box-shadow: inset 0 0 0 2px #3b82f6 !important;
+            z-index: 10;
+        }
+        .dark .schedule-drop-zone.drag-over {
+            background-color: rgba(59, 130, 246, 0.2) !important;
+            box-shadow: inset 0 0 0 2px #3b82f6 !important;
+        }
+
+        /* Enhanced Sticky Headers */
+        .sticky-header-row {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background-color: rgba(249, 250, 251, 0.95);
+            backdrop-filter: blur(8px);
+        }
+        .dark .sticky-header-row {
+            background-color: rgba(15, 23, 42, 0.95);
+        }
+        .scrolled-y .sticky-header-row {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .sticky-header-col {
+            position: sticky;
+            left: 0;
+            z-index: 30;
+            background-color: inherit;
+        }
+        .scrolled-x .sticky-header-col {
+            box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Corner header (both sticky) */
+        .sticky-header-corner {
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 50;
+            background-color: rgba(249, 250, 251, 1);
+        }
+        .dark .sticky-header-corner {
+            background-color: rgba(15, 23, 42, 1);
+        }
 
         /* Glassmorphism Utilities */
         .glass-panel {
@@ -82,6 +140,11 @@
             background: rgba(15, 23, 42, 0.7);
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
 <body>
@@ -102,7 +165,7 @@
     </script>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo, useCallback } = React;
+        const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
         // ---------------- DATA CONSTANTS (DEFAULTS) ----------------
 
@@ -208,6 +271,20 @@
             return parts[parts.length - 1].toLowerCase();
         };
 
+        const getHeatColor = (count) => {
+            if (count === 0) return 'bg-green-500';
+            if (count === 1) return 'bg-yellow-500';
+            if (count === 2) return 'bg-orange-500';
+            return 'bg-red-500';
+        };
+
+        const getHeatBg = (count) => {
+            if (count === 0) return 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+            if (count === 1) return 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
+            if (count === 2) return 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+            return 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        };
+
         const parseCSV = (text) => {
             const arr = [];
             let quote = false;
@@ -281,6 +358,113 @@
 
         // ---------------- COMPONENTS ----------------
 
+        function CSVMapperModal({ data, onImport, onClose }) {
+            const headers = data[0] || [];
+            const [mapping, setMapping] = useState({
+                nameIdx: -1,
+                roleIdx: -1,
+                keyManIdx: -1,
+                congregationIdx: -1
+            });
+
+            // Try to auto-guess based on common header names
+            useEffect(() => {
+                const newMapping = { nameIdx: -1, roleIdx: -1, keyManIdx: -1, congregationIdx: -1 };
+                headers.forEach((h, i) => {
+                    const low = h.toLowerCase().trim();
+                    if (low.includes('name') && !low.includes('key')) newMapping.nameIdx = i;
+                    if (low.includes('appoint') || low.includes('role') || low.includes('servant')) newMapping.roleIdx = i;
+                    if (low.includes('key man') || low.includes('overseer')) newMapping.keyManIdx = i;
+                    if (low.includes('cong')) newMapping.congregationIdx = i;
+                });
+                // Fallback to old hardcoded defaults if nothing found
+                if (newMapping.nameIdx === -1 && headers.length > 3) newMapping.nameIdx = 3;
+                if (newMapping.roleIdx === -1 && headers.length > 5) newMapping.roleIdx = 5;
+                if (newMapping.keyManIdx === -1 && headers.length > 7) newMapping.keyManIdx = 7;
+
+                setMapping(newMapping);
+            }, [headers]);
+
+            const handleFinish = () => {
+                if (mapping.nameIdx === -1) return alert("You must at least select a 'Name' column.");
+                onImport(mapping);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-gray-200 dark:border-slate-800">
+                        <div className="p-6 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Map CSV Columns</h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Match your spreadsheet columns to our roster fields.</p>
+                            </div>
+                            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"><i className="fa fa-times text-gray-400"></i></button>
+                        </div>
+
+                        <div className="p-8 overflow-y-auto max-h-[60vh]">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                {[
+                                    { label: "Full Name (Required)", key: "nameIdx", icon: "fa-user" },
+                                    { label: "Role / Appointment", key: "roleIdx", icon: "fa-user-tie" },
+                                    { label: "Key Man Name", key: "keyManIdx", icon: "fa-users-gear" },
+                                    { label: "Congregation", key: "congregationIdx", icon: "fa-church" }
+                                ].map(field => (
+                                    <div key={field.key}>
+                                        <label className="block text-xs font-black uppercase text-gray-400 mb-2 ml-1 flex items-center gap-2">
+                                            <i className={`fa ${field.icon}`}></i> {field.label}
+                                        </label>
+                                        <select
+                                            value={mapping[field.key]}
+                                            onChange={e => setMapping({...mapping, [field.key]: parseInt(e.target.value)})}
+                                            className="w-full p-2.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        >
+                                            <option value="-1">-- Skip / Not in CSV --</option>
+                                            {headers.map((h, i) => (
+                                                <option key={i} value={i}>Column {i + 1}: {h || `(Empty Header)`}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-800">
+                                <h4 className="text-xs font-bold uppercase text-blue-600 dark:text-blue-400 mb-3 flex items-center gap-2">
+                                    <i className="fa fa-eye"></i> Import Preview (Top 3 Rows)
+                                </h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-[10px] text-left">
+                                        <thead>
+                                            <tr className="text-gray-400 border-b border-blue-100 dark:border-blue-800">
+                                                <th className="pb-2">Name</th>
+                                                <th className="pb-2">Role</th>
+                                                <th className="pb-2">Key Man</th>
+                                                <th className="pb-2">Congregation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-gray-700 dark:text-gray-300">
+                                            {data.slice(1, 4).map((row, rid) => (
+                                                <tr key={rid}>
+                                                    <td className="py-2 pr-2 truncate max-w-[100px]">{mapping.nameIdx !== -1 ? row[mapping.nameIdx] : '-'}</td>
+                                                    <td className="py-2 pr-2 truncate max-w-[100px]">{mapping.roleIdx !== -1 ? row[mapping.roleIdx] : '-'}</td>
+                                                    <td className="py-2 pr-2 truncate max-w-[100px]">{mapping.keyManIdx !== -1 ? row[mapping.keyManIdx] : '-'}</td>
+                                                    <td className="py-2 truncate max-w-[100px]">{mapping.congregationIdx !== -1 ? row[mapping.congregationIdx] : '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6 border-t border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-end gap-3">
+                            <button onClick={onClose} className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
+                            <button onClick={handleFinish} className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95">Import {data.length - 1} Members</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
         function RosterView({ personnel, setPersonnel, areas, shifts, tags }) {
             const initialCaps = useMemo(() => {
                 const c = { keyman: false };
@@ -300,6 +484,7 @@
             const [editingId, setEditingId] = useState(null);
             const [draggedPersonId, setDraggedPersonId] = useState(null);
             const [dragOverGroup, setDragOverGroup] = useState(null);
+            const [csvData, setCsvData] = useState(null);
 
             const uniqueCongregations = useMemo(() => {
                 return [...new Set(personnel.map(p => p.congregation).filter(c => c && c.trim() !== ''))].sort();
@@ -392,64 +577,78 @@
                 reader.onload = (event) => {
                     try {
                         const rows = parseCSV(event.target.result);
-                        const dataRows = rows.slice(1).filter(r => r.length > 3 && r[3] && r[3].trim() !== '');
-                        let newPersonnel = [...personnel];
-                        let maxId = newPersonnel.reduce((max, p) => (p.id > max ? p.id : max), 0);
-
-                        let updatedCount = 0;
-                        let newCount = 0;
-
-                        dataRows.forEach(row => {
-                            const name = row[3].trim();
-                            const rawRole = row[5] || "";
-                            const keyManName = row[7] || "";
-
-                            let role = 'Exemplary';
-                            if (rawRole.includes('Elder')) role = 'Elder';
-                            else if (rawRole.includes('Ministerial')) role = 'MS';
-
-                            // Default caps logic (legacy support)
-                            let caps = ['lobby', 'dining', 'stairs', 'exterior', 'backstage'];
-                            if (role === 'Elder' || role === 'MS') caps.push('auditorium', 'upper_level', 'backstage');
-                            if (keyManName.trim().toLowerCase() === name.toLowerCase()) caps.push('keyman');
-
-                            // CHECK FOR EXISTING PERSON
-                            const existingPersonIndex = newPersonnel.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
-
-                            if (existingPersonIndex >= 0) {
-                                // UPDATE EXISTING
-                                const existing = newPersonnel[existingPersonIndex];
-                                const updatedCaps = [...new Set([...existing.caps, ...caps])];
-
-                                newPersonnel[existingPersonIndex] = {
-                                    ...existing,
-                                    role: role,
-                                    caps: updatedCaps,
-                                    tempKeyManName: keyManName
-                                };
-                                updatedCount++;
-                            } else {
-                                // ADD NEW
-                                maxId++;
-                                newPersonnel.push({ id: maxId, name: name, role: role, caps: caps, tempKeyManName: keyManName });
-                                newCount++;
-                            }
-                        });
-
-                        // RE-LINK KEY MEN IDs
-                        newPersonnel = newPersonnel.map(p => {
-                            if (p.tempKeyManName && p.tempKeyManName.toLowerCase() !== p.name.toLowerCase()) {
-                                const km = newPersonnel.find(c => c.name.toLowerCase() === p.tempKeyManName.toLowerCase());
-                                if (km) return { ...p, keyManId: km.id };
-                            }
-                            return p;
-                        });
-
-                        setPersonnel(newPersonnel);
-                        alert(`CSV Processed.\nAdded: ${newCount}\nUpdated: ${updatedCount}`);
+                        if (rows.length < 2) return alert("CSV file seems empty or invalid.");
+                        setCsvData(rows);
                     } catch (err) { alert("Error parsing CSV: " + err.message); }
                 };
                 reader.readAsText(file);
+                e.target.value = ""; // Reset input
+            };
+
+            const handleImportFinish = (mapping) => {
+                if (!csvData) return;
+                const rows = csvData;
+                const dataRows = rows.slice(1).filter(r => r.length > 0 && r[mapping.nameIdx] && r[mapping.nameIdx].trim() !== '');
+
+                let newPersonnel = [...personnel];
+                let maxId = newPersonnel.reduce((max, p) => (p.id > max ? p.id : max), 0);
+
+                let updatedCount = 0;
+                let newCount = 0;
+
+                dataRows.forEach(row => {
+                    const name = row[mapping.nameIdx].trim();
+                    const rawRole = mapping.roleIdx !== -1 ? (row[mapping.roleIdx] || "") : "";
+                    const keyManName = mapping.keyManIdx !== -1 ? (row[mapping.keyManIdx] || "") : "";
+                    const congregation = mapping.congregationIdx !== -1 ? (row[mapping.congregationIdx] || "") : "";
+
+                    let role = 'Exemplary';
+                    if (rawRole.includes('Elder')) role = 'Elder';
+                    else if (rawRole.includes('Ministerial')) role = 'MS';
+
+                    // Default caps
+                    let caps = ['lobby', 'dining', 'stairs', 'exterior', 'backstage'];
+                    if (role === 'Elder' || role === 'MS') caps.push('auditorium', 'upper_level', 'backstage');
+                    if (keyManName.trim().toLowerCase() === name.toLowerCase()) caps.push('keyman');
+
+                    const existingIndex = newPersonnel.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+
+                    if (existingIndex >= 0) {
+                        const existing = newPersonnel[existingIndex];
+                        newPersonnel[existingIndex] = {
+                            ...existing,
+                            role: role,
+                            congregation: congregation || existing.congregation,
+                            caps: [...new Set([...existing.caps, ...caps])],
+                            tempKeyManName: keyManName
+                        };
+                        updatedCount++;
+                    } else {
+                        maxId++;
+                        newPersonnel.push({
+                            id: maxId,
+                            name: name,
+                            role: role,
+                            congregation: congregation,
+                            caps: caps,
+                            tempKeyManName: keyManName
+                        });
+                        newCount++;
+                    }
+                });
+
+                // Link Key Men
+                newPersonnel = newPersonnel.map(p => {
+                    if (p.tempKeyManName && p.tempKeyManName.toLowerCase() !== p.name.toLowerCase()) {
+                        const km = newPersonnel.find(c => c.name.toLowerCase() === p.tempKeyManName.toLowerCase());
+                        if (km) return { ...p, keyManId: km.id };
+                    }
+                    return p;
+                });
+
+                setPersonnel(newPersonnel);
+                setCsvData(null);
+                alert(`Import Complete!\nAdded: ${newCount}\nUpdated: ${updatedCount}`);
             };
 
             const deletePerson = (id) => {
@@ -513,6 +712,7 @@
             if (personnel.length === 0) {
                 return (
                     <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                        {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} />}
                         <div className="flex justify-between items-center mb-8">
                             <div>
                                 <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Personnel Roster</h2>
@@ -597,6 +797,7 @@
 
             return (
                 <div className="glass-panel p-8 rounded-3xl shadow-sm">
+                    {csvData && <CSVMapperModal data={csvData} onImport={handleImportFinish} onClose={() => setCsvData(null)} />}
                     {/* HEADER & IMPORT */}
                     <div className="flex justify-between items-center mb-8">
                         <div>
@@ -984,22 +1185,361 @@
             );
         }
 
-        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas, tags }) {
+        function MobileScheduleView({ personnel, assignments, onAssign, onFindReplacement, getConflict, areas, positions, shifts, tags, hoveredMirrorKey, setHoveredMirrorKey }) {
+            return (
+                <div className="space-y-6">
+                    {areas.map(area => (
+                        <div key={area.id} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                            <div style={area.style} className="p-3 font-black uppercase text-xs tracking-widest text-center shadow-sm">
+                                {area.name}
+                            </div>
+                            <div className="divide-y divide-gray-50 dark:divide-slate-700">
+                                {positions.filter(p => p.areaId === area.id).map(pos => (
+                                    <div key={pos.id} className="p-4">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="font-bold text-gray-800 dark:text-white text-sm">{pos.name}</span>
+                                            {pos.type === 'auditorium' && <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-black uppercase dark:bg-blue-900 dark:text-blue-300">All Day</span>}
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {pos.type === 'auditorium' ? (
+                                                <div className="border border-blue-100 dark:border-blue-900 rounded-xl overflow-hidden">
+                                                    <table className="w-full">
+                                                        <tbody>
+                                                            <tr>
+                                                                <AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={onAssign} onFindReplacement={onFindReplacement} getConflict={getConflict} areas={areas} tags={tags} hoveredMirrorKey={hoveredMirrorKey} setHoveredMirrorKey={setHoveredMirrorKey} />
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                shifts.map(shift => {
+                                                    if (pos.validShifts && !pos.validShifts.includes(shift.id)) return null;
+                                                    return (
+                                                        <div key={shift.id} className="flex flex-col gap-1">
+                                                            <div className="text-[10px] font-bold text-gray-400 uppercase ml-1">{shift.label}</div>
+                                                            <div className="border border-gray-100 dark:border-slate-700 rounded-xl overflow-hidden">
+                                                                <table className="w-full">
+                                                                    <tbody>
+                                                                        <tr>
+                                                                            <AssignmentCell shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={onAssign} onFindReplacement={onFindReplacement} getConflict={getConflict} areas={areas} tags={tags} hoveredMirrorKey={hoveredMirrorKey} setHoveredMirrorKey={setHoveredMirrorKey} />
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function BatchActionMenu({ onAutoFill, onClear, label, icon }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const menuRef = useRef(null);
+
+            useEffect(() => {
+                const handleClickOutside = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setIsOpen(false); };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
+
+            return (
+                <div className="relative inline-block ml-2" ref={menuRef}>
+                    <button
+                        onClick={() => setIsOpen(!isOpen)}
+                        className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-black/10 transition-colors text-inherit opacity-50 hover:opacity-100"
+                        title="Batch Actions"
+                    >
+                        <i className={`fa ${icon || 'fa-ellipsis-v'} text-[10px]`}></i>
+                    </button>
+                    {isOpen && (
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1">
+                            <div className="px-3 py-2 border-b border-gray-100 dark:border-slate-700">
+                                <div className="text-[10px] font-black uppercase text-gray-400">{label} Actions</div>
+                            </div>
+                            <button
+                                onClick={() => { setIsOpen(false); onAutoFill(); }}
+                                className="w-full text-left px-4 py-2 text-xs hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                            >
+                                <i className="fa fa-robot text-blue-500"></i> Auto-Fill Empty
+                            </button>
+                            <button
+                                onClick={() => { setIsOpen(false); onClear(); }}
+                                className="w-full text-left px-4 py-2 text-xs hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2"
+                            >
+                                <i className="fa fa-trash-can"></i> Clear All
+                            </button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function SearchableSelect({ value, onChange, options, placeholder, conflictMsg, isWarning, isAuto, getConflict, pos, shiftId, assignments }) {
+            const [isOpen, setIsOpen] = useState(false);
+            const [search, setSearch] = useState("");
+            const dropdownRef = useRef(null);
+            const inputRef = useRef(null);
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                        setSearch("");
+                    }
+                };
+                document.addEventListener("mousedown", handleClickOutside);
+                return () => document.removeEventListener("mousedown", handleClickOutside);
+            }, []);
+
+            const selectedOption = useMemo(() => {
+                const id = parseInt(value);
+                return isNaN(id) ? null : options.find(o => o.id === id);
+            }, [options, value]);
+
+            const filteredOptions = useMemo(() => {
+                const s = search.toLowerCase();
+                // Pre-calculate shift counts for sorting
+                const list = options.map(o => {
+                    let count = 0;
+                    Object.keys(assignments).forEach(key => {
+                        if (getAssignId(assignments[key]) === o.id && key.includes('_')) count++;
+                    });
+                    return { ...o, shiftCount: count };
+                });
+
+                return list
+                    .filter(o => o.name.toLowerCase().includes(s))
+                    .sort((a, b) => {
+                        // 1. Qualified first
+                        if (a.qualified && !b.qualified) return -1;
+                        if (!a.qualified && b.qualified) return 1;
+                        // 2. Least busy first
+                        if (a.shiftCount !== b.shiftCount) return a.shiftCount - b.shiftCount;
+                        // 3. Alphabetical
+                        return a.name.localeCompare(b.name);
+                    });
+            }, [options, search, assignments]);
+
+            return (
+                <div className="relative w-full" ref={dropdownRef}>
+                    <div
+                        className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm transition-all cursor-pointer flex items-center justify-between
+                            ${conflictMsg
+                                ? (isWarning ? 'bg-white border border-yellow-300 text-yellow-800 shadow-sm shadow-yellow-100 dark:bg-slate-800 dark:border-yellow-600 dark:text-yellow-300' : 'bg-white border border-red-300 text-red-700 shadow-sm shadow-red-100 dark:bg-slate-800 dark:border-red-600 dark:text-red-300')
+                                : 'bg-white/50 border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm focus-within:bg-white focus-within:border-blue-300 text-gray-700 dark:bg-slate-700/50 dark:text-gray-200 dark:hover:bg-slate-600 dark:focus-within:bg-slate-600 dark:border-transparent'}
+                            ${!value ? 'text-gray-400 dark:text-gray-500 font-normal' : 'font-medium'}
+                        `}
+                        onClick={() => {
+                            setIsOpen(!isOpen);
+                            if (!isOpen) setTimeout(() => inputRef.current?.focus(), 50);
+                        }}
+                    >
+                        <span className="truncate">{selectedOption ? selectedOption.name : (placeholder || "Select...")}</span>
+                        <i className={`fa fa-chevron-down text-gray-400 text-[10px] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}></i>
+                    </div>
+
+                    {isOpen && (
+                        <div className="absolute top-full left-0 w-64 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-2xl z-[100] overflow-hidden flex flex-col">
+                            <div className="p-2 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+                                <div className="relative">
+                                    <i className="fa fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                        placeholder="Search name..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Escape') { setIsOpen(false); setSearch(""); }
+                                            if (e.key === 'Enter' && filteredOptions.length > 0) {
+                                                onChange(filteredOptions[0].id);
+                                                setIsOpen(false);
+                                                setSearch("");
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                <div
+                                    className="p-2.5 text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-2 border-b border-gray-50 dark:border-slate-700"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onChange("");
+                                        setIsOpen(false);
+                                        setSearch("");
+                                    }}
+                                >
+                                    <i className="fa fa-times-circle text-gray-300"></i> Clear Assignment
+                                </div>
+                                {filteredOptions.length === 0 ? (
+                                    <div className="p-4 text-xs text-gray-400 text-center italic">No matches found</div>
+                                ) : (
+                                    filteredOptions.map(p => {
+                                        const cData = getConflict(p.id, pos, shiftId, assignments);
+                                        const isWarn = cData && cData.type === 'warning';
+                                        const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
+                                        const id = parseInt(value);
+                                        const isSelected = !isNaN(id) && id === p.id;
+
+                                        return (
+                                            <div
+                                                key={p.id}
+                                                className={`p-2.5 text-xs cursor-pointer flex flex-col transition-colors border-l-2
+                                                    ${isSelected ? 'bg-blue-50 border-blue-600 dark:bg-blue-900/20' : 'border-transparent hover:bg-gray-50 dark:hover:bg-slate-700/50'}
+                                                    ${!p.qualified ? 'opacity-60' : ''}
+                                                `}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onChange(p.id);
+                                                    setIsOpen(false);
+                                                    setSearch("");
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 truncate">
+                                                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${getHeatColor(p.shiftCount)}`}></div>
+                                                        <span className={`truncate ${isSelected ? 'font-bold text-blue-700 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200'} ${!p.qualified ? 'italic' : ''}`}>
+                                                            {p.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex gap-1 items-center flex-shrink-0">
+                                                        <span className={`text-[9px] font-black px-1 rounded ${getHeatBg(p.shiftCount)}`}>{p.shiftCount}</span>
+                                                        {isTeamMatch && <span className="text-[9px] bg-blue-100 text-blue-700 px-1 rounded font-bold dark:bg-blue-900 dark:text-blue-300">Team</span>}
+                                                        {cData && <span title={cData.msg} className={isWarn ? 'text-yellow-500' : 'text-red-500'}>{isWarn ? "⚠️" : "⛔"}</span>}
+                                                    </div>
+                                                </div>
+                                                {!p.qualified && <div className="text-[9px] text-gray-400 uppercase font-bold mt-0.5 ml-4">Not Qualified</div>}
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function PersonnelSidebar({ personnel, shifts, assignments, positions }) {
+            const [search, setSearch] = useState("");
+            const [filterRole, setFilterRole] = useState("all");
+
+            const getShiftCount = useCallback((pid) => {
+                let count = 0;
+                Object.keys(assignments).forEach(key => {
+                    if (getAssignId(assignments[key]) === pid) {
+                        if (key.includes('_')) count++;
+                    }
+                });
+                return count;
+            }, [assignments]);
+
+            const filteredPersonnel = useMemo(() => {
+                let list = personnel.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+                if (filterRole !== "all") {
+                    list = list.filter(p => p.role === filterRole);
+                }
+                return list.sort((a, b) => a.name.localeCompare(b.name));
+            }, [personnel, search, filterRole]);
+
+            return (
+                <div className="w-64 flex-shrink-0 flex flex-col h-full border-r border-gray-200 dark:border-slate-700 bg-gray-50/30 dark:bg-slate-900/30 backdrop-blur-sm sticky left-0 z-30">
+                    <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
+                        <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-2">
+                            <i className="fa fa-users"></i> Volunteers
+                        </h3>
+                        <div className="relative mb-2">
+                            <i className="fa fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                            <input
+                                type="text"
+                                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                placeholder="Search..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <select
+                            value={filterRole}
+                            onChange={(e) => setFilterRole(e.target.value)}
+                            className="w-full p-1.5 text-[10px] font-bold uppercase border border-gray-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 outline-none"
+                        >
+                            <option value="all">All Roles</option>
+                            <option value="Elder">Elders</option>
+                            <option value="MS">MS</option>
+                            <option value="Exemplary">Exemplary</option>
+                        </select>
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                        {filteredPersonnel.map(p => {
+                            const shiftCount = getShiftCount(p.id);
+                            return (
+                                <div
+                                    key={p.id}
+                                    draggable="true"
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData("personId", p.id);
+                                        e.dataTransfer.effectAllowed = "move";
+                                    }}
+                                    className="p-2.5 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl shadow-sm cursor-grab active:cursor-grabbing hover:border-blue-300 dark:hover:border-blue-500 transition-all group"
+                                >
+                                    <div className="flex justify-between items-start gap-1">
+                                        <div className="truncate flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getHeatColor(shiftCount)}`}></div>
+                                            <div className="truncate">
+                                                <div className="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors truncate">{p.name}</div>
+                                                <div className="text-[9px] text-gray-400 uppercase font-bold">{p.role}</div>
+                                            </div>
+                                        </div>
+                                        <div className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${getHeatBg(shiftCount)}`}>
+                                            {shiftCount}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
+
+        function AssignmentCell({ shiftId, pos, assignments, personnel, onAssign, onFindReplacement, getConflict, areas, tags, hoveredMirrorKey, setHoveredMirrorKey }) {
+            const [isDragOver, setIsDragOver] = useState(false);
+
             if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all') return <td className="p-3 bg-gray-50/50 border-l border-dashed border-gray-200 dark:bg-slate-800/50 dark:border-slate-700 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-not-allowed">N/A</td>;
 
-            if (pos.isMirror) {
-                const sourceKey = pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2';
-                const mirrorKey = `${sourceKey}_${shiftId}`;
+            const isMirror = pos.isMirror;
+            const sourcePosId = isMirror ? (pos.id === 'lobby_ext_1' ? 'ext_walk_1' : 'ext_walk_2') : null;
+            const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`;
+
+            // Check if THIS cell is being hovered by its mirror counterpart
+            const isTargetedByHover = hoveredMirrorKey === assignmentKey;
+
+            if (isMirror) {
+                const mirrorKey = `${sourcePosId}_${shiftId}`;
                 const mirrorId = getAssignId(assignments[mirrorKey]);
                 const mirrorPerson = personnel.find(p => p.id === mirrorId);
                 return (
-                    <td className="p-3 mirrored-cell text-xs border-l border-dashed border-gray-200">
+                    <td 
+                        onMouseEnter={() => setHoveredMirrorKey(mirrorKey)}
+                        onMouseLeave={() => setHoveredMirrorKey(null)}
+                        className={`p-3 mirrored-cell text-xs border-l border-dashed border-gray-200 transition-all ${isTargetedByHover ? 'mirror-highlight' : ''}`}
+                    >
                         {mirrorPerson ? <span className="flex items-center gap-1 text-orange-700"><i className="fa fa-link text-xs"></i> {mirrorPerson.name}</span> : <span className="text-gray-400 italic">-- Linked --</span>}
                     </td>
                 );
             }
 
-            const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`;
             const assignmentVal = assignments[assignmentKey];
             const assignedId = getAssignId(assignmentVal);
             const isAuto = isAutoAssigned(assignmentVal);
@@ -1007,6 +1547,22 @@
             const conflictMsg = conflictData ? conflictData.msg : null;
             const isWarning = conflictData ? conflictData.type === 'warning' : false;
             const assignedPerson = personnel.find(p => p.id === assignedId);
+
+            // Handle hover for source cells (highlight their mirrors)
+            const handleMouseEnter = () => {
+                // If this is a source for mirrors, highlight the mirrors
+                if (pos.id === 'ext_walk_1') setHoveredMirrorKey(`lobby_ext_1_${shiftId}`);
+                if (pos.id === 'ext_walk_2') setHoveredMirrorKey(`lobby_ext_2_${shiftId}`);
+            };
+
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+                const personId = e.dataTransfer.getData("personId");
+                if (personId) {
+                    onAssign(assignmentKey, personId);
+                }
+            };
 
             const getFilteredCandidates = () => {
                 const area = areas.find(a => a.id === pos.areaId);
@@ -1068,6 +1624,11 @@
                     return a.name.localeCompare(b.name);
                 });
 
+                if (assignedId && !assignedPerson) {
+                    const unknownPerson = { id: assignedId, name: "Unknown (Removed)", qualified: false };
+                    return [unknownPerson, ...candidates];
+                }
+
                 if (assignedPerson && !candidates.find(c => c.id === assignedPerson.id)) {
                     // Ensure current assignment is in list even if logic changes
                     return [assignedPerson, ...candidates];
@@ -1077,43 +1638,64 @@
 
             const filteredCandidates = getFilteredCandidates();
 
+            const quickFixes = useMemo(() => {
+                if (!conflictMsg) return [];
+                // Top 3 qualified candidates with ZERO conflicts
+                return filteredCandidates
+                    .filter(p => p.qualified && !getConflict(p.id, pos, shiftId, assignments))
+                    .slice(0, 3);
+            }, [conflictMsg, filteredCandidates, getConflict, pos, shiftId, assignments]);
+
             return (
-                <td className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-colors duration-300 relative group-hover:bg-opacity-50 ${conflictMsg ? (isWarning ? 'bg-yellow-50/80 dark:bg-yellow-900/40' : 'bg-red-50/80 dark:bg-red-900/40') : (isAuto ? 'bg-green-50/30 dark:bg-green-900/20' : '')}`}>
+                <td
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={() => setHoveredMirrorKey(null)}
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={handleDrop}
+                    className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-all duration-300 relative group-hover:bg-opacity-50 schedule-drop-zone ${isDragOver ? 'drag-over' : ''} ${isTargetedByHover ? 'mirror-highlight' : ''} ${conflictMsg ? (isWarning ? 'bg-yellow-50/80 dark:bg-yellow-900/40' : 'bg-red-50/80 dark:bg-red-900/40') : (isAuto ? 'bg-green-50/30 dark:bg-green-900/20' : '')}`}
+                >
                     <div className="flex items-center gap-2">
                         {isAuto && <i className="fa fa-robot text-green-600 dark:text-green-400 text-[10px]" title="Auto-Assigned"></i>}
                         <div className="relative w-full">
-                            <select
-                                className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm appearance-none outline-none focus:ring-2 focus:ring-opacity-50 transition-shadow cursor-pointer
-                                    ${conflictMsg
-                                        ? (isWarning ? 'bg-white border border-yellow-300 text-yellow-800 focus:ring-yellow-400 dark:bg-slate-800 dark:border-yellow-600 dark:text-yellow-300' : 'bg-white border border-red-300 text-red-700 focus:ring-red-400 dark:bg-slate-800 dark:border-red-600 dark:text-red-300')
-                                        : 'bg-white/50 border border-transparent hover:bg-white hover:border-gray-200 hover:shadow-sm focus:bg-white focus:border-blue-300 focus:ring-blue-400 text-gray-700 dark:bg-slate-700/50 dark:text-gray-200 dark:hover:bg-slate-600 dark:focus:bg-slate-600 dark:border-transparent'}
-                                    ${!assignedId ? 'text-gray-400 dark:text-gray-500 font-normal' : 'font-medium'}
-                                `}
+                            <SearchableSelect
                                 value={assignedId || ""}
-                                onChange={(e) => onAssign(assignmentKey, e.target.value)}
-                            >
-                                <option value="">Select...</option>
-                                {assignedId && !assignedPerson && <option value={assignedId}>Unknown (Removed)</option>}
-                                {filteredCandidates.map(p => {
-                                    const cData = getConflict(p.id, pos, shiftId, assignments);
-                                    const isWarn = cData && cData.type === 'warning';
-                                    const isTeamMatch = pos.teamKeyManId && p.keyManId === pos.teamKeyManId;
-                                    return <option key={p.id} value={p.id} className={!p.qualified ? 'text-gray-400 dark:text-gray-500' : (isTeamMatch ? 'font-bold bg-green-50 dark:bg-green-900 dark:text-green-100' : 'dark:bg-slate-800 dark:text-gray-200')}>
-                                        {p.name}
-                                        {isTeamMatch ? " (Team)" : ""}
-                                        {!p.qualified ? " (Not Qual)" : ""}
-                                        {cData ? (isWarn ? " ⚠️" : " ⛔") : ""}
-                                    </option>;
-                                })}
-                            </select>
-                            {/* Custom Arrow */}
-                            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
-                                <i className="fa fa-chevron-down"></i>
-                            </div>
+                                onChange={(val) => onAssign(assignmentKey, val)}
+                                options={filteredCandidates}
+                                placeholder="Select..."
+                                conflictMsg={conflictMsg}
+                                isWarning={isWarning}
+                                isAuto={isAuto}
+                                getConflict={getConflict}
+                                pos={pos}
+                                shiftId={shiftId}
+                                assignments={assignments}
+                            />
                         </div>
                         <button onClick={() => onFindReplacement(pos, shiftId)} className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Find Replacement"><i className="fa fa-search text-xs"></i></button>
                     </div>
-                    {conflictMsg && <div className={`text-[10px] mt-1.5 font-bold flex items-center gap-1 ${isWarning ? 'text-yellow-600' : 'text-red-500'}`}><i className={`fa ${isWarning ? 'fa-exclamation-triangle' : 'fa-ban'}`}></i> {conflictMsg}</div>}
+                    {conflictMsg && (
+                        <div className="mt-1.5 space-y-1.5">
+                            <div className={`text-[10px] font-bold flex items-center gap-1 ${isWarning ? 'text-yellow-600' : 'text-red-500'}`}>
+                                <i className={`fa ${isWarning ? 'fa-exclamation-triangle' : 'fa-ban'}`}></i> {conflictMsg}
+                            </div>
+                            {quickFixes.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                    <span className="text-[8px] font-black uppercase text-gray-400 w-full mb-0.5">Suggestions:</span>
+                                    {quickFixes.map(p => (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => onAssign(assignmentKey, p.id)}
+                                            className="text-[9px] bg-white border border-gray-200 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-200 hover:bg-green-50 hover:border-green-300 hover:text-green-700 px-1.5 py-0.5 rounded shadow-sm transition-all active:scale-95"
+                                            title={`Quick Assign ${p.name}`}
+                                        >
+                                            {p.name.split(' ')[0]}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </td>
             );
         }
@@ -1434,6 +2016,24 @@
         function ScheduleView({ personnel, assignments, setAssignments, onAutoFill, areas, positions, shifts, rules, tags }) {
             const [pendingAction, setPendingAction] = useState(null);
             const [replacementSlot, setReplacementSlot] = useState(null);
+            const [isScrolledX, setIsScrolledX] = useState(false);
+            const [isScrolledY, setIsScrolledY] = useState(false);
+            const [hoveredMirrorKey, setHoveredMirrorKey] = useState(null);
+            const [layoutMode, setLayoutMode] = useState(window.innerWidth < 768 ? 'cards' : 'grid');
+            const scrollContainerRef = useRef(null);
+
+            useEffect(() => {
+                const handleResize = () => {
+                    if (window.innerWidth < 768) setLayoutMode('cards');
+                };
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            const handleScroll = (e) => {
+                setIsScrolledX(e.target.scrollLeft > 10);
+                setIsScrolledY(e.target.scrollTop > 10);
+            };
 
             const handleFindReplacement = (pos, shiftId) => {
                 setReplacementSlot({ pos, shiftId });
@@ -1861,7 +2461,7 @@
                 }
             };
 
-            // === SEQUENTIAL & FAIR AUTO FILL ===
+            // === INTELLIGENT & FAIR AUTO FILL ===
             const autoFill = () => {
                 let newAssignments = { ...assignments };
                 let filledCount = 0;
@@ -1871,7 +2471,7 @@
 
                 const addLog = (msg, type) => logEntries.push({ msg, type });
 
-                // 1. Auditorium First (Always run - Auditorium is now always "All Day")
+                // 1. Auditorium First (Anchors)
                 addLog("--- Starting Auditorium Auto-Fill ---", 'auditorium');
                 positions.filter(p => p.type === 'auditorium').forEach(pos => {
                     if (!getAssignId(newAssignments[pos.id])) {
@@ -1879,7 +2479,12 @@
                         candidates = candidates.filter(p => isPersonFree(p.id, 'all', newAssignments));
 
                         if(candidates.length > 0) {
-                            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+                            // Fairest selection for anchors
+                            candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
+                            const minShifts = Math.min(...candidates.map(c => c.shifts));
+                            const fairPool = candidates.filter(c => c.shifts === minShifts);
+                            const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+
                             newAssignments[pos.id] = { id: chosen.id, isAuto: true };
                             addLog(`Assigned ${chosen.name} to ${pos.name}`, 'auditorium');
                             filledCount++;
@@ -1890,117 +2495,120 @@
                     }
                 });
 
-                // 2. Rotational
-                addLog("--- Starting Rotational Auto-Fill ---", 'rotational');
-                shifts.forEach(shift => {
-                    addLog(`>> Processing ${shift.label}`, 'shift');
+                // 2. Rotational (Intelligent "Fewest Options First" Filling)
+                addLog("--- Starting Intelligent Rotational Auto-Fill ---", 'rotational');
 
-                    // Count Auditorium Relief Usage for this Shift
-                    const audPositions = positions.filter(x => x.type === 'auditorium');
-                    const maxRelief = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
-
-                    let reliefUsedCount = 0;
-                    // Count manually assigned relief first
-                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
-                        const pid = getAssignId(newAssignments[`${rp.id}_${shift.id}`]);
-                        if(pid) {
-                            // Is this person mainly auditorium?
-                            if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === pid)) {
-                                reliefUsedCount++;
+                const getEmptyRotationalSlots = (currentAssignments) => {
+                    const slots = [];
+                    shifts.forEach(shift => {
+                        positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
+                            if (pos.validShifts && !pos.validShifts.includes(shift.id)) return;
+                            const key = `${pos.id}_${shift.id}`;
+                            if (!getAssignId(currentAssignments[key])) {
+                                slots.push({ key, pos, shift });
                             }
+                        });
+                    });
+                    return slots;
+                };
+
+                // Track relief usage per shift
+                const audPositions = positions.filter(x => x.type === 'auditorium');
+                const maxReliefPerShift = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
+
+                const getReliefUsedCount = (shiftId, currentAssignments) => {
+                    let count = 0;
+                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
+                        const pid = getAssignId(currentAssignments[`${rp.id}_${shiftId}`]);
+                        if(pid && audPositions.some(ap => getAssignId(currentAssignments[ap.id]) === pid)) {
+                            count++;
                         }
                     });
+                    return count;
+                };
 
-                    // --- STANDARD ROTATIONAL LOGIC ---
-                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
-                        if (pos.validShifts && !pos.validShifts.includes(shift.id)) return;
-                        const key = `${pos.id}_${shift.id}`;
+                // MAIN INTELLIGENT LOOP
+                let emptySlots = getEmptyRotationalSlots(newAssignments);
 
-                        if (!getAssignId(newAssignments[key])) {
-                            let candidates = getCandidatesForPosition(pos, personnel, areas, tags);
+                while (emptySlots.length > 0) {
+                    // Calculate candidates for every empty slot to find the "Most Constrained" one
+                    const slotConstraints = emptySlots.map(slot => {
+                        let candidates = getCandidatesForPosition(slot.pos, personnel, areas, tags);
+                        const reliefUsed = getReliefUsedCount(slot.shift.id, newAssignments);
 
-                            candidates = candidates.filter(p => {
-                                // Basic Checks
-                                if (!isPersonFree(p.id, shift.id, newAssignments)) return false;
-                                if (workedPreviousShift(p.id, shift.id, newAssignments)) return false;
-                                if (!isAnchorAvailableForShift(p, shift.id, newAssignments)) return false;
-                                if (isOverWorkLimit(p.id, newAssignments)) return false;
+                        candidates = candidates.filter(p => {
+                            if (!isPersonFree(p.id, slot.shift.id, newAssignments)) return false;
+                            if (workedPreviousShift(p.id, slot.shift.id, newAssignments)) return false;
+                            if (!isAnchorAvailableForShift(p, slot.shift.id, newAssignments)) return false;
+                            if (isOverWorkLimit(p.id, newAssignments)) return false;
 
-                                // --- RELIEF MODE LOGIC ---
-                                // Check if this candidate is an Auditorium person on Relief
-                                const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
-                                if (myAudPos) {
-                                    if (!rules.auditoriumRotationMode) return false; // Not allowed if mode off
-
-                                    // 1. Max Relief Check
-                                    if (reliefUsedCount >= maxRelief) return false;
-
-                                    // 2. Section Safety Check
-                                    if (myAudPos.section) {
-                                        const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
-                                        for(let m of mates) {
-                                            const mid = getAssignId(newAssignments[m.id]);
-                                            if (mid) {
-                                                // Is mate assigned elsewhere this shift?
-                                                // Check rotational assignments
-                                                for(let otherRP of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
-                                                    const assignedId = getAssignId(newAssignments[`${otherRP.id}_${shift.id}`]);
-                                                    if (assignedId === mid) return false; // Mate is gone, I must stay
-                                                }
+                            // Relief Mode Check
+                            const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
+                            if (myAudPos) {
+                                if (!rules.auditoriumRotationMode) return false;
+                                if (reliefUsed >= maxReliefPerShift) return false;
+                                if (myAudPos.section) {
+                                    const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
+                                    for(let m of mates) {
+                                        const mid = getAssignId(newAssignments[m.id]);
+                                        if (mid) {
+                                            for(let otherRP of positions.filter(x => x.type === 'rotational' && !x.isMirror)) {
+                                                if (getAssignId(newAssignments[`${otherRP.id}_${slot.shift.id}`]) === mid) return false;
                                             }
                                         }
                                     }
                                 }
-                                return true;
-                            });
-
-                            if (candidates.length === 0) {
-                                addLog(`Slot ${pos.name}: No candidates.`, 'warn');
-                                return;
                             }
+                            return true;
+                        });
 
-                            candidates = candidates.map(c => ({...c, shifts: getShiftCount(c.id, newAssignments)}));
-                            const minShifts = Math.min(...candidates.map(c => c.shifts));
-                            let fairPool = candidates.filter(c => c.shifts === minShifts);
-
-                            // TEAM PRIORITIZATION
-                            if (pos.teamKeyManId) {
-                                const teamMembers = fairPool.filter(c => c.keyManId === pos.teamKeyManId);
-                                if (teamMembers.length > 0) {
-                                    fairPool = teamMembers;
-                                    addLog(`  > Prioritizing Team Members (${teamMembers.length})`, 'info');
-                                }
-                            }
-
-                            // LOGIC: If picking between Brother A (Rotational, 0 shifts) and Brother B (Auditorium Relief, 0 relief shifts)
-                            // Fairness dictates Brother A needs a job more than Brother B needs relief.
-                            if (rules.auditoriumRotationMode && minShifts === 0) {
-                                const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
-                                if (pureRotational.length > 0) {
-                                    fairPool = pureRotational;
-                                    addLog(`  > Prioritizing Idle Rotational Staff (${pureRotational.length})`, 'info');
-                                }
-                            }
-
-                            addLog(`Slot ${pos.name}: Candidates ${candidates.length}, Fair (${minShifts}) ${fairPool.length}`, 'info');
-
-                            if (fairPool.length > 0) {
-                                const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
-                                newAssignments[key] = { id: chosen.id, isAuto: true };
-
-                                // Increment relief count if necessary
-                                if (audPositions.some(ap => getAssignId(newAssignments[ap.id]) === chosen.id)) {
-                                    reliefUsedCount++;
-                                    addLog(`  > Assigned Relief: ${chosen.name} (from Aud)`, 'success');
-                                } else {
-                                    addLog(`  > Assigned ${chosen.name} (Shifts: ${chosen.shifts})`, 'success');
-                                }
-                                filledCount++;
-                                rotFilled++;
-                            }
-                        }
+                        return { ...slot, candidates };
                     });
-                });
+
+                    // Find the slot with the FEWEST candidates (The bottleneck)
+                    slotConstraints.sort((a, b) => a.candidates.length - b.candidates.length);
+
+                    // Pick the most constrained slot
+                    const target = slotConstraints[0];
+
+                    if (!target || target.candidates.length === 0) {
+                        // All remaining slots are impossible to fill under current rules
+                        if (target) addLog(`Slot ${target.pos.name} (${target.shift.label}) has 0 options. skipping.`, 'warn');
+                        // Remove this slot from consideration and continue
+                        emptySlots = emptySlots.filter(s => s.key !== target?.key);
+                        if (!target) break;
+                        continue;
+                    }
+
+                    // For this slot, pick the "Fairest" candidate (Least shifts worked so far)
+                    let fairPool = target.candidates.map(c => ({...c, currentShifts: getShiftCount(c.id, newAssignments)}));
+                    const minShifts = Math.min(...fairPool.map(c => c.currentShifts));
+                    fairPool = fairPool.filter(c => c.currentShifts === minShifts);
+
+                    // Team Prioritization
+                    if (target.pos.teamKeyManId) {
+                        const teamMembers = fairPool.filter(c => c.keyManId === target.pos.teamKeyManId);
+                        if (teamMembers.length > 0) fairPool = teamMembers;
+                    }
+
+                    // Tie-breaker: Prioritize Idle Rotational Staff over Auditorium Relief
+                    if (rules.auditoriumRotationMode && minShifts === 0) {
+                        const pureRotational = fairPool.filter(c => !c.caps || !c.caps.includes('auditorium'));
+                        if (pureRotational.length > 0) fairPool = pureRotational;
+                    }
+
+                    const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+                    newAssignments[target.key] = { id: chosen.id, isAuto: true };
+
+                    const isRelief = audPositions.some(ap => getAssignId(newAssignments[ap.id]) === chosen.id);
+                    addLog(`[${target.candidates.length} options] Assigned ${chosen.name}${isRelief ? ' (Relief)' : ''} to ${target.pos.name} (${target.shift.label})`, 'success');
+
+                    filledCount++;
+                    rotFilled++;
+
+                    // Re-calculate empty slots for next iteration
+                    emptySlots = getEmptyRotationalSlots(newAssignments);
+                }
 
                 const assignedIds = new Set();
                 Object.keys(newAssignments).forEach(k => {
@@ -2012,7 +2620,210 @@
                 const participationPct = totalPersonnel > 0 ? Math.round((participated / totalPersonnel) * 100) : 0;
 
                 onAutoFill(newAssignments, logEntries);
-                alert(`Auto-Fill Complete!\n\nTotal Volunteers Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
+                alert(`Intelligent Auto-Fill Complete!\n\nTotal Volunteers Filled: ${filledCount}\n- All Day: ${audFilled}\n- Rotating: ${rotFilled}\n\nTotal Assignments: ${participated}/${totalPersonnel} Volunteers (${participationPct}%)`);
+            };
+
+            const autoFillArea = (areaId) => {
+                let newAssignments = { ...assignments };
+                let logEntries = [];
+                const addLog = (msg, type) => logEntries.push({ msg, type });
+
+                addLog(`--- Starting Batch Auto-Fill for Area: ${areaId} ---`, 'info');
+
+                // 1. Identify all empty slots in this area
+                const getAreaSlots = (currentAssignments) => {
+                    const slots = [];
+                    positions.filter(p => p.areaId === areaId && !p.isMirror).forEach(pos => {
+                        if (pos.type === 'auditorium') {
+                            if (!getAssignId(currentAssignments[pos.id])) {
+                                slots.push({ key: pos.id, pos, shift: { id: 'all', label: 'All Day' } });
+                            }
+                        } else {
+                            shifts.forEach(shift => {
+                                if (pos.validShifts && !pos.validShifts.includes(shift.id)) return;
+                                const key = `${pos.id}_${shift.id}`;
+                                if (!getAssignId(currentAssignments[key])) {
+                                    slots.push({ key, pos, shift });
+                                }
+                            });
+                        }
+                    });
+                    return slots;
+                };
+
+                const audPositions = positions.filter(x => x.type === 'auditorium');
+                const maxReliefPerShift = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
+
+                const getReliefUsedCount = (shiftId, currentAssignments) => {
+                    let count = 0;
+                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
+                        const pid = getAssignId(currentAssignments[`${rp.id}_${shiftId}`]);
+                        if(pid && audPositions.some(ap => getAssignId(currentAssignments[ap.id]) === pid)) count++;
+                    });
+                    return count;
+                };
+
+                let emptySlots = getAreaSlots(newAssignments);
+                let filled = 0;
+
+                while (emptySlots.length > 0) {
+                    const slotConstraints = emptySlots.map(slot => {
+                        let candidates = getCandidatesForPosition(slot.pos, personnel, areas, tags);
+                        const reliefUsed = getReliefUsedCount(slot.shift.id, newAssignments);
+
+                        candidates = candidates.filter(p => {
+                            if (!isPersonFree(p.id, slot.shift.id, newAssignments)) return false;
+                            if (slot.shift.id !== 'all' && workedPreviousShift(p.id, slot.shift.id, newAssignments)) return false;
+                            if (slot.shift.id !== 'all' && !isAnchorAvailableForShift(p, slot.shift.id, newAssignments)) return false;
+                            if (slot.shift.id !== 'all' && isOverWorkLimit(p.id, newAssignments)) return false;
+
+                            const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
+                            if (myAudPos && slot.shift.id !== 'all') {
+                                if (!rules.auditoriumRotationMode || reliefUsed >= maxReliefPerShift) return false;
+                                if (myAudPos.section) {
+                                    const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
+                                    for(let m of mates) {
+                                        const mid = getAssignId(newAssignments[m.id]);
+                                        if (mid && positions.some(x => x.type === 'rotational' && getAssignId(newAssignments[`${x.id}_${slot.shift.id}`]) === mid)) return false;
+                                    }
+                                }
+                            }
+                            return true;
+                        });
+                        return { ...slot, candidates };
+                    });
+
+                    slotConstraints.sort((a, b) => a.candidates.length - b.candidates.length);
+                    const target = slotConstraints[0];
+
+                    if (!target || target.candidates.length === 0) {
+                        emptySlots = emptySlots.filter(s => s.key !== target?.key);
+                        if (!target) break;
+                        continue;
+                    }
+
+                    let fairPool = target.candidates.map(c => ({...c, cur: getShiftCount(c.id, newAssignments)}));
+                    const minS = Math.min(...fairPool.map(c => c.cur));
+                    fairPool = fairPool.filter(c => c.cur === minS);
+
+                    const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+                    newAssignments[target.key] = { id: chosen.id, isAuto: true };
+                    addLog(`Assigned ${chosen.name} to ${target.pos.name}`, 'success');
+                    filled++;
+                    emptySlots = getAreaSlots(newAssignments);
+                }
+
+                setAssignments(newAssignments);
+                alert(`Area Auto-Fill Complete!\nFilled ${filled} slots.`);
+            };
+
+            const autoFillShift = (shiftId) => {
+                let newAssignments = { ...assignments };
+                let logEntries = [];
+                const addLog = (msg, type) => logEntries.push({ msg, type });
+
+                addLog(`--- Starting Batch Auto-Fill for Shift: ${shiftId} ---`, 'info');
+
+                const getShiftSlots = (currentAssignments) => {
+                    const slots = [];
+                    positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
+                        if (pos.validShifts && !pos.validShifts.includes(shiftId)) return;
+                        const key = `${pos.id}_${shiftId}`;
+                        if (!getAssignId(currentAssignments[key])) {
+                            slots.push({ key, pos, shift: shifts.find(s => s.id === shiftId) });
+                        }
+                    });
+                    return slots;
+                };
+
+                const audPositions = positions.filter(x => x.type === 'auditorium');
+                const maxReliefPerShift = Math.floor(audPositions.length * ((rules.auditoriumCoverage || 25) / 100));
+
+                let emptySlots = getShiftSlots(newAssignments);
+                let filled = 0;
+
+                while (emptySlots.length > 0) {
+                    const slotConstraints = emptySlots.map(slot => {
+                        let candidates = getCandidatesForPosition(slot.pos, personnel, areas, tags);
+                        let reliefUsed = 0;
+                        positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(rp => {
+                            const pid = getAssignId(newAssignments[`${rp.id}_${shiftId}`]);
+                            if(pid && audPositions.some(ap => getAssignId(newAssignments[ap.id]) === pid)) reliefUsed++;
+                        });
+
+                        candidates = candidates.filter(p => {
+                            if (!isPersonFree(p.id, shiftId, newAssignments)) return false;
+                            if (workedPreviousShift(p.id, shiftId, newAssignments)) return false;
+                            if (!isAnchorAvailableForShift(p, shiftId, newAssignments)) return false;
+                            if (isOverWorkLimit(p.id, newAssignments)) return false;
+
+                            const myAudPos = audPositions.find(ap => getAssignId(newAssignments[ap.id]) === p.id);
+                            if (myAudPos) {
+                                if (!rules.auditoriumRotationMode || reliefUsed >= maxReliefPerShift) return false;
+                                if (myAudPos.section) {
+                                    const mates = audPositions.filter(ap => ap.section === myAudPos.section && ap.id !== myAudPos.id);
+                                    for(let m of mates) {
+                                        const mid = getAssignId(newAssignments[m.id]);
+                                        if (mid && positions.some(x => x.type === 'rotational' && getAssignId(newAssignments[`${x.id}_${shiftId}`]) === mid)) return false;
+                                    }
+                                }
+                            }
+                            return true;
+                        });
+                        return { ...slot, candidates };
+                    });
+
+                    slotConstraints.sort((a, b) => a.candidates.length - b.candidates.length);
+                    const target = slotConstraints[0];
+
+                    if (!target || target.candidates.length === 0) {
+                        emptySlots = emptySlots.filter(s => s.key !== target?.key);
+                        if (!target) break;
+                        continue;
+                    }
+
+                    let fairPool = target.candidates.map(c => ({...c, cur: getShiftCount(c.id, newAssignments)}));
+                    const minS = Math.min(...fairPool.map(c => c.cur));
+                    fairPool = fairPool.filter(c => c.cur === minS);
+
+                    const chosen = fairPool[Math.floor(Math.random() * fairPool.length)];
+                    newAssignments[target.key] = { id: chosen.id, isAuto: true };
+                    filled++;
+                    emptySlots = getShiftSlots(newAssignments);
+                }
+
+                setAssignments(newAssignments);
+                alert(`Shift Auto-Fill Complete!\nFilled ${filled} slots.`);
+            };
+
+            const clearArea = (areaId) => {
+                if(!confirm(`Clear all assignments for ${areas.find(a=>a.id===areaId)?.name}?`)) return;
+                const newAssignments = { ...assignments };
+                let count = 0;
+                positions.filter(p => p.areaId === areaId).forEach(pos => {
+                    if (pos.type === 'auditorium') {
+                        if (newAssignments[pos.id]) { newAssignments[pos.id] = null; count++; }
+                    } else {
+                        shifts.forEach(s => {
+                            const key = `${pos.id}_${s.id}`;
+                            if (newAssignments[key]) { newAssignments[key] = null; count++; }
+                        });
+                    }
+                });
+                setAssignments(newAssignments);
+                alert(`Cleared ${count} assignments.`);
+            };
+
+            const clearShift = (shiftId) => {
+                if(!confirm(`Clear all assignments for ${shifts.find(s=>s.id===shiftId)?.label}?`)) return;
+                const newAssignments = { ...assignments };
+                let count = 0;
+                positions.filter(p => p.type === 'rotational' && !p.isMirror).forEach(pos => {
+                    const key = `${pos.id}_${shiftId}`;
+                    if (newAssignments[key]) { newAssignments[key] = null; count++; }
+                });
+                setAssignments(newAssignments);
+                alert(`Cleared ${count} assignments.`);
             };
 
             const clearAutoAssignments = () => {
@@ -2025,91 +2836,150 @@
                 alert(`Cleared ${count} auto-assigned slots.`);
             };
 
+            const clearAllAssignments = () => {
+                if(!confirm("Are you sure you want to clear ALL assignments? This will wipe manual work too.")) return;
+                const cleaned = {};
+                Object.keys(assignments).forEach(key => { cleaned[key] = null; });
+                setAssignments(cleaned);
+                alert("Schedule cleared.");
+            };
+
             const isScheduleEmpty = useMemo(() => {
                 const filled = Object.values(assignments).filter(val => getAssignId(val)).length;
                 return filled === 0;
             }, [assignments]);
 
             return (
-                <div className="glass-panel p-8 rounded-3xl shadow-sm mt-8 relative">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Schedule Grid</h2>
-                        <div className="flex flex-wrap gap-3">
-                            <button onClick={clearAutoAssignments} className="bg-white border border-gray-200 text-orange-600 px-5 py-2 rounded-full hover:bg-orange-50 hover:border-orange-200 font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-700 dark:border-slate-600 dark:text-orange-400 dark:hover:bg-slate-600"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
-                            <button onClick={fixConflicts} className="bg-yellow-100 text-yellow-800 px-5 py-2 rounded-full hover:bg-yellow-200 font-semibold shadow-sm transition-all flex items-center gap-2"><i className="fa fa-wrench"></i> Fix Conflicts</button>
-                            <button onClick={autoFill} className={`text-white px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-robot"></i> Auto-Fill</button>
-                        </div>
-                    </div>
-
-                    {isScheduleEmpty && personnel.length > 0 && (
-                        <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
-                                <div>
-                                    <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
-                                    <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Auto-Fill" to automatically generate a schedule.</p>
-                                </div>
-                            </div>
-                            <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
+                <div className="flex flex-col md:flex-row gap-6 items-start mt-8">
+                    {/* LEFT SIDEBAR: PERSONNEL LIST (Draggable) */}
+                    {layoutMode === 'grid' && (
+                        <div className="hidden md:block">
+                            <PersonnelSidebar personnel={personnel} shifts={shifts} assignments={assignments} positions={positions} />
                         </div>
                     )}
 
-                    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white dark:bg-slate-800 dark:border-slate-700">
-                        <table className="w-full border-collapse text-sm">
-                            <thead>
-                                <tr className="bg-gray-50/90 backdrop-blur-sm border-b border-gray-200 dark:bg-slate-900/90 dark:border-slate-700">
-                                    <th className="p-4 text-left w-64 sticky left-0 bg-gray-50 z-20 font-semibold text-gray-500 uppercase tracking-wider text-xs shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)] dark:bg-slate-900 dark:text-gray-400">Position</th>
-                                    {shifts.map(s => <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200 dark:border-slate-700 dark:text-gray-400">{s.label}</th>)}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-                                {areas.map(area => (
-                                    <React.Fragment key={area.id}>
-                                        <tr style={area.style}><td colSpan={5} className="p-3 font-bold uppercase tracking-wider pl-6 shadow-sm relative z-10">{area.name}</td></tr>
-                                        {positions.filter(p => p.areaId === area.id).map(pos => (
-                                            <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}>
-                                                <td className="p-3 pl-6 font-medium sticky left-0 bg-inherit z-10 border-r border-gray-100 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)] text-gray-700 dark:border-slate-700 dark:text-gray-300">
-                                                    {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
-                                                </td>
-                                                {pos.type === 'auditorium' ? (
-                                                    <td colSpan={4} className="p-0">
-                                                        <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
-                                                            <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} /></div>
-                                                        </div>
-                                                    </td>
-                                                ) : (
-                                                    shifts.map(shift => <AssignmentCell key={shift.id} shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} />)
-                                                )}
-                                            </tr>
-                                        ))}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    {replacementSlot && <FindReplacementModal slot={replacementSlot} personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} tags={tags} onAssign={handleReplacementAssign} onClose={()=>setReplacementSlot(null)} />}
-                    {pendingAction && (
-                        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-                            <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-gray-100 transform transition-all scale-100">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0"><i className="fa fa-exclamation-triangle"></i></div>
+                    {/* MAIN CONTENT: SCHEDULE GRID */}
+                    <div className="flex-1 min-w-0 glass-panel p-4 md:p-8 rounded-3xl shadow-sm relative">
+                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">Schedule {layoutMode === 'grid' ? 'Grid' : 'Cards'}</h2>
+                                <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl border border-gray-200 dark:border-slate-700">
+                                    <button onClick={() => setLayoutMode('grid')} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${layoutMode === 'grid' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}><i className="fa fa-table-cells mr-1"></i> Grid</button>
+                                    <button onClick={() => setLayoutMode('cards')} className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${layoutMode === 'cards' ? 'bg-white dark:bg-slate-700 text-blue-600 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}><i className="fa fa-address-card mr-1"></i> Cards</button>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2 md:gap-3">
+                                <button onClick={clearAllAssignments} className="bg-white border border-gray-200 text-red-600 px-4 md:px-5 py-2 rounded-full hover:bg-red-50 hover:border-red-200 font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-700 dark:border-slate-600 dark:text-red-400 dark:hover:bg-slate-600 text-xs md:text-sm"><i className="fa fa-trash-can"></i> Clear All</button>
+                                <button onClick={clearAutoAssignments} className="bg-white border border-gray-200 text-orange-600 px-4 md:px-5 py-2 rounded-full hover:bg-orange-50 hover:border-orange-200 font-semibold shadow-sm transition-all flex items-center gap-2 dark:bg-slate-700 dark:border-slate-600 dark:text-orange-400 dark:hover:bg-slate-600 text-xs md:text-sm"><i className="fa fa-eraser"></i> Clear Auto-Fills</button>
+                                <button onClick={fixConflicts} className="bg-yellow-100 text-yellow-800 px-4 md:px-5 py-2 rounded-full hover:bg-yellow-200 font-semibold shadow-sm transition-all flex items-center gap-2 text-xs md:text-sm"><i className="fa fa-wrench"></i> Fix Conflicts</button>
+                                <button onClick={autoFill} className={`text-white px-4 md:px-5 py-2 rounded-full font-semibold shadow-sm transition-all flex items-center gap-2 active:scale-95 text-xs md:text-sm ${isScheduleEmpty ? 'bg-green-600 hover:bg-green-700 shadow-green-200 ring-4 ring-green-100 animate-pulse' : 'bg-green-600 hover:bg-green-700 shadow-green-200'}`}><i className="fa fa-robot"></i> Auto-Fill</button>
+                            </div>
+                        </div>
+
+                        {isScheduleEmpty && personnel.length > 0 && (
+                            <div className="mb-6 bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i className="fa fa-info-circle"></i></div>
                                     <div>
-                                        <h3 className="font-bold text-xl text-gray-900 tracking-tight">Conflict Detected</h3>
-                                        <p className="text-sm text-gray-500">Assigning {pendingAction.personName}</p>
+                                        <h4 className="font-bold text-blue-900">Ready to Schedule?</h4>
+                                        <p className="text-sm text-blue-700">You have {personnel.length} people in your roster. Click "Auto-Fill" to automatically generate a schedule.</p>
                                     </div>
                                 </div>
-                                <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 font-medium mb-8 text-sm flex items-start gap-3">
-                                    <i className="fa fa-info-circle mt-0.5"></i>
-                                    {pendingAction.conflictMsg}
-                                </div>
-                                <div className="flex flex-col gap-3">
-                                    {pendingAction.conflictSourceKey && <button onClick={resolveAndAssign} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"><i className="fa fa-exchange-alt"></i> Resolve & Assign Here</button>}
-                                    <button onClick={confirmConflict} className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Ignore & Assign Anyway</button>
-                                    <button onClick={() => setPendingAction(null)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Cancel</button>
+                                <div className="text-blue-300 text-2xl"><i className="fa fa-arrow-up mr-8"></i></div>
+                            </div>
+                        )}
+
+                        {layoutMode === 'grid' ? (
+                            <div 
+                                ref={scrollContainerRef}
+                                onScroll={handleScroll}
+                                className={`overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white dark:bg-slate-800 dark:border-slate-700 ${isScrolledX ? 'scrolled-x' : ''} ${isScrolledY ? 'scrolled-y' : ''}`}
+                            >
+                                <table className="w-full border-collapse text-sm">
+                                    <thead>
+                                        <tr className="sticky-header-row border-b border-gray-200 dark:border-slate-700">
+                                            <th className="p-4 text-left w-64 sticky-header-corner font-semibold text-gray-500 uppercase tracking-wider text-xs dark:text-gray-400">Position</th>
+                                            {shifts.map(s => (
+                                                <th key={s.id} className="p-4 text-center min-w-[220px] font-semibold text-gray-500 uppercase tracking-wider text-xs border-l border-dashed border-gray-200 dark:border-slate-700 dark:text-gray-400">
+                                                    <div className="flex items-center justify-center">
+                                                        {s.label}
+                                                        <BatchActionMenu label="Shift" onAutoFill={() => autoFillShift(s.id)} onClear={() => clearShift(s.id)} />
+                                                    </div>
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
+                                        {areas.map(area => (
+                                            <React.Fragment key={area.id}>
+                                                <tr style={area.style}>
+                                                    <td colSpan={shifts.length + 1} className="p-3 font-bold uppercase tracking-wider pl-6 shadow-sm sticky-header-col z-20">
+                                                        <div className="flex items-center">
+                                                            {area.name}
+                                                            <BatchActionMenu label="Area" onAutoFill={() => autoFillArea(area.id)} onClear={() => clearArea(area.id)} icon="fa-ellipsis-h" />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {positions.filter(p => p.areaId === area.id).map(pos => (
+                                                    <tr key={pos.id} className={`group transition-colors ${pos.type === 'auditorium' ? 'bg-blue-50/30 dark:bg-blue-900/10' : 'bg-white hover:bg-gray-50 dark:bg-slate-800 dark:hover:bg-slate-700/50'}`}>
+                                                        <td className="p-3 pl-6 font-medium sticky-header-col text-gray-700 dark:border-slate-700 dark:text-gray-300">
+                                                            {pos.name} {pos.type === 'auditorium' && <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">ALL DAY</span>}
+                                                        </td>
+                                                        {pos.type === 'auditorium' ? (
+                                                            <td colSpan={4} className="p-0">
+                                                                <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
+                                                                    <div className="w-full max-w-md"><AssignmentCell shiftId="all" pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} hoveredMirrorKey={hoveredMirrorKey} setHoveredMirrorKey={setHoveredMirrorKey} /></div>
+                                                                </div>
+                                                            </td>
+                                                        ) : (
+                                                            shifts.map(shift => <AssignmentCell key={shift.id} shiftId={shift.id} pos={pos} assignments={assignments} personnel={personnel} onAssign={handleAssignAttempt} onFindReplacement={handleFindReplacement} getConflict={getConflict} areas={areas} tags={tags} hoveredMirrorKey={hoveredMirrorKey} setHoveredMirrorKey={setHoveredMirrorKey} />)
+                                                        )}
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <MobileScheduleView 
+                                personnel={personnel}
+                                assignments={assignments}
+                                onAssign={handleAssignAttempt}
+                                onFindReplacement={handleFindReplacement}
+                                getConflict={getConflict}
+                                areas={areas}
+                                positions={positions}
+                                shifts={shifts}
+                                tags={tags}
+                                hoveredMirrorKey={hoveredMirrorKey}
+                                setHoveredMirrorKey={setHoveredMirrorKey}
+                            />
+                        )}
+                        {replacementSlot && <FindReplacementModal slot={replacementSlot} personnel={personnel} assignments={assignments} areas={areas} positions={positions} shifts={shifts} tags={tags} onAssign={handleReplacementAssign} onClose={()=>setReplacementSlot(null)} />}
+                        {pendingAction && (
+                            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+                                <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-gray-100 transform transition-all scale-100">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xl flex-shrink-0"><i className="fa fa-exclamation-triangle"></i></div>
+                                        <div>
+                                            <h3 className="font-bold text-xl text-gray-900 tracking-tight">Conflict Detected</h3>
+                                            <p className="text-sm text-gray-500">Assigning {pendingAction.personName}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-red-50 p-4 rounded-xl border border-red-100 text-red-800 font-medium mb-8 text-sm flex items-start gap-3">
+                                        <i className="fa fa-info-circle mt-0.5"></i>
+                                        {pendingAction.conflictMsg}
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        {pendingAction.conflictSourceKey && <button onClick={resolveAndAssign} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"><i className="fa fa-exchange-alt"></i> Resolve & Assign Here</button>}
+                                        <button onClick={confirmConflict} className="w-full bg-white border border-red-200 text-red-600 hover:bg-red-50 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Ignore & Assign Anyway</button>
+                                        <button onClick={() => setPendingAction(null)} className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl transition-all active:scale-95">Cancel</button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             );
         }

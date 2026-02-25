@@ -31,7 +31,9 @@ A powerful, single-file browser application designed to streamline the schedulin
 
 ### 📅 Intelligent Scheduling
 *   **Auto-Fill:** A sophisticated algorithm that fills your entire schedule in seconds, respecting all rules, qualifications, and fairness constraints.
+*   **Drag-and-Drop:** Quickly assign brothers by grabbing them from the sidebar and dropping them directly into any slot.
 *   **Conflict Detection:** Real-time feedback prevents double-bookings, unavailability overlaps, and qualification mismatches.
+*   **One-Click Reset:** Quickly reset the entire grid with **Clear All** or surgically remove only automated assignments with **Clear Auto-Fills**.
 *   **Find Replacement:** A smart search tool to find the perfect, free substitute for any specific slot.
 *   **Undo/Redo:** Experiment freely with a 50-step history buffer.
 
