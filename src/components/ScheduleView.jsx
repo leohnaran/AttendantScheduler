@@ -293,6 +293,37 @@ export default function ScheduleView({
       }
     }
 
+    // 2a. Tag Restrictions (Shifts & Areas)
+    if (tags && person.tags) {
+      for (let tid of person.tags) {
+        const tag = tags.find((t) => t.id === tid)
+        if (tag) {
+          // Check Restricted Areas
+          if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) {
+            return {
+              type: 'error',
+              msg: `Restricted Area: ${tag.name}`,
+            }
+          }
+          // Check Restricted Shifts
+          if (tag.restrictedShifts) {
+            if (tag.restrictedShifts.includes(shiftId)) {
+              return {
+                type: 'error',
+                msg: `Restricted Shift: ${tag.name}`,
+              }
+            }
+            if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) {
+              return {
+                type: 'error',
+                msg: `Restricted All Day: ${tag.name}`,
+              }
+            }
+          }
+        }
+      }
+    }
+
     // 3. Capabilities
     const area = areas.find((a) => a.id === pos.areaId)
     const requiredCap = area ? area.capability : ''
@@ -756,7 +787,7 @@ export default function ScheduleView({
                               )}
                             </td>
                             {pos.type === 'auditorium' ? (
-                              <td colSpan={4} className="p-0">
+                              <td colSpan={shifts.length} className="p-0">
                                 <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
                                   <div className="w-full max-w-md">
                                     <AssignmentCell
