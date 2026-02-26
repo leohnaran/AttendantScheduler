@@ -31,12 +31,8 @@ export default function AssignmentCell({
       </td>
     )
 
-  const isMirror = pos.isMirror
-  const sourcePosId = isMirror
-    ? pos.id === 'lobby_ext_1'
-      ? 'ext_walk_1'
-      : 'ext_walk_2'
-    : null
+  const isMirror = !!pos.mirrorOf
+  const sourcePosId = pos.mirrorOf
   const assignmentKey =
     pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
 
@@ -56,8 +52,8 @@ export default function AssignmentCell({
         }`}
       >
         {mirrorPerson ? (
-          <span className="flex items-center gap-1 text-orange-700">
-            <i className="fa fa-link text-xs"></i> {mirrorPerson.name}
+          <span className="flex items-center gap-1 text-orange-700 font-bold">
+            <i className="fa fa-link text-[10px]"></i> {mirrorPerson.name}
           </span>
         ) : (
           <span className="text-gray-400 italic">-- Linked --</span>
@@ -76,9 +72,12 @@ export default function AssignmentCell({
 
   // Handle hover for source cells (highlight their mirrors)
   const handleMouseEnter = () => {
-    // If this is a source for mirrors, highlight the mirrors
-    if (pos.id === 'ext_walk_1') setHoveredMirrorKey(`lobby_ext_1_${shiftId}`)
-    if (pos.id === 'ext_walk_2') setHoveredMirrorKey(`lobby_ext_2_${shiftId}`)
+    // Dynamically find any positions that mirror THIS one
+    const mirrorPositions = positions.filter(p => p.mirrorOf === pos.id);
+    if (mirrorPositions.length > 0) {
+        // For simplicity in highlight logic, we pick the first mirror to highlight
+        setHoveredMirrorKey(`${mirrorPositions[0].id}_${shiftId}`);
+    }
   }
 
   const handleDrop = (e) => {

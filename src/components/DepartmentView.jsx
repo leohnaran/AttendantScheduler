@@ -255,13 +255,9 @@ export default function DepartmentView({
                             .filter((p) => p.areaId === oversight.area?.id)
                             .filter((p) => p.type === oversight.type)
                             .map((pos) => {
-                              // Handle Mirrors (same logic as AssignmentCell)
-                              const isMirror = pos.isMirror
-                              const sourcePosId = isMirror
-                                ? pos.id === 'lobby_ext_1'
-                                  ? 'ext_walk_1'
-                                  : 'ext_walk_2'
-                                : null
+                              // Handle Dynamic Mirrors
+                              const isMirror = !!pos.mirrorOf
+                              const sourcePosId = pos.mirrorOf
 
                               const assignmentKey = isMirror
                                 ? `${sourcePosId}_${oversight.shiftId}`

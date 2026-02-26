@@ -696,7 +696,7 @@ export default function ConfigView({
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
-                  Section / Key Man
+                  Section / Key Man / Mirror
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -707,6 +707,16 @@ export default function ConfigView({
                     }
                     className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
                   />
+                  <select
+                    value={posForm.mirrorOf || ''}
+                    onChange={(e) => setPosForm({ ...posForm, mirrorOf: e.target.value })}
+                    className="border p-2 rounded w-full text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  >
+                    <option value="">-- No Mirror --</option>
+                    {positions.filter(p => !p.mirrorOf).map(p => (
+                        <option key={p.id} value={p.id}>Mirror: {p.name}</option>
+                    ))}
+                  </select>
                   <label className="flex items-center gap-1 cursor-pointer min-w-max">
                     <input
                       type="checkbox"
@@ -716,7 +726,7 @@ export default function ConfigView({
                       }
                     />
                     <span className="text-sm font-bold">
-                      {t('key_man_only', language)}
+                      KM
                     </span>
                   </label>
                 </div>
@@ -750,6 +760,7 @@ export default function ConfigView({
                 <th className="p-2 text-left">
                   {t('sect', language) || 'Sect'}
                 </th>
+                <th className="p-2 text-left">Mirror</th>
                 <th className="p-2 text-left">
                   {t('type', language) || 'Type'}
                 </th>
@@ -818,6 +829,24 @@ export default function ConfigView({
                         />
                       ) : (
                         <span className="text-xs">{p.section || '-'}</span>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isEditing ? (
+                        <select
+                            value={editPosForm.mirrorOf || ''}
+                            onChange={(e) => setEditPosForm({ ...editPosForm, mirrorOf: e.target.value })}
+                            className="border p-1 rounded w-full text-xs dark:bg-slate-700 dark:text-white"
+                        >
+                            <option value="">-- None --</option>
+                            {positions.filter(pos => pos.id !== p.id && !pos.mirrorOf).map(pos => (
+                                <option key={pos.id} value={pos.id}>{pos.name}</option>
+                            ))}
+                        </select>
+                      ) : (
+                        <span className="text-[10px] text-orange-600 font-bold uppercase">
+                            {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : '-'}
+                        </span>
                       )}
                     </td>
                     <td className="p-2 text-xs">
