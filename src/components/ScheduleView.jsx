@@ -496,15 +496,17 @@ export default function ScheduleView({
         const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
         if (candidates.length === 0) return
 
-        // Sort candidates by Workload Score (Lowest first)
-        candidates.sort((a, b) => {
+        // 1. Pre-shuffle candidates for true randomness among equals
+        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+
+        // 2. Sort candidates by Workload Score (Lowest first)
+        shuffled.sort((a, b) => {
             const scoreA = getWorkloadScore(a.id, newAssignments, false)
             const scoreB = getWorkloadScore(b.id, newAssignments, false)
-            if (Math.abs(scoreA - scoreB) > 0.01) return scoreA - scoreB
-            return Math.random() - 0.5 // Tie-breaker
+            return scoreA - scoreB
         })
 
-        const chosen = candidates[0]
+        const chosen = shuffled[0]
         newAssignments[slot.key] = { id: chosen.id, isAuto: true }
         filledCount++
         
@@ -528,15 +530,17 @@ export default function ScheduleView({
         const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
         if (candidates.length === 0) return
 
-        // Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
-        candidates.sort((a, b) => {
+        // 1. Pre-shuffle candidates for true randomness among equals
+        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+
+        // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
+        shuffled.sort((a, b) => {
             const scoreA = getWorkloadScore(a.id, newAssignments, true)
             const scoreB = getWorkloadScore(b.id, newAssignments, true)
-            if (Math.abs(scoreA - scoreB) > 0.01) return scoreA - scoreB
-            return Math.random() - 0.5
+            return scoreA - scoreB
         })
 
-        const chosen = candidates[0]
+        const chosen = shuffled[0]
         newAssignments[slot.key] = { id: chosen.id, isAuto: true }
         filledCount++
         
