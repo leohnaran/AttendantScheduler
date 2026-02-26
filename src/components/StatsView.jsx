@@ -55,7 +55,7 @@ export default function StatsView({
 
             // Add any positions that MIRROR this one
             positions.filter(p => p.mirrorOf === pos.id).forEach(mirror => {
-                assignmentLabels.push(`[Linked] ${mirror.name} (${shiftLabel})`)
+                assignmentLabels.push(`${mirror.name} (${shiftLabel})`)
             })
           }
         }
