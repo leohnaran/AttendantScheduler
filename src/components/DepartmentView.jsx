@@ -3,11 +3,11 @@ import { t } from '../i18n/translations'
 import { getAssignId } from '../utils/helpers'
 
 export default function DepartmentView({
-  personnel,
-  assignments,
-  areas,
-  positions,
-  shifts,
+  personnel = [],
+  assignments = {},
+  areas = [],
+  positions = [],
+  shifts = [],
   language,
 }) {
   const keyMen = useMemo(() => {
@@ -25,22 +25,23 @@ export default function DepartmentView({
   // --- LOGIC: MY DIRECT TEAM ---
   const myTeam = useMemo(() => {
     if (!selectedKeyManId) return []
+    const kmId = parseInt(selectedKeyManId)
     return personnel
-      .filter((p) => p.keyManId === parseInt(selectedKeyManId))
+      .filter((p) => p.keyManId === kmId)
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [personnel, selectedKeyManId])
 
   // --- LOGIC: MY AREAS OF OVERSIGHT ---
-  // Find where the Key Man is actually assigned
   const myOversightAreas = useMemo(() => {
     if (!selectedKeyManId) return []
     const oversight = []
+    const kmId = parseInt(selectedKeyManId)
 
     // 1. Check All-Day (Auditorium) Assignments
     positions
       .filter((pos) => pos.type === 'auditorium')
       .forEach((pos) => {
-        if (getAssignId(assignments[pos.id]) === parseInt(selectedKeyManId)) {
+        if (getAssignId(assignments[pos.id]) === kmId) {
           const area = areas.find((a) => a.id === pos.areaId)
           oversight.push({
             type: 'auditorium',
@@ -56,10 +57,7 @@ export default function DepartmentView({
       .filter((pos) => pos.type === 'rotational')
       .forEach((pos) => {
         shifts.forEach((s) => {
-          if (
-            getAssignId(assignments[`${pos.id}_${s.id}`]) ===
-            parseInt(selectedKeyManId)
-          ) {
+          if (getAssignId(assignments[`${pos.id}_${s.id}`]) === kmId) {
             const area = areas.find((a) => a.id === pos.areaId)
             oversight.push({
               type: 'rotational',
@@ -90,24 +88,24 @@ export default function DepartmentView({
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="space-y-6 animate-in fade-in duration-500 pb-20 print:pb-0 print:space-y-4">
       {/* HEADER & SELECTOR */}
-      <div className="glass-panel p-6 rounded-3xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 print:hidden">
+      <div className="glass-panel p-6 rounded-3xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 print:p-0 print:border-none print:shadow-none print:mb-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-700">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 print:hidden">
             <i className="fa fa-clipboard-user text-xl"></i>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Key Man Report
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white print:text-2xl print:mb-1">
+              {selectedKM?.name} - Key Man Report
             </h2>
-            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-              Personnel Oversight Dashboard
+            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider print:text-sm print:text-black">
+              Assigned oversight for {new Date().toLocaleDateString()}
             </p>
           </div>
         </div>
 
-        <div className="flex gap-3 w-full md:w-auto">
+        <div className="flex gap-3 w-full md:w-auto print:hidden">
           <select
             value={selectedKeyManId}
             onChange={(e) => setSelectedKeyManId(e.target.value)}
@@ -121,46 +119,46 @@ export default function DepartmentView({
           </select>
           <button
             onClick={() => window.print()}
-            className="bg-gray-900 text-white px-6 py-2.5 rounded-full hover:bg-black font-bold text-sm shadow-md transition-all active:scale-95 flex items-center gap-2 dark:bg-slate-700 dark:hover:bg-slate-600"
+            className="bg-gray-900 text-white px-6 py-2.5 rounded-full hover:bg-black font-bold text-sm shadow-md transition-all active:scale-95 flex items-center gap-2"
           >
             <i className="fa fa-print"></i> Print
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        {/* LEFT COLUMN: DIRECT TEAM */}
-        <div className="xl:col-span-1 space-y-6">
-          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400">
-                My Direct Team ({myTeam.length})
-              </h3>
-              <i className="fa fa-users text-gray-300"></i>
+      <div className="space-y-6 print:space-y-4">
+        {/* TEAM ASSIGNMENTS TABLE (DENSE) */}
+        <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none">
+          <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
+            My Direct Team Assignments ({myTeam.length})
+          </h3>
+
+          {myTeam.length === 0 ? (
+            <div className="py-8 text-center text-gray-400 italic text-sm">
+              No brothers report to you.
             </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-[10px] uppercase text-gray-400 border-b border-gray-200 dark:border-slate-700 print:text-[10px] print:text-black">
+                    <th className="py-2 pr-4">Brother</th>
+                    {shifts.map(s => (
+                        <th key={s.id} className="py-2 px-2 text-center">{s.label.split('(')[0]}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-800 print:divide-black">
+                  {myTeam.map(member => (
+                    <tr key={member.id} className="text-xs print:text-[11px]">
+                      <td className="py-2 pr-4 font-bold text-gray-900 dark:text-white print:text-black">
+                        {member.name}
+                        <div className="text-[9px] text-gray-400 font-normal uppercase print:hidden">{member.role}</div>
+                      </td>
+                      {shifts.map(s => {
+                        let assignment = '-'
+                        let colorClass = 'text-gray-300 print:text-gray-400'
 
-            {myTeam.length === 0 ? (
-              <div className="py-8 text-center text-gray-400 italic text-sm">
-                No brothers report to you in the roster.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {myTeam.map((member) => (
-                  <div
-                    key={member.id}
-                    className="p-4 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl shadow-sm"
-                  >
-                    <div className="font-bold text-gray-800 dark:text-white mb-2 border-b border-gray-50 dark:border-slate-700 pb-1 flex justify-between items-center">
-                      <span>{member.name}</span>
-                      <span className="text-[9px] bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-gray-500 uppercase">{member.role}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {shifts.map((s) => {
-                        // Find assignment for this shift
-                        let assignment = 'Off Duty'
-                        let colorClass = 'text-gray-300 dark:text-gray-600'
-
-                        // 1. Check for rotational assignments
                         const rotKey = Object.keys(assignments).find(key => {
                             return key.endsWith(`_${s.id}`) && getAssignId(assignments[key]) === member.id;
                         });
@@ -176,7 +174,7 @@ export default function DepartmentView({
                           } else {
                               assignment = 'Assigned';
                           }
-                          colorClass = 'text-blue-600 dark:text-blue-400 font-bold'
+                          colorClass = 'text-blue-600 font-bold print:text-black'
                         } else {
                           const audKey = positions
                             .filter((pos) => pos.type === 'auditorium')
@@ -185,145 +183,119 @@ export default function DepartmentView({
                           if (audKey) {
                             const mirrors = positions.filter(p => p.mirrorOf === audKey.id).map(m => m.name);
                             assignment = [audKey.name, ...mirrors].join(' + ');
-                            colorClass = 'text-purple-600 dark:text-purple-400 font-bold'
+                            colorClass = 'text-purple-600 font-bold print:text-black'
                           }
                         }
 
                         return (
-                          <div key={s.id} className="text-[10px] flex flex-col">
-                            <span className="text-gray-400 uppercase font-black text-[7px] leading-tight">{s.label}</span>
-                            <span className={`truncate ${colorClass}`} title={assignment}>{assignment}</span>
-                          </div>
+                          <td key={s.id} className={`py-2 px-2 text-center ${colorClass}`}>
+                            {assignment}
+                          </td>
                         )
                       })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
-        {/* RIGHT COLUMN: AREAS OF OVERSIGHT */}
-        <div className="xl:col-span-2 space-y-6">
-          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 min-h-[400px]">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400">
-                My Areas of Oversight
-              </h3>
-              <i className="fa fa-shield-halved text-gray-300"></i>
+        {/* AREAS OF OVERSIGHT (DENSE) */}
+        <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none">
+          <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
+            My Areas of Oversight
+          </h3>
+
+          {myOversightAreas.length === 0 ? (
+            <div className="py-10 text-center text-gray-400 italic text-sm">
+              No oversight positions assigned.
             </div>
-
-            {myOversightAreas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center text-gray-400">
-                <i className="fa fa-calendar-xmark text-4xl mb-4 opacity-20"></i>
-                <p className="text-sm italic">
-                  You are not currently assigned to any Key Man positions in the schedule.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {myOversightAreas.map((oversight, idx) => (
-                  <div
-                    key={idx}
-                    className="border border-gray-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm break-inside-avoid print:mb-8"
-                  >
-                    <div
-                      style={oversight.area?.style}
-                      className="p-4 flex justify-between items-center text-white"
-                    >
-                      <div>
-                        <h4 className="font-black uppercase tracking-widest text-sm">
-                          {oversight.area?.name} Oversight
-                        </h4>
-                        <p className="text-[10px] opacity-80 uppercase font-bold">
-                          {oversight.shiftId === 'all'
-                            ? 'Full Assembly Day'
-                            : `Shift: ${oversight.shiftLabel}`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] opacity-80 uppercase font-bold block">My Position</span>
-                        <span className="font-black">{oversight.posName}</span>
-                      </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
+              {myOversightAreas.map((oversight, idx) => (
+                <div
+                  key={idx}
+                  className="border border-gray-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm break-inside-avoid print:border-black print:rounded-none"
+                >
+                  <div className="bg-gray-100 dark:bg-slate-800 p-3 flex justify-between items-center print:bg-gray-200 print:border-b print:border-black">
+                    <div>
+                      <h4 className="font-black uppercase tracking-widest text-[10px] print:text-xs">
+                        {oversight.area?.name} Oversight
+                      </h4>
+                      <p className="text-[9px] opacity-60 uppercase font-bold print:text-[10px] print:text-black">
+                        {oversight.shiftId === 'all'
+                          ? 'Full Day'
+                          : `Shift: ${oversight.shiftLabel}`}
+                      </p>
                     </div>
-
-                    <div className="p-4 bg-white dark:bg-slate-800">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-[10px] uppercase text-gray-400 border-b border-gray-50 dark:border-slate-700">
-                            <th className="pb-2 text-left">Position</th>
-                            <th className="pb-2 text-left">Assigned Brother</th>
-                            <th className="pb-2 text-right">Reporting To</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                          {positions
-                            .filter((p) => p.areaId === oversight.area?.id)
-                            .filter((p) => p.type === oversight.type)
-                            .map((pos) => {
-                              // Handle Dynamic Mirrors
-                              const isMirror = !!pos.mirrorOf
-                              const sourcePosId = pos.mirrorOf
-
-                              const assignmentKey = isMirror
-                                ? `${sourcePosId}_${oversight.shiftId}`
-                                : (oversight.type === 'auditorium'
-                                    ? pos.id
-                                    : `${pos.id}_${oversight.shiftId}`)
-
-                              const pid = getAssignId(assignments[assignmentKey])
-                              const assignedPerson = personnel.find(
-                                (x) => x.id === pid,
-                              )
-                              const itsMe = pid === parseInt(selectedKeyManId)
-
-                              return (
-                                <tr
-                                  key={pos.id}
-                                  className={`group ${itsMe ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
-                                >
-                                  <td className="py-3 font-bold text-gray-600 dark:text-gray-400">
-                                    <div>{pos.name}</div>
-                                    {pos.timeNote && (
-                                        <div className="text-[9px] text-blue-500 font-black uppercase tracking-wider">
-                                            🕒 {pos.timeNote}
-                                        </div>
-                                    )}
-                                  </td>
-                                  <td className="py-3">
-                                    {assignedPerson ? (
-                                      <div className="flex items-center gap-2">
-                                        {isMirror && <i className="fa fa-link text-[10px] text-orange-500" title="Mirrored Assignment"></i>}
-                                        <span className={`font-bold ${itsMe ? 'text-blue-600 dark:text-blue-400' : (isMirror ? 'text-orange-700 dark:text-orange-400' : 'text-gray-900 dark:text-white')}`}>
-                                          {assignedPerson.name}
-                                        </span>
-                                        {itsMe && <span className="text-[8px] bg-blue-600 text-white px-1 rounded font-black uppercase">YOU</span>}
-                                      </div>
-                                    ) : (
-                                      <span className="text-red-400 font-bold italic text-xs flex items-center gap-1">
-                                        <i className="fa fa-triangle-exclamation text-[10px]"></i> VACANT
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-3 text-right text-xs text-gray-500">
-                                    {assignedPerson
-                                      ? personnel.find(
-                                          (km) => km.id === assignedPerson.keyManId,
-                                        )?.name || 'Unassigned'
-                                      : '-'}
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                        </tbody>
-                      </table>
+                    <div className="text-right">
+                      <span className="text-[8px] opacity-60 uppercase font-black block">My Post</span>
+                      <span className="font-black text-xs">{oversight.posName}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+
+                  <div className="p-3 bg-white dark:bg-slate-900">
+                    <table className="w-full text-[10px] print:text-[11px]">
+                      <thead>
+                        <tr className="text-[8px] uppercase text-gray-400 border-b border-gray-50 print:text-black print:border-black">
+                          <th className="pb-1 text-left">Post</th>
+                          <th className="pb-1 text-left">Brother</th>
+                          <th className="pb-1 text-right">Oversight</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                        {positions
+                          .filter((p) => p.areaId === oversight.area?.id)
+                          .filter((p) => p.type === oversight.type)
+                          .map((pos) => {
+                            const isMirror = !!pos.mirrorOf
+                            const sourcePosId = pos.mirrorOf
+
+                            let assignmentKey = (oversight.type === 'auditorium'
+                              ? pos.id
+                              : `${pos.id}_${oversight.shiftId}`)
+
+                            if (isMirror) {
+                              const sourcePos = positions.find(x => x.id === sourcePosId)
+                              assignmentKey = (sourcePos && sourcePos.type === 'auditorium')
+                                  ? sourcePosId
+                                  : `${sourcePosId}_${oversight.shiftId}`
+                            }
+
+                            const pid = getAssignId(assignments[assignmentKey])
+                            const assignedPerson = personnel.find((x) => x.id === pid)
+                            const itsMe = pid === parseInt(selectedKeyManId)
+
+                            return (
+                              <tr key={pos.id} className={itsMe ? 'bg-blue-50/50' : ''}>
+                                <td className="py-1.5 font-bold text-gray-600 print:text-black">
+                                  {pos.name}
+                                </td>
+                                <td className="py-1.5 font-bold">
+                                  {assignedPerson ? (
+                                    <span className={itsMe ? 'text-blue-600' : 'print:text-black'}>
+                                      {assignedPerson.name} {itsMe && '(YOU)'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-red-500 italic">VACANT</span>
+                                  )}
+                                </td>
+                                <td className="py-1.5 text-right text-gray-400 print:text-black">
+                                  {assignedPerson
+                                    ? personnel.find(km => km.id === assignedPerson.keyManId)?.name || 'None'
+                                    : '-'}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
