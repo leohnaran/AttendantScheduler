@@ -398,9 +398,17 @@ export default function ScheduleView({
       let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
 
       // KEY MAN PRIORITY: In non-final passes, if this is a regular position, 
-      // exclude brothers who have the 'keyman' capability to reserve them for oversight.
+      // exclude brothers who are "Key Men" to reserve them for oversight.
       if (!isFinalPass && !pos.keyMan) {
-        candidates = candidates.filter(p => !p.caps || !p.caps.includes('keyman'));
+        candidates = candidates.filter(p => {
+            const hasKMString = p.caps && p.caps.includes('keyman');
+            const hasKMRole = p.role === 'Elder' || p.role === 'MS';
+            const hasTeam = personnel.some(other => other.keyManId === p.id);
+            
+            // If he is an Elder, MS, or has the KM flag, or has a team, reserve him.
+            const isKM = hasKMString || hasKMRole || hasTeam;
+            return !isKM;
+        });
       }
 
       // RELIEF MODE: Expand rotational pool to include any Auditorium-capable brothers
@@ -415,7 +423,13 @@ export default function ScheduleView({
         // RELIEF MODE RESTRICTION: Key Men should ONLY be available for relief duty 
         // if the target position is also a Key Man position.
         if (!pos.keyMan) {
-          audPotential = audPotential.filter(p => !p.caps || !p.caps.includes('keyman'));
+          audPotential = audPotential.filter(p => {
+            const hasKMString = p.caps && p.caps.includes('keyman');
+            const hasKMRole = p.role === 'Elder' || p.role === 'MS';
+            const hasTeam = personnel.some(other => other.keyManId === p.id);
+            const isKM = hasKMString || hasKMRole || hasTeam;
+            return !isKM;
+          });
         }
         
         candidates = [...candidates, ...audPotential]
