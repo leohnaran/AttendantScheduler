@@ -60,31 +60,30 @@ export default function ScheduleView({
   }, [])
 
   const handleExportPNG = async () => {
-    if (!gridRef.current) return
-    setShowPrintMenu(false)
+    // Target the actual table inside the gridRef
+    const tableEl = gridRef.current?.querySelector('table');
+    if (!tableEl) return;
+    
+    setShowPrintMenu(false);
     
     try {
-      // Find the actual scrollable content size
-      const scrollableEl = gridRef.current.querySelector('.overflow-auto') || gridRef.current;
-      
-      const dataUrl = await htmlToImage.toPng(gridRef.current, {
+      const dataUrl = await htmlToImage.toPng(tableEl, {
         backgroundColor: '#ffffff',
-        // Force the engine to look at the full scrollable area
-        width: scrollableEl.scrollWidth,
-        height: scrollableEl.scrollHeight,
+        // Clear out any scroll-related styles during capture
         style: {
-            borderRadius: '0',
-            width: scrollableEl.scrollWidth + 'px',
-            height: scrollableEl.scrollHeight + 'px',
+            transform: 'none',
+            margin: '0',
+            padding: '20px', // Add some breathing room
         }
-      })
-      const link = document.createElement('a')
-      link.download = `schedule-${new Date().toISOString().split('T')[0]}.png`
-      link.href = dataUrl
-      link.click()
+      });
+      
+      const link = document.createElement('a');
+      link.download = `schedule-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = dataUrl;
+      link.click();
     } catch (err) {
-      console.error('oops, something went wrong!', err)
-      alert('PNG Export failed. Try standard Print instead.')
+      console.error('oops, something went wrong!', err);
+      alert('PNG Export failed. Try standard Print instead.');
     }
   }
 
