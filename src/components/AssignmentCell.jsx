@@ -233,15 +233,15 @@ export default function AssignmentCell({
       }}
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
-      className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-all duration-300 relative group-hover:bg-opacity-50 schedule-drop-zone ${
+      className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-all duration-300 relative group-hover:bg-opacity-50 schedule-drop-zone print:border-none print:p-1 ${
         isDragOver ? 'drag-over' : ''
       } ${isTargetedByHover ? 'mirror-highlight' : ''} ${
         conflictMsg
           ? isWarning
-            ? 'bg-yellow-50/80 dark:bg-yellow-900/40'
-            : 'bg-red-50/80 dark:bg-red-900/40'
+            ? 'bg-yellow-50/80 dark:bg-yellow-900/40 print:bg-transparent'
+            : 'bg-red-50/80 dark:bg-red-900/40 print:bg-transparent'
           : isAuto
-          ? 'bg-green-50/30 dark:bg-green-900/20'
+          ? 'bg-green-50/30 dark:bg-green-900/20 print:bg-transparent'
           : ''
       }`}
     >
@@ -277,7 +277,7 @@ export default function AssignmentCell({
         </button>
       </div>
       {conflictMsg && (
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-1.5 space-y-1.5 print:hidden">
           <div
             className={`text-[10px] font-bold flex items-center gap-1 ${
               isWarning ? 'text-yellow-600' : 'text-red-500'

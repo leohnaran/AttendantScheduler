@@ -64,7 +64,7 @@ export default function SearchableSelect({
   return (
     <div className="relative w-full" ref={dropdownRef}>
       <div
-        className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm transition-all cursor-pointer flex items-center justify-between
+        className={`w-full py-1.5 px-2 pr-6 rounded-lg text-sm transition-all cursor-pointer flex items-center justify-between print:border-none print:bg-transparent print:p-0 print:pr-0
                             ${
                               conflictMsg
                                 ? isWarning
