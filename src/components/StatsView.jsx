@@ -82,7 +82,7 @@ export default function StatsView({
 
   return (
     <div className="glass-panel p-8 rounded-3xl shadow-sm">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white print:hidden">
         {t('stats_title', language)} (Balance Check)
       </h2>
       <div className="overflow-hidden rounded-xl border border-gray-100 shadow-sm dark:border-slate-700">

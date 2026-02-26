@@ -10,7 +10,7 @@ export default function LogView({ log, language }) {
     )
   return (
     <div className="glass-panel p-8 rounded-3xl shadow-sm">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900 tracking-tight dark:text-white print:hidden">
         {t('log_title', language)}
       </h2>
       <div className="h-96 overflow-y-auto border border-gray-100 p-4 rounded-xl bg-gray-50/50 text-xs font-mono shadow-inner dark:bg-slate-900/50 dark:border-slate-800">

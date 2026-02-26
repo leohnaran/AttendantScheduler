@@ -83,7 +83,7 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  console.log("Attendant Scheduler v2.8.1 - Reset Fix Active");
+  console.log("Attendant Scheduler v2.8.2 - Reset Fix Active");
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -386,7 +386,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen pb-10 text-gray-800 transition-colors duration-300 dark:text-gray-200">
-        <header className="glass-header sticky top-0 z-50 px-6 py-3 shadow-sm mb-8">
+        <header className="glass-header sticky top-0 z-50 px-6 py-3 shadow-sm mb-8 print:hidden">
           <div className="container mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-6">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-3">
@@ -395,7 +395,7 @@ export default function App() {
                 </div>
                 <span className="tracking-tight">{t('app_title', language)}</span>
                 <span className="ml-2 text-[10px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-400">
-                  v2.8.1
+                  v2.8.2
                 </span>
               </h1>
                                                                 
