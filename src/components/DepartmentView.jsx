@@ -166,18 +166,25 @@ export default function DepartmentView({
                         });
 
                         if (rotKey) {
-                          const posId = rotKey.substring(0, rotKey.lastIndexOf(`_${s.id}`));
+                          const parts = rotKey.split('_');
+                          const posId = parts.slice(0, parts.length - 1).join('_');
                           const foundPos = positions.find((p) => p.id === posId);
-                          assignment = foundPos ? foundPos.name : 'Assigned'
+                          
+                          if (foundPos) {
+                              const mirrors = positions.filter(p => p.mirrorOf === foundPos.id).map(m => m.name);
+                              assignment = [foundPos.name, ...mirrors].join(' + ');
+                          } else {
+                              assignment = 'Assigned';
+                          }
                           colorClass = 'text-blue-600 dark:text-blue-400 font-bold'
                         } else {
-                          // 2. Check auditorium (all day)
                           const audKey = positions
                             .filter((pos) => pos.type === 'auditorium')
                             .find((pos) => getAssignId(assignments[pos.id]) === member.id)
                           
                           if (audKey) {
-                            assignment = 'Auditorium'
+                            const mirrors = positions.filter(p => p.mirrorOf === audKey.id).map(m => m.name);
+                            assignment = [audKey.name, ...mirrors].join(' + ');
                             colorClass = 'text-purple-600 dark:text-purple-400 font-bold'
                           }
                         }

@@ -40,18 +40,23 @@ export default function StatsView({
           const pos = positions.find((pos) => pos.id === posId)
           if (pos) {
             const shift = shifts.find((s) => s.id === shiftId)
+            const shiftLabel = shift
+                ? shift.label
+                : language === 'en'
+                ? 'All Day'
+                : t('grid_all_day', language)
+
             if (pos.type !== 'auditorium') {
               if (shift) minutesAway += shift.minutes
             }
-            assignmentLabels.push(
-              `${pos.name} (${
-                shift
-                  ? shift.label
-                  : language === 'en'
-                  ? 'All Day'
-                  : t('grid_all_day', language)
-              })`,
-            )
+            
+            // Add primary position
+            assignmentLabels.push(`${pos.name} (${shiftLabel})`)
+
+            // Add any positions that MIRROR this one
+            positions.filter(p => p.mirrorOf === pos.id).forEach(mirror => {
+                assignmentLabels.push(`[Linked] ${mirror.name} (${shiftLabel})`)
+            })
           }
         }
       })

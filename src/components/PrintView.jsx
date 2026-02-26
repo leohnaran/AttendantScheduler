@@ -26,13 +26,19 @@ export default function PrintView({
         const pos = positions.find((x) => x.id === posId)
         const shift = shifts.find((s) => s.id === shiftId)
         if (pos) {
-          myAssignments.push({
-            posName: pos.name,
-            time: shift
+          const shiftLabel = shift
               ? shift.label
               : language === 'en'
               ? 'Full Day'
-              : t('grid_all_day', language),
+              : t('grid_all_day', language);
+
+          // Find any positions that MIRROR this one
+          const mirrors = positions.filter(p => p.mirrorOf === pos.id).map(m => m.name);
+          const fullPosName = [pos.name, ...mirrors].join(' + ');
+
+          myAssignments.push({
+            posName: fullPosName,
+            time: shiftLabel,
             shiftId: shiftId,
           })
         }
