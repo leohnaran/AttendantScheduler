@@ -126,7 +126,7 @@ export const DEFAULT_POSITIONS = [
   },
   {
     id: "pos14",
-    name: "Pos 14 (Sect C Baptism Walk)",
+    name: "Pos 14 (Sect C)",
     areaId: "auditorium",
     type: "auditorium",
     section: "C",
@@ -136,7 +136,7 @@ export const DEFAULT_POSITIONS = [
   },
   {
     id: "pos11",
-    name: "Pos 11 (Sect C Baptism Walk)",
+    name: "Pos 11 (Sect C)",
     areaId: "auditorium",
     type: "auditorium",
     section: "C",
