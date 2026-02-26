@@ -411,10 +411,12 @@ export default function ScheduleView({
             p.caps.includes('auditorium') &&
             !candidates.some((c) => c.id === p.id),
         )
-        // Ensure we still respect the keyman reservation in non-final passes
+        
+        // Ensure Key Men are NOT pulled into Relief Duty in initial passes
         if (!isFinalPass && !pos.keyMan) {
           audPotential = audPotential.filter(p => !p.caps || !p.caps.includes('keyman'));
         }
+        
         candidates = [...candidates, ...audPotential]
       }
 
@@ -462,13 +464,6 @@ export default function ScheduleView({
 
         // Pick fairest candidate (Least assignments, then random)
         const sorted = [...target.candidates].sort((a, b) => {
-          // KEY MAN PENALTY: Always prefer non-keymen for non-keyman slots
-          if (!target.pos.keyMan) {
-            const aIsKeyMan = a.caps && a.caps.includes('keyman')
-            const bIsKeyMan = b.caps && b.caps.includes('keyman')
-            if (aIsKeyMan !== bIsKeyMan) return aIsKeyMan ? 1 : -1
-          }
-
           const tA = getTotalAssignmentCount(a.id, newAssignments)
           const tB = getTotalAssignmentCount(b.id, newAssignments)
           if (tA !== tB) return tA - tB
