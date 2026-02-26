@@ -616,9 +616,15 @@ export default function ScheduleView({
       const id = getAssignId(newAssignments[k])
       if (id) assignedIds.add(id)
     })
+
+    const emptyCount = allSlots.filter(s => !newAssignments[s.key]).length;
+    const vacancyWarning = emptyCount > 0 
+        ? `\n\n⚠️ WARNING: ${emptyCount} positions could not be filled! Check for red cells in the schedule.`
+        : `\n\n✅ All positions were successfully filled.`;
+
     onAutoFill(newAssignments, newLog)
     alert(
-      `Weighted Scoring Auto-Fill Complete! (v2.8.0)\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
+      `Weighted Scoring Auto-Fill Complete! (v2.9.2)\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)${vacancyWarning}\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
     )
   }
 
