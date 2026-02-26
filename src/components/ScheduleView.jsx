@@ -393,25 +393,45 @@ export default function ScheduleView({
     const totalPersonnel = personnel.length
     let filledCount = 0
 
-    // HELPER: Get valid candidates with a strict total assignment limit
-    const getCandidatesForSlot = (pos, shiftId, maxTotalAllowed, isFinalPass = false) => {
-      let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
+    // HELPER: Calculate dynamic workload score
+    const getWorkloadScore = (pid, currentAssignments, targetPosIsRegular) => {
+      let score = 0
+      let hasKeymanJob = false
 
-      // KEY MAN PRIORITY: In non-final passes, if this is a regular position, 
-      // exclude brothers who are "Key Men" to reserve them for oversight.
-      if (!isFinalPass && !pos.keyMan) {
-        candidates = candidates.filter(p => {
-            const hasKMString = p.caps && p.caps.includes('keyman');
-            const hasKMRole = p.role === 'Elder' || p.role === 'MS';
-            const hasTeam = personnel.some(other => other.keyManId === p.id);
-            
-            // If he is an Elder, MS, or has the KM flag, or has a team, reserve him.
-            const isKM = hasKMString || hasKMRole || hasTeam;
-            return !isKM;
-        });
+      Object.keys(currentAssignments).forEach((key) => {
+        if (getAssignId(currentAssignments[key]) === pid) {
+          // Identify position type from key
+          let posId = key
+          if (key.includes('_')) {
+            const parts = key.split('_')
+            // Check if last part is a shift ID
+            if (shifts.some(s => s.id === parts[parts.length - 1])) {
+                posId = parts.slice(0, parts.length - 1).join('_')
+            }
+          }
+          const pos = positions.find((p) => p.id === posId)
+          if (pos) {
+            if (pos.type === 'auditorium') score += 0.1
+            else score += 1.0
+
+            if (pos.keyMan) hasKeymanJob = true
+          }
+        }
+      })
+
+      // If we are filling a regular spot and this brother already has an oversight job
+      if (targetPosIsRegular && hasKeymanJob) {
+        score += 10.0
       }
 
-      // RELIEF MODE: Expand rotational pool to include any Auditorium-capable brothers
+      return score
+    }
+
+    // HELPER: Get valid candidates based on current state
+    const getValidCandidates = (pos, shiftId, currentAssignments) => {
+      let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
+
+      // RELIEF MODE expansion
       if (rules.auditoriumRotationMode && pos.type === 'rotational') {
         let audPotential = personnel.filter(
           (p) =>
@@ -437,143 +457,101 @@ export default function ScheduleView({
 
       return candidates.filter((p) => {
         // 1. Hard Conflict / Capability Check
-        const conflict = getConflict(p.id, pos, shiftId, newAssignments)
+        const conflict = getConflict(p.id, pos, shiftId, currentAssignments)
         if (conflict && conflict.type === 'error') return false
 
-        // 2. Strict Utilization Pass Check
-        const currentTotal = getTotalAssignmentCount(p.id, newAssignments)
-        if (currentTotal > maxTotalAllowed) return false
-
-        // 3. Rules & Load
-        if (isOverWorkLimit(p.id, newAssignments)) return false
-        if (workedPreviousShift(p.id, shiftId, newAssignments)) return false
-        if (!isAnchorAvailableForShift(p, shiftId, newAssignments)) return false
+        // 2. Rules & Load
+        if (isOverWorkLimit(p.id, currentAssignments)) return false
+        if (workedPreviousShift(p.id, shiftId, currentAssignments)) return false
+        if (!isAnchorAvailableForShift(p, shiftId, currentAssignments)) return false
 
         return true
       })
     }
 
-    const fillPoolByHardness = (slots, label, passLimit, isSpecialistPass = false, isFinalPass = false) => {
-      let madeChanges = false
-      while (true) {
-        const candidatesBySlot = slots
-          .filter((s) => !newAssignments[s.key])
-          .map((s) => {
-            // Specialist override: if we are in PASS-0 but it's a specialist slot, 
-            // and no one at 0 jobs is available, temporarily allow someone with 1 job.
-            let valid = getCandidatesForSlot(s.pos, s.shiftId, passLimit, isFinalPass)
-            
-            if (isSpecialistPass && valid.length === 0 && passLimit === 0) {
-                valid = getCandidatesForSlot(s.pos, s.shiftId, 1, isFinalPass);
-            }
-
-            return { ...s, candidates: valid, hardness: valid.length }
-          })
-          .filter((s) => s.hardness > 0)
-
-        if (candidatesBySlot.length === 0) break
-
-        // Pick hardest slot (fewest options)
-        candidatesBySlot.sort((a, b) => a.hardness - b.hardness)
-        const target = candidatesBySlot[0]
-
-        // Pick fairest candidate (Least assignments, then random)
-        const sorted = [...target.candidates].sort((a, b) => {
-          const tA = getTotalAssignmentCount(a.id, newAssignments)
-          const tB = getTotalAssignmentCount(b.id, newAssignments)
-          if (tA !== tB) return tA - tB
-          return Math.random() - 0.5
-        })
-
-        const chosen = sorted[0]
-        newAssignments[target.key] = { id: chosen.id, isAuto: true }
-        filledCount++
-        madeChanges = true
-
-        // Hyper-verbose assignment logging
-        const otherQualifiedCount = target.candidates.length - 1;
-        const totalQualifiedNames = target.candidates.map(c => c.name).join(', ');
-        
-        newLog.push({
-          type: target.pos.type,
-          msg: `[PASS-${passLimit}] ASSIGNED ${chosen.name} to ${target.pos.name} (${target.shiftId === 'all' ? 'All Day' : target.shiftId}). POOL: ${target.candidates.length} candidates (${totalQualifiedNames}). REASON: Least jobs (${getTotalAssignmentCount(chosen.id, newAssignments)}) and passed all rules.`,
-        })
-      }
-      return madeChanges
-    }
-
     // --- PREPARE ALL SLOTS ---
-    const specialists = []
-    const auditorium = []
-    const rotational = []
-
+    const allSlots = []
     positions.forEach((pos) => {
-      const isConstrained = !!(pos.limitType || pos.keyMan)
       if (pos.type === 'auditorium') {
-        const slot = { pos, shiftId: 'all', key: pos.id }
-        if (isConstrained) specialists.push(slot)
-        else auditorium.push(slot)
+        allSlots.push({ pos, shiftId: 'all', key: pos.id })
       } else if (!pos.isMirror) {
         shifts.forEach((s) => {
           if (pos.validShifts && !pos.validShifts.includes(s.id)) return
-          const slot = { pos, shiftId: s.id, key: `${pos.id}_${s.id}` }
-          if (isConstrained) specialists.push(slot)
-          else rotational.push(slot)
+          allSlots.push({ pos, shiftId: s.id, key: `${pos.id}_${s.id}` })
         })
       }
     })
 
-    // --- EXECUTE PASSES (Utilization First!) ---
-    // PASS 0: Give everyone their 1st assignment
-    fillPoolByHardness(specialists, 'S-PASS0', 0, true, false)
-    fillPoolByHardness(auditorium, 'A-PASS0', 0, false, false)
-    fillPoolByHardness(rotational, 'R-PASS0', 0, false, false)
+    // --- PHASE 1: PROCESS KEYMAN SLOTS ---
+    const keymanSlots = allSlots.filter((s) => s.pos.keyMan && !newAssignments[s.key])
+    
+    // Sort Keyman slots by "Hardness" (Pool Size - static)
+    keymanSlots.sort((a, b) => {
+        const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
+        const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
+        return poolA - poolB
+    })
 
-    // PASS 1: Give everyone their 2nd assignment
-    fillPoolByHardness(specialists, 'S-PASS1', 1, true, false)
-    fillPoolByHardness(auditorium, 'A-PASS1', 1, false, false)
-    fillPoolByHardness(rotational, 'R-PASS1', 1, false, false)
+    keymanSlots.forEach(slot => {
+        const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+        if (candidates.length === 0) return
 
-    // PASS 2+: Fill any absolute leftovers (ALLOW KEY MEN HERE)
-    fillPoolByHardness([...specialists, ...auditorium, ...rotational], 'FINAL', 5, false, true)
+        // Sort candidates by Workload Score (Lowest first)
+        candidates.sort((a, b) => {
+            const scoreA = getWorkloadScore(a.id, newAssignments, false)
+            const scoreB = getWorkloadScore(b.id, newAssignments, false)
+            if (Math.abs(scoreA - scoreB) > 0.01) return scoreA - scoreB
+            return Math.random() - 0.5 // Tie-breaker
+        })
 
-    // --- FINAL HYPER-VERBOSE DIAGNOSTIC (Individual Person Logging) ---
-    const finalEmptySlots = [...specialists, ...auditorium, ...rotational].filter(
-      (s) => !newAssignments[s.key],
-    )
-
-    finalEmptySlots.forEach((s) => {
-      const allQualified = getCandidatesForPosition(s.pos, personnel, areas, tags)
-      
-      // RELIEF MODE expansion check for logging
-      let potentialPool = [...allQualified];
-      if (rules.auditoriumRotationMode && s.pos.type === 'rotational') {
-          const audExtra = personnel.filter(p => p.caps && p.caps.includes('auditorium') && !allQualified.some(q => q.id === p.id));
-          potentialPool = [...potentialPool, ...audExtra];
-      }
-
-      newLog.push({
-        type: 'error',
-        msg: `FAILED TO FILL: ${s.pos.name} (${s.shiftId === 'all' ? 'All Day' : s.shiftId})`,
-      })
-
-      potentialPool.forEach((p) => {
-        const reasons = []
-        
-        const conflict = getConflict(p.id, s.pos, s.shiftId, newAssignments)
-        if (conflict && conflict.type === 'error') reasons.push(`Conflict: ${conflict.msg}`)
-        
-        if (isOverWorkLimit(p.id, newAssignments)) reasons.push(`Over Work Limit (${getWorkPercentage(p.id, newAssignments)}%)`)
-        if (workedPreviousShift(p.id, s.shiftId, newAssignments)) reasons.push('Worked Previous Shift')
-        if (!isAnchorAvailableForShift(p, s.shiftId, newAssignments)) reasons.push('Anchor/Section Limit')
-        
-        const finalReason = reasons.length > 0 ? reasons.join(' + ') : `Passed all rules (but has ${getTotalAssignmentCount(p.id, newAssignments)} jobs)`;
+        const chosen = candidates[0]
+        newAssignments[slot.key] = { id: chosen.id, isAuto: true }
+        filledCount++
         
         newLog.push({
-          type: 'error',
-          msg: `   -> REJECTED ${p.name}: ${finalReason}`,
+            type: 'keyman',
+            msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false).toFixed(1)}`,
         })
-      })
+    })
+
+    // --- PHASE 2: PROCESS REGULAR SLOTS ---
+    const regularSlots = allSlots.filter((s) => !s.pos.keyMan && !newAssignments[s.key])
+    
+    // Sort Regular slots by "Hardness"
+    regularSlots.sort((a, b) => {
+        const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
+        const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
+        return poolA - poolB
+    })
+
+    regularSlots.forEach(slot => {
+        const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+        if (candidates.length === 0) return
+
+        // Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
+        candidates.sort((a, b) => {
+            const scoreA = getWorkloadScore(a.id, newAssignments, true)
+            const scoreB = getWorkloadScore(b.id, newAssignments, true)
+            if (Math.abs(scoreA - scoreB) > 0.01) return scoreA - scoreB
+            return Math.random() - 0.5
+        })
+
+        const chosen = candidates[0]
+        newAssignments[slot.key] = { id: chosen.id, isAuto: true }
+        filledCount++
+        
+        newLog.push({
+            type: 'rotational',
+            msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true).toFixed(1)}`,
+        })
+    })
+
+    // --- DIAGNOSTICS FOR EMPTY SLOTS ---
+    allSlots.filter(s => !newAssignments[s.key]).forEach(s => {
+        newLog.push({
+            type: 'error',
+            msg: `FAILED TO FILL: ${s.pos.name} (${s.shiftId}). No qualified candidates passed all rules.`,
+        })
     })
 
     const assignedIds = new Set()
@@ -583,7 +561,7 @@ export default function ScheduleView({
     })
     onAutoFill(newAssignments, newLog)
     alert(
-      `Hyper-Verbose Auto-Fill Complete! (v2.1.0)\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)\n\nPLEASE CHECK THE LOG TAB FOR THE PERSON-BY-PERSON BREAKDOWN.`,
+      `Weighted Scoring Auto-Fill Complete! (v2.8.0)\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
     )
   }
 
