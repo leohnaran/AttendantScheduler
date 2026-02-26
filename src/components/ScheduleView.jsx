@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import * as htmlToImage from 'html-to-image'
 import { t } from '../i18n/translations'
 import {
   getAssignId,
@@ -30,12 +31,18 @@ export default function ScheduleView({
   const [hoveredMirrorKey, setHoveredMirrorKey] = useState(null)
 
   const [showActionMenu, setShowActionMenu] = useState(false)
+  const [showPrintMenu, setShowPrintMenu] = useState(false)
   const actionMenuRef = useRef(null)
+  const printMenuRef = useRef(null)
+  const gridRef = useRef(null)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
         setShowActionMenu(false)
+      }
+      if (printMenuRef.current && !printMenuRef.current.contains(e.target)) {
+        setShowPrintMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -51,6 +58,27 @@ export default function ScheduleView({
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  const handleExportPNG = async () => {
+    if (!gridRef.current) return
+    setShowPrintMenu(false)
+    
+    try {
+      const dataUrl = await htmlToImage.toPng(gridRef.current, {
+        backgroundColor: '#ffffff',
+        style: {
+            borderRadius: '0',
+        }
+      })
+      const link = document.createElement('a')
+      link.download = `schedule-${new Date().toISOString().split('T')[0]}.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error('oops, something went wrong!', err)
+      alert('PNG Export failed. Try standard Print instead.')
+    }
+  }
 
   const handleFindReplacement = (pos, shiftId) => {
     setReplacementSlot({ pos, shiftId })
@@ -678,6 +706,32 @@ export default function ScheduleView({
             >
               <i className="fa fa-robot"></i> {t('btn_auto_fill', language)}
             </button>
+            
+            <div className="relative" ref={printMenuRef}>
+              <button
+                onClick={() => setShowPrintMenu(!showPrintMenu)}
+                className="bg-gray-900 text-white px-6 py-2 rounded-full font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2"
+              >
+                <i className="fa fa-print"></i> Export/Print
+              </button>
+              {showPrintMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl z-[60] overflow-hidden py-2 animate-in fade-in zoom-in duration-200 origin-top-right">
+                  <button
+                    onClick={() => { window.print(); setShowPrintMenu(false); }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 flex items-center gap-2 font-bold"
+                  >
+                    <i className="fa fa-print"></i> Send to Printer
+                  </button>
+                  <button
+                    onClick={handleExportPNG}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center gap-2 font-bold"
+                  >
+                    <i className="fa fa-image"></i> Download as PNG
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="relative" ref={actionMenuRef}>
               <button
                 onClick={() => setShowActionMenu(!showActionMenu)}
@@ -749,10 +803,10 @@ export default function ScheduleView({
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden rounded-3xl border border-gray-200 shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800">
+        <div ref={gridRef} className="flex-1 overflow-hidden rounded-3xl border border-gray-200 shadow-xl bg-white dark:bg-slate-900 dark:border-slate-800">
           {layoutMode === 'grid' ? (
             <div className="h-full overflow-auto custom-scrollbar scrolled-x">
-              <table className="w-full border-collapse text-xs table-fixed">
+              <table className="w-full border-collapse text-xs table-fixed bg-white dark:bg-slate-900">
                 <thead className="sticky top-0 z-40">
                   <tr className="bg-gray-50/95 backdrop-blur-md dark:bg-slate-800/95 border-b border-gray-200 dark:border-slate-700">
                     <th className="p-4 text-left w-64 sticky-header-corner font-semibold text-gray-500 uppercase tracking-wider text-xs dark:text-gray-400">
