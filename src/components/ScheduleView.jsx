@@ -60,21 +60,27 @@ export default function ScheduleView({
   }, [])
 
   const handleExportPNG = async () => {
-    // Target the actual table inside the gridRef
-    const tableEl = gridRef.current?.querySelector('table');
-    if (!tableEl) return;
+    // Target the wrapper that has the overflow-auto
+    const scrollEl = gridRef.current?.querySelector('.overflow-auto');
+    if (!scrollEl) return;
     
     setShowPrintMenu(false);
     
     try {
-      const dataUrl = await htmlToImage.toPng(tableEl, {
-        backgroundColor: '#ffffff',
-        // Clear out any scroll-related styles during capture
+      // Use the actual scrollable dimensions
+      const width = scrollEl.scrollWidth;
+      const height = scrollEl.scrollHeight;
+
+      const dataUrl = await htmlToImage.toPng(scrollEl, {
+        width: width,
+        height: height,
         style: {
-            transform: 'none',
-            margin: '0',
-            padding: '20px', // Add some breathing room
-        }
+            width: width + 'px',
+            height: height + 'px',
+            overflow: 'visible',
+            transform: 'none'
+        },
+        backgroundColor: '#ffffff',
       });
       
       const link = document.createElement('a');
