@@ -130,6 +130,11 @@ export default function AssignmentCell({
             const tObj = tags.find((x) => x.id === limitValue)
             reason = `Restricted to Tag: ${tObj ? tObj.name : limitValue}`
           }
+        } else if (limitType === 'role') {
+          if (p.role !== limitValue) {
+            qualified = false
+            reason = `Restricted to Role: ${limitValue}`
+          }
         }
       }
 

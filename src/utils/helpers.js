@@ -122,6 +122,8 @@ export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
         if (p.congregation !== limitValue) return false
       } else if (limitType === 'tag') {
         if (!p.tags || !p.tags.includes(limitValue)) return false
+      } else if (limitType === 'role') {
+        if (p.role !== limitValue) return false
       }
     }
 

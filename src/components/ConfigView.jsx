@@ -102,6 +102,7 @@ export default function ConfigView({
         <option value="keyman">Limit to Team</option>
         <option value="congregation">Limit to Cong</option>
         <option value="tag">Limit to Tag</option>
+        <option value="role">Limit to Appointment</option>
       </select>
       {form.limitType && (
         <select
@@ -130,6 +131,13 @@ export default function ConfigView({
                 {tag.name}
               </option>
             ))}
+          {form.limitType === 'role' && (
+            <>
+              <option value="Elder">{t('role_elder', language) || 'Elder'}</option>
+              <option value="MS">{t('role_ms', language) || 'MS'}</option>
+              <option value="Exemplary">{t('role_exemplary', language) || 'Exemplary'}</option>
+            </>
+          )}
         </select>
       )}
     </div>
@@ -144,6 +152,9 @@ export default function ConfigView({
     if (obj.limitType === 'tag') {
       const t = tags.find((x) => x.id === obj.limitValue)
       return `Tag: ${t ? t.name : obj.limitValue}`
+    }
+    if (obj.limitType === 'role') {
+      return `Role: ${obj.limitValue}`
     }
     return `${obj.limitType}: ${obj.limitValue}`
   }
