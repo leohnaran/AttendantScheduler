@@ -87,7 +87,7 @@ export default function SearchableSelect({
           {selectedOption ? selectedOption.name : placeholder || 'Select...'}
         </span>
         <i
-          className={`fa fa-chevron-down text-gray-400 text-[10px] transition-transform duration-200 ${
+          className={`fa fa-chevron-down text-gray-400 text-[10px] transition-transform duration-200 print:hidden ${
             isOpen ? 'rotate-180' : ''
           }`}
         ></i>

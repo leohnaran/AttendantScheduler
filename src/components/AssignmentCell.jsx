@@ -248,7 +248,7 @@ export default function AssignmentCell({
       <div className="flex items-center gap-2">
         {isAuto && (
           <i
-            className="fa fa-robot text-green-600 dark:text-green-400 text-[10px]"
+            className="fa fa-robot text-green-600 dark:text-green-400 text-[10px] print:hidden"
             title="Auto-Assigned"
           ></i>
         )}
@@ -270,7 +270,7 @@ export default function AssignmentCell({
         </div>
         <button
           onClick={() => onFindReplacement(pos, shiftId)}
-          className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors print:hidden"
           title="Find Replacement"
         >
           <i className="fa fa-search text-xs"></i>
