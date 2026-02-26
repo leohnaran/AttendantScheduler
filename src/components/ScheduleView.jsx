@@ -81,6 +81,18 @@ export default function ScheduleView({
             transform: 'none'
         },
         backgroundColor: '#ffffff',
+        // CRITICAL: Explicitly filter out UI elements during PNG capture
+        filter: (node) => {
+            const classList = node.classList;
+            if (classList && (
+                classList.contains('print:hidden') || 
+                node.tagName === 'BUTTON' ||
+                classList.contains('fa')
+            )) {
+                return false;
+            }
+            return true;
+        }
       });
       
       const link = document.createElement('a');
