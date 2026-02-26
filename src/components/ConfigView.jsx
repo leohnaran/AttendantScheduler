@@ -732,7 +732,36 @@ export default function ConfigView({
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center">
+
+            <div className="mt-4">
+                <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">
+                  Active During These Shifts (Leave empty for ALL)
+                </label>
+                <div className="flex flex-wrap gap-4 bg-white p-3 rounded-xl border border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                    {shifts.map(s => {
+                        const currentShifts = posForm.validShifts || [];
+                        const isActive = currentShifts.includes(s.id);
+                        return (
+                            <label key={s.id} className="flex items-center gap-2 cursor-pointer group">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isActive}
+                                    onChange={(e) => {
+                                        const next = e.target.checked 
+                                            ? [...currentShifts, s.id]
+                                            : currentShifts.filter(x => x !== s.id);
+                                        setPosForm({ ...posForm, validShifts: next });
+                                    }}
+                                    className="w-4 h-4 rounded text-blue-600"
+                                />
+                                <span className={`text-xs font-bold ${isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>{s.label}</span>
+                            </label>
+                        )
+                    })}
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center mt-4">
               <div className="flex items-center">
                 <span className="text-xs font-bold text-gray-500 uppercase mr-2">
                   Restriction:
@@ -761,6 +790,7 @@ export default function ConfigView({
                   {t('sect', language) || 'Sect'}
                 </th>
                 <th className="p-2 text-left">Mirror</th>
+                <th className="p-2 text-left">Active Shifts</th>
                 <th className="p-2 text-left">
                   {t('type', language) || 'Type'}
                 </th>
@@ -847,6 +877,40 @@ export default function ConfigView({
                         <span className="text-[10px] text-orange-600 font-bold uppercase">
                             {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : '-'}
                         </span>
+                      )}
+                    </td>
+                    <td className="p-2">
+                      {isEditing ? (
+                        <div className="flex flex-col gap-1">
+                            {shifts.map(s => (
+                                <label key={s.id} className="flex items-center gap-1 text-[9px] font-bold">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={(editPosForm.validShifts || []).includes(s.id)}
+                                        onChange={(e) => {
+                                            const current = editPosForm.validShifts || [];
+                                            const next = e.target.checked 
+                                                ? [...current, s.id]
+                                                : current.filter(x => x !== s.id);
+                                            setEditPosForm({ ...editPosForm, validShifts: next });
+                                        }}
+                                    />
+                                    {s.label.split(' ')[0]}
+                                </label>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                            {(!p.validShifts || p.validShifts.length === 0) ? (
+                                <span className="text-[9px] text-gray-400">All Shifts</span>
+                            ) : (
+                                p.validShifts.map(sid => (
+                                    <span key={sid} className="text-[9px] bg-blue-50 text-blue-600 px-1 rounded font-bold">
+                                        {shifts.find(s => s.id === sid)?.label.split(' ')[0] || sid}
+                                    </span>
+                                ))
+                            )}
+                        </div>
                       )}
                     </td>
                     <td className="p-2 text-xs">

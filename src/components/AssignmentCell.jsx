@@ -36,6 +36,17 @@ export default function AssignmentCell({
   const assignmentKey =
     pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
 
+  // 0. NEW: Shift Validation (Position-level)
+  const isShiftValid = !pos.validShifts || pos.validShifts.length === 0 || pos.validShifts.includes(shiftId) || shiftId === 'all';
+
+  if (!isShiftValid) {
+    return (
+        <td className="p-3 bg-gray-100/50 dark:bg-slate-800/50 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-not-allowed">
+          N/A
+        </td>
+      )
+  }
+
   // Check if THIS cell is being hovered by its mirror counterpart
   const isTargetedByHover = hoveredMirrorKey === assignmentKey
 
