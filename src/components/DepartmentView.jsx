@@ -226,7 +226,7 @@ export default function DepartmentView({
                 {myOversightAreas.map((oversight, idx) => (
                   <div
                     key={idx}
-                    className="border border-gray-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm"
+                    className="border border-gray-100 dark:border-slate-700 rounded-3xl overflow-hidden shadow-sm break-inside-avoid print:mb-8"
                   >
                     <div
                       style={oversight.area?.style}
