@@ -402,17 +402,32 @@ export default function ScheduleView({
     return null
   }
 
-  const workedPreviousShift = (pid, shiftId, currentAssignments) => {
+  const workedAdjacentShift = (pid, shiftId, currentAssignments) => {
     if (rules.avoidConsecutive === false) return false
     const sIdx = shifts.findIndex((s) => s.id === shiftId)
-    if (sIdx <= 0) return false
-    const prevShift = shifts[sIdx - 1]
-    return Object.keys(currentAssignments).some((key) => {
+    if (sIdx === -1) return false
+
+    // Check Previous
+    const prevShift = sIdx > 0 ? shifts[sIdx - 1] : null
+    const workedPrev = prevShift && Object.keys(currentAssignments).some((key) => {
       return (
         key.endsWith(`_${prevShift.id}`) &&
         getAssignId(currentAssignments[key]) === pid
       )
     })
+    if (workedPrev) return true
+
+    // Check Next
+    const nextShift = sIdx < shifts.length - 1 ? shifts[sIdx + 1] : null
+    const workedNext = nextShift && Object.keys(currentAssignments).some((key) => {
+      return (
+        key.endsWith(`_${nextShift.id}`) &&
+        getAssignId(currentAssignments[key]) === pid
+      )
+    })
+    if (workedNext) return true
+
+    return false
   }
 
   const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
@@ -472,8 +487,8 @@ export default function ScheduleView({
         }
       })
 
-      // CONSECUTIVE PENALTY: Heavily penalize anyone who worked the shift immediately before
-      if (workedPreviousShift(pid, targetShiftId, currentAssignments)) {
+      // CONSECUTIVE PENALTY: Heavily penalize anyone who worked an adjacent shift
+      if (workedAdjacentShift(pid, targetShiftId, currentAssignments)) {
           score += 5.0;
       }
 
@@ -520,7 +535,7 @@ export default function ScheduleView({
 
         // 2. Rules & Load
         if (isOverWorkLimit(p.id, currentAssignments)) return false
-        if (workedPreviousShift(p.id, shiftId, currentAssignments)) return false
+        if (workedAdjacentShift(p.id, shiftId, currentAssignments)) return false
         if (!isAnchorAvailableForShift(p, shiftId, currentAssignments)) return false
 
         return true
