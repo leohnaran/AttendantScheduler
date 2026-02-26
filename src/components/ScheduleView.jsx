@@ -412,8 +412,9 @@ export default function ScheduleView({
             !candidates.some((c) => c.id === p.id),
         )
         
-        // Ensure Key Men are NOT pulled into Relief Duty in initial passes
-        if (!isFinalPass && !pos.keyMan) {
+        // RELIEF MODE RESTRICTION: Key Men should ONLY be available for relief duty 
+        // if the target position is also a Key Man position.
+        if (!pos.keyMan) {
           audPotential = audPotential.filter(p => !p.caps || !p.caps.includes('keyman'));
         }
         
