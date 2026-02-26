@@ -879,7 +879,7 @@ export default function ScheduleView({
                             {pos.type === 'auditorium' ? (
                               <td colSpan={shifts.length} className="p-0">
                                 <div className="p-3 bg-blue-50/50 h-full flex items-center justify-center border-l border-dashed border-blue-100 dark:bg-blue-900/10 dark:border-blue-800">
-                                  <div className="w-full max-w-md">
+                                  <div className="w-[400px]">
                                     <AssignmentCell
                                       shiftId="all"
                                       pos={pos}
