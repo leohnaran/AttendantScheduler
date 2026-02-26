@@ -93,8 +93,13 @@ export default function PrintView({
                     key={idx}
                     className="border-b border-gray-200 dark:border-slate-600"
                   >
-                    <td className="p-1.5 font-bold dark:text-gray-200">
-                      {a.posName}
+                    <td className="p-1.5 dark:text-gray-200">
+                      <div className="font-bold">{a.posName}</div>
+                      {positions.find(x => x.name === a.posName)?.timeNote && (
+                        <div className="text-[10px] text-gray-600 font-bold uppercase tracking-tight">
+                            🕒 {positions.find(x => x.name === a.posName).timeNote}
+                        </div>
+                      )}
                     </td>
                     <td className="p-1.5 text-right dark:text-gray-200">
                       {a.time}

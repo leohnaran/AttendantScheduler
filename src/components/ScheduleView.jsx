@@ -873,7 +873,14 @@ export default function ScheduleView({
                             className="hover:bg-gray-50/50 group transition-colors dark:hover:bg-slate-800/30"
                           >
                             <td className="p-4 font-bold text-gray-700 sticky-header-col dark:text-gray-300">
-                              {pos.name}{' '}
+                              <div className="flex flex-col">
+                                <span>{pos.name}</span>
+                                {pos.timeNote && (
+                                    <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider mt-0.5">
+                                        🕒 {pos.timeNote}
+                                    </span>
+                                )}
+                              </div>
                               {pos.type === 'auditorium' && (
                                 <span 
                                   title="Assigned for the whole day (all shifts)"

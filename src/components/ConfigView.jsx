@@ -731,6 +731,19 @@ export default function ConfigView({
                   </label>
                 </div>
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                  Specific Time / Note (Optional)
+                </label>
+                <input
+                  placeholder="e.g. 10:15 AM or During Song"
+                  value={posForm.timeNote || ''}
+                  onChange={(e) =>
+                    setPosForm({ ...posForm, timeNote: e.target.value })
+                  }
+                  className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                />
+              </div>
             </div>
 
             <div className="mt-4">
@@ -863,20 +876,35 @@ export default function ConfigView({
                     </td>
                     <td className="p-2">
                       {isEditing ? (
-                        <select
-                            value={editPosForm.mirrorOf || ''}
-                            onChange={(e) => setEditPosForm({ ...editPosForm, mirrorOf: e.target.value })}
-                            className="border p-1 rounded w-full text-xs dark:bg-slate-700 dark:text-white"
-                        >
-                            <option value="">-- None --</option>
-                            {positions.filter(pos => pos.id !== p.id && !pos.mirrorOf).map(pos => (
-                                <option key={pos.id} value={pos.id}>{pos.name}</option>
-                            ))}
-                        </select>
+                        <div className="flex flex-col gap-1">
+                            <input
+                                placeholder="Time Note"
+                                value={editPosForm.timeNote || ''}
+                                onChange={(e) => setEditPosForm({ ...editPosForm, timeNote: e.target.value })}
+                                className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
+                            />
+                            <select
+                                value={editPosForm.mirrorOf || ''}
+                                onChange={(e) => setEditPosForm({ ...editPosForm, mirrorOf: e.target.value })}
+                                className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
+                            >
+                                <option value="">-- No Mirror --</option>
+                                {positions.filter(pos => pos.id !== p.id && !pos.mirrorOf).map(pos => (
+                                    <option key={pos.id} value={pos.id}>{pos.name}</option>
+                                ))}
+                            </select>
+                        </div>
                       ) : (
-                        <span className="text-[10px] text-orange-600 font-bold uppercase">
-                            {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : '-'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                            {p.timeNote && (
+                                <span className="text-[10px] bg-yellow-50 text-yellow-700 px-1 rounded font-black border border-yellow-100 uppercase">
+                                    🕒 {p.timeNote}
+                                </span>
+                            )}
+                            <span className="text-[10px] text-orange-600 font-bold uppercase">
+                                {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : ''}
+                            </span>
+                        </div>
                       )}
                     </td>
                     <td className="p-2">

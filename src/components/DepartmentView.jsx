@@ -277,7 +277,12 @@ export default function DepartmentView({
                                   className={`group ${itsMe ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                                 >
                                   <td className="py-3 font-bold text-gray-600 dark:text-gray-400">
-                                    {pos.name}
+                                    <div>{pos.name}</div>
+                                    {pos.timeNote && (
+                                        <div className="text-[9px] text-blue-500 font-black uppercase tracking-wider">
+                                            🕒 {pos.timeNote}
+                                        </div>
+                                    )}
                                   </td>
                                   <td className="py-3">
                                     {assignedPerson ? (
