@@ -405,12 +405,16 @@ export default function ScheduleView({
 
       // RELIEF MODE: Expand rotational pool to include any Auditorium-capable brothers
       if (rules.auditoriumRotationMode && pos.type === 'rotational') {
-        const audPotential = personnel.filter(
+        let audPotential = personnel.filter(
           (p) =>
             p.caps &&
             p.caps.includes('auditorium') &&
             !candidates.some((c) => c.id === p.id),
         )
+        // Ensure we still respect the keyman reservation in non-final passes
+        if (!isFinalPass && !pos.keyMan) {
+          audPotential = audPotential.filter(p => !p.caps || !p.caps.includes('keyman'));
+        }
         candidates = [...candidates, ...audPotential]
       }
 
@@ -458,6 +462,13 @@ export default function ScheduleView({
 
         // Pick fairest candidate (Least assignments, then random)
         const sorted = [...target.candidates].sort((a, b) => {
+          // KEY MAN PENALTY: Always prefer non-keymen for non-keyman slots
+          if (!target.pos.keyMan) {
+            const aIsKeyMan = a.caps && a.caps.includes('keyman')
+            const bIsKeyMan = b.caps && b.caps.includes('keyman')
+            if (aIsKeyMan !== bIsKeyMan) return aIsKeyMan ? 1 : -1
+          }
+
           const tA = getTotalAssignmentCount(a.id, newAssignments)
           const tB = getTotalAssignmentCount(b.id, newAssignments)
           if (tA !== tB) return tA - tB
