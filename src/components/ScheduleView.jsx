@@ -447,7 +447,7 @@ export default function ScheduleView({
     let filledCount = 0
 
     // HELPER: Calculate dynamic workload score
-    const getWorkloadScore = (pid, currentAssignments, targetPosIsRegular) => {
+    const getWorkloadScore = (pid, currentAssignments, targetPosIsRegular, targetShiftId) => {
       let score = 0
       let hasKeymanJob = false
 
@@ -471,6 +471,11 @@ export default function ScheduleView({
           }
         }
       })
+
+      // CONSECUTIVE PENALTY: Heavily penalize anyone who worked the shift immediately before
+      if (workedPreviousShift(pid, targetShiftId, currentAssignments)) {
+          score += 5.0;
+      }
 
       // If we are filling a regular spot and this brother already has an oversight job
       if (targetPosIsRegular && hasKeymanJob) {
@@ -554,8 +559,8 @@ export default function ScheduleView({
 
         // 2. Sort candidates by Workload Score (Lowest first)
         shuffled.sort((a, b) => {
-            const scoreA = getWorkloadScore(a.id, newAssignments, false)
-            const scoreB = getWorkloadScore(b.id, newAssignments, false)
+            const scoreA = getWorkloadScore(a.id, newAssignments, false, slot.shiftId)
+            const scoreB = getWorkloadScore(b.id, newAssignments, false, slot.shiftId)
             return scoreA - scoreB
         })
 
@@ -565,7 +570,7 @@ export default function ScheduleView({
         
         newLog.push({
             type: 'keyman',
-            msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false).toFixed(1)}`,
+            msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false, slot.shiftId).toFixed(1)}`,
         })
     })
 
@@ -588,8 +593,8 @@ export default function ScheduleView({
 
         // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
         shuffled.sort((a, b) => {
-            const scoreA = getWorkloadScore(a.id, newAssignments, true)
-            const scoreB = getWorkloadScore(b.id, newAssignments, true)
+            const scoreA = getWorkloadScore(a.id, newAssignments, true, slot.shiftId)
+            const scoreB = getWorkloadScore(b.id, newAssignments, true, slot.shiftId)
             return scoreA - scoreB
         })
 
@@ -599,7 +604,7 @@ export default function ScheduleView({
         
         newLog.push({
             type: 'rotational',
-            msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true).toFixed(1)}`,
+            msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true, slot.shiftId).toFixed(1)}`,
         })
     })
 
