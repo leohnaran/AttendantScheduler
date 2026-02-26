@@ -64,10 +64,18 @@ export default function ScheduleView({
     setShowPrintMenu(false)
     
     try {
+      // Find the actual scrollable content size
+      const scrollableEl = gridRef.current.querySelector('.overflow-auto') || gridRef.current;
+      
       const dataUrl = await htmlToImage.toPng(gridRef.current, {
         backgroundColor: '#ffffff',
+        // Force the engine to look at the full scrollable area
+        width: scrollableEl.scrollWidth,
+        height: scrollableEl.scrollHeight,
         style: {
             borderRadius: '0',
+            width: scrollableEl.scrollWidth + 'px',
+            height: scrollableEl.scrollHeight + 'px',
         }
       })
       const link = document.createElement('a')
