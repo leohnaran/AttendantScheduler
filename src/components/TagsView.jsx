@@ -25,12 +25,17 @@ export default function TagsView({
     const id = 'tag_' + Date.now()
     setTags([...tags, { id, ...newTag }])
     setNewTag({ name: '', restrictedShifts: [], restrictedAreas: [] })
+    setSelectedTagId(id) // Auto-select new tag
   }
 
-  const deleteTag = (id) => {
+  const deleteTag = (tagId) => {
+    console.log('TagsView: deleteTag called for:', tagId)
     if (confirm('Delete this tag?')) {
-      onDeleteTag(id)
-      if (selectedTagId === id) setSelectedTagId('')
+      onDeleteTag(tagId)
+      if (selectedTagId === tagId) {
+        console.log('TagsView: Deselecting deleted tag')
+        setSelectedTagId('')
+      }
     }
   }
 
@@ -108,8 +113,9 @@ export default function TagsView({
 
   const selectedTag = tags.find((t) => t.id === selectedTagId)
 
-  // FILTER & SORT
-  const filteredPersonnel = personnel.filter(
+  // FILTER & SORT (Ensuring personnel is an array)
+  const safePersonnel = Array.isArray(personnel) ? personnel : []
+  const filteredPersonnel = safePersonnel.filter(
     (p) =>
       p.name.toLowerCase().includes(filterName.toLowerCase()) ||
       (p.role && p.role.toLowerCase().includes(filterName.toLowerCase())) ||
@@ -120,9 +126,14 @@ export default function TagsView({
 
   return (
     <div className="glass-panel p-8 rounded-3xl shadow-sm">
-      <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6 dark:text-white">
-        Tags & Constraints
-      </h2>
+      <div className="flex justify-between items-start mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 tracking-tight dark:text-white">
+          Tags & Constraints
+        </h2>
+        <div className="text-[10px] bg-gray-100 px-3 py-1 rounded-full text-gray-500 font-bold dark:bg-slate-800 dark:text-gray-400 border border-gray-200 dark:border-slate-700">
+          SYSTEM STATUS: {safePersonnel.length} BROTHERS DETECTED
+        </div>
+      </div>
 
       {/* TOP: CREATE TAG */}
       <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 mb-8 dark:bg-slate-800/50 dark:border-slate-700">
@@ -400,48 +411,59 @@ export default function TagsView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-                    {filteredPersonnel.map((p) => {
-                      const isMember =
-                        p.tags && p.tags.includes(selectedTag.id)
-                      return (
-                        <tr
-                          key={p.id}
-                          className={`hover:bg-white transition-colors cursor-pointer group dark:hover:bg-slate-700 ${
-                            isMember ? 'bg-green-50 dark:bg-green-900/10' : ''
-                          }`}
-                          onClick={() => togglePersonTag(p.id, selectedTag.id)}
-                        >
-                          <td className="p-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isMember || false}
-                              onChange={() => {}} // Handled by row click
-                              className="w-4 h-4 cursor-pointer text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
-                            />
-                          </td>
-                          <td className="p-3 font-medium text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
-                            {p.name}
-                          </td>
-                          <td className="p-3 text-xs text-gray-500 dark:text-gray-400">
-                            {p.role}
-                          </td>
-                          <td className="p-3 text-xs text-gray-500">
-                            {p.tags &&
-                              p.tags.map((tid) => {
-                                const t = tags.find((tag) => tag.id === tid)
-                                return t ? (
-                                  <span
-                                    key={tid}
-                                    className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mr-1 dark:bg-slate-600 dark:text-gray-300"
-                                  >
-                                    {t.name}
-                                  </span>
-                                ) : null
-                              })}
-                          </td>
-                        </tr>
-                      )
-                    })}
+                    {filteredPersonnel.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="p-10 text-center text-gray-400 italic bg-white/50 dark:bg-slate-800/30">
+                          {safePersonnel.length === 0 
+                            ? "No brothers found in roster. Please add people in the Roster tab first."
+                            : "No brothers match your search filter."
+                          }
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPersonnel.map((p) => {
+                        const isMember =
+                          p.tags && p.tags.includes(selectedTag.id)
+                        return (
+                          <tr
+                            key={p.id}
+                            className={`hover:bg-white transition-colors cursor-pointer group dark:hover:bg-slate-700 ${
+                              isMember ? 'bg-green-50 dark:bg-green-900/10' : ''
+                            }`}
+                            onClick={() => togglePersonTag(p.id, selectedTag.id)}
+                          >
+                            <td className="p-3 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isMember || false}
+                                onChange={() => {}} // Handled by row click
+                                className="w-4 h-4 cursor-pointer text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                              />
+                            </td>
+                            <td className="p-3 font-medium text-gray-800 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
+                              {p.name}
+                            </td>
+                            <td className="p-3 text-xs text-gray-500 dark:text-gray-400">
+                              <span title={p.role === 'MS' ? 'Ministerial Servant' : p.role}>{p.role}</span>
+                            </td>
+                            <td className="p-3 text-xs text-gray-500">
+                              {p.tags &&
+                                p.tags.map((tid) => {
+                                  const t = tags.find((tag) => tag.id === tid)
+                                  return t ? (
+                                    <span
+                                      key={tid}
+                                      className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mr-1 dark:bg-slate-600 dark:text-gray-300"
+                                    >
+                                      {t.name}
+                                    </span>
+                                  ) : null
+                                })}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

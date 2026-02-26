@@ -83,7 +83,7 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  console.log("Attendant Scheduler v2.5.3 - Reset Fix Active");
+  console.log("Attendant Scheduler v2.7.6 - Reset Fix Active");
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -236,8 +236,10 @@ export default function App() {
     updateState({
       personnel: typeof val === 'function' ? val(personnel) : val,
     })
-  const setTags = (val) =>
+  const setTags = (val) => {
+    console.log('App: setTags called', val)
     updateState({ tags: typeof val === 'function' ? val(tags) : val })
+  }
   const setAssignments = (val) =>
     updateState({
       assignments: typeof val === 'function' ? val(assignments) : val,
@@ -256,17 +258,68 @@ export default function App() {
     updateState({ rules: typeof val === 'function' ? val(rules) : val })
 
   const handleDeleteTag = (tagId) => {
-    setTags(tags.filter((t) => t.id !== tagId))
-    setPersonnel(
-      personnel.map((p) => ({
-        ...p,
-        tags: (p.tags || []).filter((tid) => tid !== tagId),
-      })),
-    )
+    console.log('App: handleDeleteTag starting for:', tagId)
+    const newTags = tags.filter((t) => t.id !== tagId)
+    const newPersonnel = personnel.map((p) => ({
+      ...p,
+      tags: (p.tags || []).filter((tid) => tid !== tagId),
+    }))
+    
+    console.log('App: Setting new state with tag count:', newTags.length)
+    updateState({
+      tags: newTags,
+      personnel: newPersonnel
+    })
   }
 
   const handleAutoFill = (newAssignments, newLog) => {
     updateState({ assignments: newAssignments, log: newLog })
+  }
+
+  const handleMerge = (sourceId, targetId) => {
+    if (sourceId === targetId) return
+    const source = personnel.find((p) => p.id === sourceId)
+    const target = personnel.find((p) => p.id === targetId)
+    if (!source || !target) return
+
+    // 1. Update Assignments
+    const newAssignments = { ...assignments }
+    Object.keys(newAssignments).forEach((key) => {
+      if (newAssignments[key] === sourceId) {
+        newAssignments[key] = targetId
+      }
+    })
+
+    // 2. Update Key Man IDs
+    const newPersonnel = personnel
+      .filter((p) => p.id !== sourceId)
+      .map((p) => {
+        if (p.keyManId === sourceId) {
+          return { ...p, keyManId: targetId }
+        }
+        return p
+      })
+
+    // 3. Merge Metadata to Target
+    const mergedPersonnel = newPersonnel.map((p) => {
+      if (p.id === targetId) {
+        return {
+          ...p,
+          caps: [...new Set([...p.caps, ...source.caps])],
+          tags: [...new Set([...(p.tags || []), ...(source.tags || [])])],
+          unavailable: [
+            ...new Set([...(p.unavailable || []), ...(source.unavailable || [])]),
+          ],
+        }
+      }
+      return p
+    })
+
+    updateState({
+      personnel: mergedPersonnel,
+      assignments: newAssignments,
+    })
+    alert(`Merged ${source.name} into ${target.name}. All assignments updated.`)
   }
 
   const resetAll = async () => {
@@ -342,7 +395,7 @@ export default function App() {
                 </div>
                 <span className="tracking-tight">{t('app_title', language)}</span>
                 <span className="ml-2 text-[10px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-400">
-                  v2.5.3
+                  v2.7.6
                 </span>
               </h1>
                                                                 
@@ -395,7 +448,7 @@ export default function App() {
                       : v === 'stats'
                       ? t('nav_stats', language)
                       : v === 'dept'
-                      ? t('nav_depts', language)
+                      ? 'Key Man Report'
                       : v === 'log'
                       ? t('nav_log', language)
                       : v === 'tags'
@@ -496,6 +549,7 @@ export default function App() {
               areas={areas}
               shifts={shifts}
               tags={tags}
+              onMerge={handleMerge}
               language={language}
             />
           ) : view === 'stats' ? (

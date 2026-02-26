@@ -9,20 +9,12 @@ export default function RosterView({
   areas,
   shifts,
   tags,
+  onMerge,
   language,
 }) {
   const initialCaps = useMemo(() => {
     const c = { keyman: false }
-    areas.forEach(
-      (a) =>
-        (c[a.capability] = [
-          'stairs',
-          'backstage',
-          'dining',
-          'lobby',
-          'exterior',
-        ].includes(a.capability)),
-    )
+    areas.forEach((a) => (c[a.capability] = true))
     return c
   }, [areas])
 
@@ -36,6 +28,7 @@ export default function RosterView({
     tags: [],
   })
   const [editingId, setEditingId] = useState(null)
+  const [mergingId, setMergingId] = useState(null)
   const [draggedPersonId, setDraggedPersonId] = useState(null)
   const [dragOverGroup, setDragOverGroup] = useState(null)
   const [csvData, setCsvData] = useState(null)
@@ -110,6 +103,16 @@ export default function RosterView({
       unavailable: [],
       tags: [],
     })
+  }
+
+  const handleMergeAction = (targetId) => {
+    if (!mergingId || !targetId) return
+    const source = personnel.find((p) => p.id === mergingId)
+    const target = personnel.find((p) => p.id === targetId)
+    if (confirm(`Are you sure you want to merge ${source.name} into ${target.name}? \n\nAll of ${source.name}'s assignments will be moved to ${target.name}. This cannot be undone.`)) {
+      onMerge(mergingId, targetId)
+      setMergingId(null)
+    }
   }
 
   const savePerson = () => {
@@ -197,12 +200,30 @@ export default function RosterView({
       if (rawRole.includes('Elder')) role = 'Elder'
       else if (rawRole.includes('Ministerial')) role = 'MS'
 
-      // Default caps
-      let caps = ['lobby', 'dining', 'stairs', 'exterior', 'backstage']
-      if (role === 'Elder' || role === 'MS')
-        caps.push('auditorium', 'upper_level', 'backstage')
-      if (keyManName.trim().toLowerCase() === name.toLowerCase())
+      // Default caps (Now assuming everyone can do every area)
+      let caps = [
+        'lobby',
+        'dining',
+        'stairs',
+        'exterior',
+        'backstage',
+        'auditorium',
+        'upper_level',
+      ]
+
+      // Check if they are a Key Man (either self-referencing or referenced by someone else)
+      const isReferencedAsKeyMan = dataRows.some(
+        (r) =>
+          mapping.keyManIdx !== -1 &&
+          r[mapping.keyManIdx] &&
+          r[mapping.keyManIdx].trim().toLowerCase() === name.toLowerCase(),
+      )
+      if (
+        keyManName.trim().toLowerCase() === name.toLowerCase() ||
+        isReferencedAsKeyMan
+      ) {
         caps.push('keyman')
+      }
 
       const existingIndex = newPersonnel.findIndex(
         (p) => p.name.toLowerCase() === name.toLowerCase(),
@@ -232,13 +253,45 @@ export default function RosterView({
       }
     })
 
-    // Link Key Men
-    newPersonnel = newPersonnel.map((p) => {
+    // Link Key Men & Auto-Create Missing Ones
+    const tempPersonnel = [...newPersonnel]
+    const keyMenToCreate = new Set()
+
+    // 1. Identify missing key men
+    tempPersonnel.forEach((p) => {
+      if (p.tempKeyManName) {
+        const kmName = p.tempKeyManName.trim()
+        if (kmName.toLowerCase() !== p.name.toLowerCase()) {
+          const exists = tempPersonnel.find(
+            (c) => c.name.toLowerCase() === kmName.toLowerCase(),
+          )
+          if (!exists) keyMenToCreate.add(kmName)
+        }
+      }
+    })
+
+    // 2. Create missing key men (as Elders)
+    keyMenToCreate.forEach((kmName) => {
+      maxId++
+      tempPersonnel.push({
+        id: maxId,
+        name: kmName,
+        role: 'Elder',
+        congregation: '',
+        caps: ['lobby', 'dining', 'stairs', 'exterior', 'backstage', 'auditorium', 'upper_level', 'keyman'],
+        tags: [],
+        unavailable: [],
+      })
+      newCount++
+    })
+
+    // 3. Final Link pass
+    newPersonnel = tempPersonnel.map((p) => {
       if (
         p.tempKeyManName &&
         p.tempKeyManName.toLowerCase() !== p.name.toLowerCase()
       ) {
-        const km = newPersonnel.find(
+        const km = tempPersonnel.find(
           (c) => c.name.toLowerCase() === p.tempKeyManName.toLowerCase(),
         )
         if (km) return { ...p, keyManId: km.id }
@@ -299,6 +352,326 @@ export default function RosterView({
       </span>
     </label>
   )
+
+  const renderPersonRow = (p) => {
+    const isEditing = editingId === p.id
+    const isKeyMan = p.caps && p.caps.includes('keyman')
+
+    return (
+      <tr
+        key={p.id}
+        draggable={!isEditing}
+        onDragStart={(e) => !isEditing && handleDragStart(e, p.id)}
+        className={`draggable-row transition-all duration-200 ${
+          isEditing
+            ? 'bg-yellow-50/50 dark:bg-yellow-900/20'
+            : isKeyMan 
+                ? 'bg-blue-50/20 dark:bg-blue-900/10 hover:bg-blue-50/40' 
+                : 'hover:bg-gray-50/80 bg-white dark:bg-slate-800 dark:hover:bg-slate-700/50'
+        }`}
+      >
+        <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
+          {isEditing ? (
+            <div className="flex flex-col gap-1">
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    name: e.target.value,
+                  })
+                }
+                className="border p-1 rounded w-full text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                autoFocus
+              />
+              <input
+                type="text"
+                list="congregation-list"
+                value={formData.congregation}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    congregation: e.target.value,
+                  })
+                }
+                className="border p-1 rounded w-full text-[10px] text-gray-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                placeholder="Congregation"
+              />
+              {!isKeyMan && (
+                <select
+                    value={formData.keyManId}
+                    onChange={(e) =>
+                    setFormData({
+                        ...formData,
+                        keyManId: e.target.value,
+                    })
+                    }
+                    className="border p-1 rounded w-full text-[10px] text-gray-500 mt-0.5 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                >
+                    <option value="">-- No Key Man --</option>
+                    {personnel
+                    .filter((km) => km.caps && km.caps.includes('keyman') && km.id !== p.id)
+                    .map((km) => (
+                        <option key={km.id} value={km.id}>
+                        {km.name}
+                        </option>
+                    ))}
+                </select>
+              )}
+              <div className="mt-1">
+                <select
+                  onChange={(e) => {
+                    handleTagAdd(e.target.value)
+                    e.target.value = ''
+                  }}
+                  className="border p-1 rounded w-full text-[10px] text-gray-500 mb-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                >
+                  <option value="">+ Add Tag...</option>
+                  {tags
+                    .filter(
+                      (t) =>
+                        !formData.tags ||
+                        !formData.tags.includes(t.id),
+                    )
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                </select>
+                <div className="flex flex-wrap gap-1">
+                  {formData.tags &&
+                    formData.tags.map((tid) => {
+                      const t = tags.find((tag) => tag.id === tid)
+                      return t ? (
+                        <span
+                          key={tid}
+                          className="bg-purple-100 text-purple-800 text-[9px] px-1.5 py-0.5 rounded border border-purple-200 flex items-center gap-1 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800"
+                        >
+                          {t.name}{' '}
+                          <button
+                            onClick={() => handleTagRemove(tid)}
+                            className="hover:text-red-500"
+                          >
+                            <i className="fa fa-times"></i>
+                          </button>
+                        </span>
+                      ) : null
+                    })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                    {isKeyMan ? (
+                        <div className="w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center dark:bg-blue-900 dark:text-blue-300">
+                            <i className="fa fa-user-tie text-[10px]"></i>
+                        </div>
+                    ) : (
+                        <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
+                    )}
+                    <span className={isKeyMan ? 'font-black text-blue-900 dark:text-blue-300' : ''}>{p.name}</span>
+                </div>
+                {p.tags &&
+                  p.tags.map((tid) => {
+                    const t = tags
+                      ? tags.find((tag) => tag.id === tid)
+                      : null
+                    return t ? (
+                      <span
+                        key={tid}
+                        className="ml-1 text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200"
+                      >
+                        <i className="fa fa-tag mr-1"></i>
+                        {t.name}
+                      </span>
+                    ) : null
+                  })}
+              </div>
+              {p.congregation && (
+                <div className={`text-[10px] ml-7 dark:text-gray-500 ${isKeyMan ? 'text-blue-500/70 font-bold' : 'text-gray-400'}`}>
+                  {p.congregation}
+                </div>
+              )}
+            </div>
+          )}
+        </td>
+        <td className="px-6 py-3">
+          {isEditing ? (
+            <select
+              value={formData.role}
+              onChange={(e) =>
+                setFormData({ ...formData, role: e.target.value })
+              }
+              className="border p-1 rounded w-full text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            >
+              <option value="Exemplary">Exemplary</option>
+              <option value="MS">MS (Ministerial Servant)</option>
+              <option value="Elder">Elder</option>
+            </select>
+          ) : (
+            <span
+              title={p.role === 'MS' ? 'Ministerial Servant' : p.role}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-sm
+                                                      ${
+                                                        p.role ===
+                                                        'Elder'
+                                                          ? 'bg-yellow-100 text-yellow-700'
+                                                          : p.role ===
+                                                            'MS'
+                                                          ? 'bg-blue-100 text-blue-700'
+                                                          : 'bg-gray-100 text-gray-600'
+                                                      }`}
+            >
+              {p.role}
+            </span>
+          )}
+        </td>
+        <td className="px-6 py-3">
+          {isEditing ? (
+            <div>
+              <div className="flex flex-wrap gap-2 max-w-[200px] mb-2">
+                {areas.map((area) => (
+                  <label
+                    key={area.capability}
+                    title={area.name}
+                    className="flex items-center cursor-pointer text-[10px] bg-white border px-1 rounded hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.caps[area.capability]}
+                      onChange={(e) =>
+                        handleCapChange(
+                          area.capability,
+                          e.target.checked,
+                        )
+                      }
+                      className="mr-1 w-3 h-3"
+                    />
+                    {area.capability === 'auditorium'
+                      ? 'Aud'
+                      : area.capability.slice(0, 3).toUpperCase()}
+                  </label>
+                ))}
+                <label 
+                  title="Key Man"
+                  className="flex items-center cursor-pointer text-[10px] bg-yellow-50 border border-yellow-200 px-1 rounded hover:bg-yellow-100 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-100 dark:hover:bg-yellow-900/50">
+                  <input
+                    type="checkbox"
+                    checked={formData.caps['keyman']}
+                    onChange={(e) =>
+                      handleCapChange('keyman', e.target.checked)
+                    }
+                    className="mr-1 w-3 h-3"
+                  />
+                  KM
+                </label>
+              </div>
+              <div className="border-t border-gray-200 pt-1 dark:border-slate-600">
+                <span className="text-[9px] font-bold uppercase text-gray-400 block mb-1">
+                  Unavailable
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {shifts.map((s) => (
+                    <label
+                      key={s.id}
+                      title={s.label}
+                      className="flex items-center cursor-pointer text-[10px] bg-white border px-1 rounded hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.unavailable &&
+                          formData.unavailable.includes(s.id)
+                        }
+                        onChange={(e) =>
+                          handleUnavailableChange(
+                            s.id,
+                            e.target.checked,
+                          )
+                        }
+                        className="mr-1 w-3 h-3"
+                      />
+                      {s.label.split('(')[0]}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {p.caps.map((c) => {
+                const areaObj = areas.find(a => a.capability === c);
+                const fullName = areaObj ? areaObj.name : (c === 'keyman' ? 'Key Man' : c.charAt(0).toUpperCase() + c.slice(1));
+                const displayName = c === 'auditorium' ? 'Aud' : (c === 'keyman' ? 'KM' : (areaObj ? (areaObj.capability.length > 4 ? areaObj.capability.slice(0, 3).toUpperCase() : areaObj.name) : c.charAt(0).toUpperCase() + c.slice(1)));
+
+                return (
+                  <span
+                    key={c}
+                    title={fullName}
+                    className={`text-[10px] border px-2 py-0.5 rounded-full font-medium ${isKeyMan ? 'bg-blue-100 border-blue-200 text-blue-700' : 'bg-gray-100 border-gray-200 text-gray-500'}`}
+                  >
+                    {displayName}
+                  </span>
+                );
+              })}
+              {p.unavailable && p.unavailable.length > 0 && (
+                <span
+                  className="text-[10px] bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-bold ml-1"
+                  title={`Unavailable: ${p.unavailable.map(id => shifts.find(s => s.id === id)?.label).join(', ')}`}
+                >
+                  Unavail ({p.unavailable.length})
+                </span>
+              )}
+            </div>
+          )}
+        </td>
+        <td className="px-6 py-3 text-center">
+          {isEditing ? (
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={savePerson}
+                className="text-green-600 hover:text-green-800 font-bold text-xs bg-green-50 px-2 py-1 rounded border border-green-200"
+              >
+                Save
+              </button>
+              <button
+                onClick={cancelEdit}
+                className="text-gray-500 hover:text-gray-700 text-xs px-2 py-1"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setMergingId(p.id)}
+                className="text-gray-400 hover:text-purple-600 transition-colors"
+                title="Merge this record into another"
+              >
+                <i className="fa fa-code-merge"></i>
+              </button>
+              <button
+                onClick={() => startEdit(p)}
+                className="text-gray-400 hover:text-blue-600 transition-colors"
+              >
+                <i className="fa fa-pencil"></i>
+              </button>
+              <button
+                onClick={() => deletePerson(p.id)}
+                className="text-gray-400 hover:text-red-500 transition-colors"
+              >
+                <i className="fa fa-trash"></i>
+              </button>
+            </div>
+          )}
+        </td>
+      </tr>
+    )
+  }
 
   // --- GROUPING & SORTING LOGIC ---
   const keyMen = personnel.filter((p) => p.caps && p.caps.includes('keyman'))
@@ -705,240 +1078,24 @@ export default function RosterView({
             }
             onDrop={(e) => handleDrop(e, group.keyMan ? group.keyMan.id : null)}
           >
-            {/* GROUP HEADER */}
-            <div className="bg-gray-50/50 p-4 border-b border-gray-100 flex justify-between items-center backdrop-blur-sm dark:bg-slate-800/50 dark:border-slate-700">
-              {group.keyMan && editingId === group.keyMan.id ? (
-                <div className="w-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                        <i className="fa fa-user-tie"></i>
-                      </div>
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                        Edit Key Man Details
-                      </h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={savePerson}
-                        className="text-white bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 flex items-center gap-1"
-                      >
-                        <i className="fa fa-check"></i> Save
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="text-gray-600 hover:text-gray-800 bg-white border border-gray-200 hover:bg-gray-50 px-4 py-1.5 rounded-lg font-bold text-sm shadow-sm transition-all active:scale-95 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    {/* ROW 1: Name & Role */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                        placeholder="Key Man Name"
-                        autoFocus
-                      />
-                      <input
-                        type="text"
-                        list="congregation-list"
-                        value={formData.congregation}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            congregation: e.target.value,
-                          })
-                        }
-                        className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 text-xs mt-2 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                        placeholder="Congregation"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
-                        Role
-                      </label>
-                      <select
-                        value={formData.role}
-                        onChange={(e) =>
-                          setFormData({ ...formData, role: e.target.value })
-                        }
-                        className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                      >
-                        <option value="Exemplary">Exemplary</option>
-                        <option value="MS">MS</option>
-                        <option value="Elder">Elder</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
-                        Tags
-                      </label>
-                      <select
-                        onChange={(e) => {
-                          handleTagAdd(e.target.value)
-                          e.target.value = ''
-                        }}
-                        className="border border-gray-300 p-2 rounded-lg w-full bg-white text-gray-900 text-xs mb-1 focus:ring-2 focus:ring-blue-100 outline-none dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                      >
-                        <option value="">+ Add Tag...</option>
-                        {tags
-                          .filter(
-                            (t) =>
-                              !formData.tags || !formData.tags.includes(t.id),
-                          )
-                          .map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}
-                            </option>
-                          ))}
-                      </select>
-                      <div className="flex flex-wrap gap-1 min-h-[24px]">
-                        {formData.tags &&
-                          formData.tags.map((tid) => {
-                            const t = tags.find((tag) => tag.id === tid)
-                            return t ? (
-                              <span
-                                key={tid}
-                                className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0.5 rounded border border-purple-200 flex items-center gap-1 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800"
-                              >
-                                {t.name}{' '}
-                                <button
-                                  onClick={() => handleTagRemove(tid)}
-                                  className="hover:text-red-500"
-                                >
-                                  <i className="fa fa-times"></i>
-                                </button>
-                              </span>
-                            ) : null
-                          })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* ROW 2: Permissions */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
-                        Capabilities
-                      </label>
-                      <div className="flex flex-wrap bg-white p-2 rounded-lg border border-gray-200 gap-2 dark:bg-slate-800 dark:border-slate-700">
-                        {areas.map((area) => (
-                          <label
-                            key={area.capability}
-                            className="flex items-center cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={formData.caps[area.capability]}
-                              onChange={(e) =>
-                                handleCapChange(area.capability, e.target.checked)
-                              }
-                              className="mr-1 w-3 h-3"
-                            />
-                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                              {area.name}
-                            </span>
-                          </label>
-                        ))}
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={formData.caps['keyman']}
-                            onChange={(e) =>
-                              handleCapChange('keyman', e.target.checked)
-                            }
-                            className="mr-1 w-3 h-3"
-                          />
-                          <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
-                            KEY MAN
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* ROW 3: Unavailability */}
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
-                        Unavailability
-                      </label>
-                      <div className="flex flex-wrap bg-white p-2 rounded-lg border border-gray-200 gap-2 dark:bg-slate-800 dark:border-slate-700">
-                        {shifts.map((s) => (
-                          <label
-                            key={s.id}
-                            className="flex items-center cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={
-                                formData.unavailable &&
-                                formData.unavailable.includes(s.id)
-                              }
-                              onChange={(e) =>
-                                handleUnavailableChange(s.id, e.target.checked)
-                              }
-                              className="mr-1 w-3 h-3"
-                            />
-                            <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">
-                              {s.label}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h3 className="font-bold text-gray-900 flex items-center gap-3 dark:text-white">
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-sm ${
-                        group.keyMan
-                          ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300'
-                          : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'
-                      }`}
-                    >
-                      <i
-                        className={`fa ${
-                          group.keyMan ? 'fa-user-tie' : 'fa-users'
-                        }`}
-                      ></i>
-                    </div>
-                    {group.keyMan
-                      ? group.keyMan.name
-                      : t('unassigned_no_keyman', language) ||
-                        'Unassigned / No Key Man'}
-                    <span className="text-xs font-medium text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300">
-                      {group.members.length} {t('members', language) || 'members'}
+            {/* GROUP HEADER (Title Only) */}
+            <div className="bg-gray-100/80 p-3 border-b border-gray-200 flex justify-between items-center backdrop-blur-sm dark:bg-slate-800 dark:border-slate-700">
+                <h3 className="font-black uppercase tracking-[0.2em] text-[10px] text-gray-500 flex items-center gap-2 dark:text-gray-400">
+                    <i className={`fa ${group.keyMan ? 'fa-user-tie' : 'fa-users'}`}></i>
+                    {group.keyMan 
+                        ? `${group.keyMan.name}'s Team` 
+                        : t('unassigned_no_keyman', language) || 'Unassigned / No Key Man'}
+                    <span className="ml-2 bg-white/50 px-2 py-0.5 rounded-full text-gray-400 dark:bg-slate-700/50">
+                        {group.members.length + (group.keyMan ? 1 : 0)} Total
                     </span>
-                  </h3>
-                  {group.keyMan && (
-                    <button
-                      onClick={() => startEdit(group.keyMan)}
-                      className="text-xs text-blue-600 font-medium hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 transition-colors dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      {t('edit_key_man', language) || 'Edit Key Man'}
-                    </button>
-                  )}
-                </>
-              )}
+                </h3>
             </div>
 
             {/* MEMBERS TABLE */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
-                  <tr className="bg-white border-b border-gray-100 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:bg-slate-800 dark:border-slate-700 dark:text-gray-500">
+                  <tr className="bg-white border-b border-gray-100 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:bg-slate-800 dark:border-slate-700">
                     <th className="px-6 py-3 w-1/3">
                       {t('roster_name', language)}
                     </th>
@@ -952,7 +1109,10 @@ export default function RosterView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                  {group.members.length === 0 ? (
+                  {/* IF KEY MAN EXISTS, SHOW HIM FIRST AS A FULL ROW */}
+                  {group.keyMan && renderPersonRow(group.keyMan)}
+
+                  {group.members.length === 0 && !group.keyMan ? (
                     <tr>
                       <td
                         colSpan="4"
@@ -963,294 +1123,7 @@ export default function RosterView({
                       </td>
                     </tr>
                   ) : (
-                    group.members.map((p) => {
-                      const isEditing = editingId === p.id
-                      return (
-                        <tr
-                          key={p.id}
-                          draggable={!isEditing}
-                          onDragStart={(e) => !isEditing && handleDragStart(e, p.id)}
-                          className={`draggable-row transition-all duration-200 ${
-                            isEditing
-                              ? 'bg-yellow-50/50 dark:bg-yellow-900/20'
-                              : 'hover:bg-gray-50/80 bg-white dark:bg-slate-800 dark:hover:bg-slate-700/50'
-                          }`}
-                        >
-                          <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
-                            {isEditing ? (
-                              <div className="flex flex-col gap-1">
-                                <input
-                                  type="text"
-                                  value={formData.name}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-                                      name: e.target.value,
-                                    })
-                                  }
-                                  className="border p-1 rounded w-full text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                  autoFocus
-                                />
-                                <input
-                                  type="text"
-                                  list="congregation-list"
-                                  value={formData.congregation}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-                                      congregation: e.target.value,
-                                    })
-                                  }
-                                  className="border p-1 rounded w-full text-[10px] text-gray-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                  placeholder="Congregation"
-                                />
-                                <select
-                                  value={formData.keyManId}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-                                      keyManId: e.target.value,
-                                    })
-                                  }
-                                  className="border p-1 rounded w-full text-[10px] text-gray-500 mt-0.5 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                >
-                                  <option value="">-- No Key Man --</option>
-                                  {keyMen
-                                    .filter((km) => km.id !== p.id)
-                                    .map((km) => (
-                                      <option key={km.id} value={km.id}>
-                                        {km.name}
-                                      </option>
-                                    ))}
-                                </select>
-                                <div className="mt-1">
-                                  <select
-                                    onChange={(e) => {
-                                      handleTagAdd(e.target.value)
-                                      e.target.value = ''
-                                    }}
-                                    className="border p-1 rounded w-full text-[10px] text-gray-500 mb-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                                  >
-                                    <option value="">+ Add Tag...</option>
-                                    {tags
-                                      .filter(
-                                        (t) =>
-                                          !formData.tags ||
-                                          !formData.tags.includes(t.id),
-                                      )
-                                      .map((t) => (
-                                        <option key={t.id} value={t.id}>
-                                          {t.name}
-                                        </option>
-                                      ))}
-                                  </select>
-                                  <div className="flex flex-wrap gap-1">
-                                    {formData.tags &&
-                                      formData.tags.map((tid) => {
-                                        const t = tags.find((tag) => tag.id === tid)
-                                        return t ? (
-                                          <span
-                                            key={tid}
-                                            className="bg-purple-100 text-purple-800 text-[9px] px-1 py-0.5 rounded border border-purple-200 flex items-center gap-1 dark:bg-purple-900 dark:text-purple-300 dark:border-purple-800"
-                                          >
-                                            {t.name}{' '}
-                                            <button
-                                              onClick={() => handleTagRemove(tid)}
-                                              className="hover:text-red-500"
-                                            >
-                                              <i className="fa fa-times"></i>
-                                            </button>
-                                          </span>
-                                        ) : null
-                                      })}
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
-                                  {p.name}
-                                  {p.tags &&
-                                    p.tags.map((tid) => {
-                                      const t = tags
-                                        ? tags.find((tag) => tag.id === tid)
-                                        : null
-                                      return t ? (
-                                        <span
-                                          key={tid}
-                                          className="ml-1 text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-200"
-                                        >
-                                          <i className="fa fa-tag mr-1"></i>
-                                          {t.name}
-                                        </span>
-                                      ) : null
-                                    })}
-                                </div>
-                                {p.congregation && (
-                                  <div className="text-[10px] text-gray-400 ml-5 dark:text-gray-500">
-                                    {p.congregation}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-3">
-                            {isEditing ? (
-                              <select
-                                value={formData.role}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, role: e.target.value })
-                                }
-                                className="border p-1 rounded w-full text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                              >
-                                <option value="Exemplary">Exemplary</option>
-                                <option value="MS">MS</option>
-                                <option value="Elder">Elder</option>
-                              </select>
-                            ) : (
-                              <span
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase shadow-sm
-                                                                        ${
-                                                                          p.role ===
-                                                                          'Elder'
-                                                                            ? 'bg-yellow-100 text-yellow-700'
-                                                                            : p.role ===
-                                                                              'MS'
-                                                                            ? 'bg-blue-100 text-blue-700'
-                                                                            : 'bg-gray-100 text-gray-600'
-                                                                        }`}
-                              >
-                                {p.role}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-3">
-                            {isEditing ? (
-                              <div>
-                                <div className="flex flex-wrap gap-2 max-w-[200px] mb-2">
-                                  {areas.map((area) => (
-                                    <label
-                                      key={area.capability}
-                                      className="flex items-center cursor-pointer text-[10px] bg-white border px-1 rounded hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={formData.caps[area.capability]}
-                                        onChange={(e) =>
-                                          handleCapChange(
-                                            area.capability,
-                                            e.target.checked,
-                                          )
-                                        }
-                                        className="mr-1 w-3 h-3"
-                                      />
-                                      {area.capability === 'auditorium'
-                                        ? 'Aud'
-                                        : area.capability.slice(0, 3).toUpperCase()}
-                                    </label>
-                                  ))}
-                                  <label className="flex items-center cursor-pointer text-[10px] bg-yellow-50 border border-yellow-200 px-1 rounded hover:bg-yellow-100 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-100 dark:hover:bg-yellow-900/50">
-                                    <input
-                                      type="checkbox"
-                                      checked={formData.caps['keyman']}
-                                      onChange={(e) =>
-                                        handleCapChange('keyman', e.target.checked)
-                                      }
-                                      className="mr-1 w-3 h-3"
-                                    />
-                                    KM
-                                  </label>
-                                </div>
-                                <div className="border-t border-gray-200 pt-1 dark:border-slate-600">
-                                  <span className="text-[9px] font-bold uppercase text-gray-400 block mb-1">
-                                    Unavailable
-                                  </span>
-                                  <div className="flex flex-wrap gap-1">
-                                    {shifts.map((s) => (
-                                      <label
-                                        key={s.id}
-                                        className="flex items-center cursor-pointer text-[10px] bg-white border px-1 rounded hover:bg-gray-50 dark:bg-slate-700 dark:border-slate-600 dark:text-gray-300 dark:hover:bg-slate-600"
-                                      >
-                                        <input
-                                          type="checkbox"
-                                          checked={
-                                            formData.unavailable &&
-                                            formData.unavailable.includes(s.id)
-                                          }
-                                          onChange={(e) =>
-                                            handleUnavailableChange(
-                                              s.id,
-                                              e.target.checked,
-                                            )
-                                          }
-                                          className="mr-1 w-3 h-3"
-                                        />
-                                        {s.label.split('(')[0]}
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {p.caps.map((c) => (
-                                  <span
-                                    key={c}
-                                    className="text-[10px] bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full text-gray-500 font-medium"
-                                  >
-                                    {c === 'auditorium'
-                                      ? 'Aud'
-                                      : c.charAt(0).toUpperCase() + c.slice(1)}
-                                  </span>
-                                ))}
-                                {p.unavailable && p.unavailable.length > 0 && (
-                                  <span
-                                    className="text-[10px] bg-red-50 text-red-600 border border-red-100 px-2 py-0.5 rounded-full font-bold ml-1"
-                                    title={p.unavailable.join(', ')}
-                                  >
-                                    Unavail ({p.unavailable.length})
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-3 text-center">
-                            {isEditing ? (
-                              <div className="flex justify-center gap-2">
-                                <button
-                                  onClick={savePerson}
-                                  className="text-green-600 hover:text-green-800 font-bold text-xs bg-green-50 px-2 py-1 rounded border border-green-200"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={cancelEdit}
-                                  className="text-gray-500 hover:text-gray-700 text-xs px-2 py-1"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <div className="flex justify-center gap-3">
-                                <button
-                                  onClick={() => startEdit(p)}
-                                  className="text-gray-400 hover:text-blue-600 transition-colors"
-                                >
-                                  <i className="fa fa-pencil"></i>
-                                </button>
-                                <button
-                                  onClick={() => deletePerson(p.id)}
-                                  className="text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                  <i className="fa fa-trash"></i>
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })
+                    group.members.map((p) => renderPersonRow(p))
                   )}
                 </tbody>
               </table>
@@ -1258,6 +1131,46 @@ export default function RosterView({
           </div>
         ))}
       </div>
+
+      {/* MERGE MODAL */}
+      {mergingId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-gray-200 dark:border-slate-800">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-800/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Merge Records</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Select who to merge <b>{personnel.find(p => p.id === mergingId)?.name}</b> into.
+                </p>
+              </div>
+              <button onClick={() => setMergingId(null)} className="text-gray-400 hover:text-gray-600">
+                <i className="fa fa-times"></i>
+              </button>
+            </div>
+            <div className="p-6 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                {personnel
+                  .filter(p => p.id !== mergingId)
+                  .sort((a,b) => a.name.localeCompare(b.name))
+                  .map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleMergeAction(p.id)}
+                      className="w-full text-left p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 dark:border-slate-800 dark:hover:bg-blue-900/20 transition-all flex justify-between items-center group"
+                    >
+                      <span className="font-bold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400">{p.name}</span>
+                      <i className="fa fa-chevron-right text-[10px] text-gray-300 group-hover:text-blue-400"></i>
+                    </button>
+                  ))
+                }
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-100 dark:border-slate-800 flex justify-center">
+                <button onClick={() => setMergingId(null)} className="text-sm font-bold text-gray-400 hover:text-gray-600">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

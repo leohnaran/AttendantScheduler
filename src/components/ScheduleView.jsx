@@ -394,8 +394,14 @@ export default function ScheduleView({
     let filledCount = 0
 
     // HELPER: Get valid candidates with a strict total assignment limit
-    const getCandidatesForSlot = (pos, shiftId, maxTotalAllowed) => {
+    const getCandidatesForSlot = (pos, shiftId, maxTotalAllowed, isFinalPass = false) => {
       let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
+
+      // KEY MAN PRIORITY: In non-final passes, if this is a regular position, 
+      // exclude brothers who have the 'keyman' capability to reserve them for oversight.
+      if (!isFinalPass && !pos.keyMan) {
+        candidates = candidates.filter(p => !p.caps || !p.caps.includes('keyman'));
+      }
 
       // RELIEF MODE: Expand rotational pool to include any Auditorium-capable brothers
       if (rules.auditoriumRotationMode && pos.type === 'rotational') {
@@ -426,7 +432,7 @@ export default function ScheduleView({
       })
     }
 
-    const fillPoolByHardness = (slots, label, passLimit, isSpecialistPass = false) => {
+    const fillPoolByHardness = (slots, label, passLimit, isSpecialistPass = false, isFinalPass = false) => {
       let madeChanges = false
       while (true) {
         const candidatesBySlot = slots
@@ -434,10 +440,10 @@ export default function ScheduleView({
           .map((s) => {
             // Specialist override: if we are in PASS-0 but it's a specialist slot, 
             // and no one at 0 jobs is available, temporarily allow someone with 1 job.
-            let valid = getCandidatesForSlot(s.pos, s.shiftId, passLimit)
+            let valid = getCandidatesForSlot(s.pos, s.shiftId, passLimit, isFinalPass)
             
             if (isSpecialistPass && valid.length === 0 && passLimit === 0) {
-                valid = getCandidatesForSlot(s.pos, s.shiftId, 1);
+                valid = getCandidatesForSlot(s.pos, s.shiftId, 1, isFinalPass);
             }
 
             return { ...s, candidates: valid, hardness: valid.length }
@@ -498,17 +504,17 @@ export default function ScheduleView({
 
     // --- EXECUTE PASSES (Utilization First!) ---
     // PASS 0: Give everyone their 1st assignment
-    fillPoolByHardness(specialists, 'S-PASS0', 0, true)
-    fillPoolByHardness(auditorium, 'A-PASS0', 0)
-    fillPoolByHardness(rotational, 'R-PASS0', 0)
+    fillPoolByHardness(specialists, 'S-PASS0', 0, true, false)
+    fillPoolByHardness(auditorium, 'A-PASS0', 0, false, false)
+    fillPoolByHardness(rotational, 'R-PASS0', 0, false, false)
 
     // PASS 1: Give everyone their 2nd assignment
-    fillPoolByHardness(specialists, 'S-PASS1', 1, true)
-    fillPoolByHardness(auditorium, 'A-PASS1', 1)
-    fillPoolByHardness(rotational, 'R-PASS1', 1)
+    fillPoolByHardness(specialists, 'S-PASS1', 1, true, false)
+    fillPoolByHardness(auditorium, 'A-PASS1', 1, false, false)
+    fillPoolByHardness(rotational, 'R-PASS1', 1, false, false)
 
-    // PASS 2+: Fill any absolute leftovers
-    fillPoolByHardness([...specialists, ...auditorium, ...rotational], 'FINAL', 5)
+    // PASS 2+: Fill any absolute leftovers (ALLOW KEY MEN HERE)
+    fillPoolByHardness([...specialists, ...auditorium, ...rotational], 'FINAL', 5, false, true)
 
     // --- FINAL HYPER-VERBOSE DIAGNOSTIC (Individual Person Logging) ---
     const finalEmptySlots = [...specialists, ...auditorium, ...rotational].filter(
@@ -781,7 +787,9 @@ export default function ScheduleView({
                             <td className="p-4 font-bold text-gray-700 sticky-header-col dark:text-gray-300">
                               {pos.name}{' '}
                               {pos.type === 'auditorium' && (
-                                <span className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">
+                                <span 
+                                  title="Assigned for the whole day (all shifts)"
+                                  className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">
                                   ALL DAY
                                 </span>
                               )}
