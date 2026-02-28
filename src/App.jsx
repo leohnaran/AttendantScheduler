@@ -88,7 +88,7 @@ class ErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  console.log("Attendant Scheduler v3.6.4 - Reset Fix Active");
+  console.log("Attendant Scheduler v3.6.5 - Reset Fix Active");
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -466,7 +466,7 @@ export default function App() {
                 </div>
                 <span className="tracking-tight">{t('app_title', language)}</span>
                 <span className="ml-2 text-[10px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-400">
-                  v3.6.4
+                  v3.6.5
                 </span>
               </h1>
 
