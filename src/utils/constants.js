@@ -107,7 +107,7 @@ export const DEFAULT_AREAS = [
 export const DEFAULT_POSITIONS = [
   {
     id: "pos12",
-    name: "Pos 12 (Sect A - Key Man)",
+    name: "Pos 12 (Sect A - Key Man Count)",
     areaId: "auditorium",
     type: "auditorium",
     keyMan: true,

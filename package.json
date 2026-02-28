@@ -3,7 +3,7 @@
   "description": "Attendant Scheduler for Jehovah's Witnesses Circuit Assemblies and Regional Conventions",
   "author": "leohnaran",
   "private": true,
-  "version": "3.6.6",
+  "version": "3.6.7",
   "type": "module",
   "repository": {
     "type": "git",
