@@ -6,6 +6,7 @@ import {
   getCandidatesForPosition,
   isAutoAssigned,
   parseAssignmentKey,
+  ROLE_HIERARCHY,
 } from '../utils/helpers'
 import PersonnelSidebar from './PersonnelSidebar'
 import MobileScheduleView from './MobileScheduleView'
@@ -500,22 +501,45 @@ export default function ScheduleView({
     let filledCount = 0
 
     // HELPER: Calculate dynamic workload score
-    const getWorkloadScore = (pid, currentAssignments, targetPosIsRegular, targetShiftId) => {
+    const getWorkloadScore = (pid, currentAssignments, targetPos, targetShiftId) => {
       let score = 0
       let hasKeymanJob = false
 
-            Object.keys(currentAssignments).forEach((key) => {
-              if (getAssignId(currentAssignments[key]) === pid) {
-                const { posId } = parseAssignmentKey(key, shifts)
-                const pos = positions.find((p) => p.id === posId)
-                if (pos) {
-                  if (pos.type === 'auditorium') score += 0.1
-                  else score += 1.0
-      
-                  if (pos.keyMan) hasKeymanJob = true
-                }
-              }
-            })
+      Object.keys(currentAssignments).forEach((key) => {
+        if (getAssignId(currentAssignments[key]) === pid) {
+          const { posId } = parseAssignmentKey(key, shifts)
+          const pos = positions.find((p) => p.id === posId)
+          if (pos) {
+            if (pos.type === 'auditorium') score += 0.1
+            else score += 1.0
+
+            if (pos.keyMan) hasKeymanJob = true
+          }
+        }
+      })
+
+      // Preference bonus: If person's role exactly matches the restriction
+      const area = areas.find((a) => a.id === targetPos.areaId)
+      let limitType = targetPos.limitType
+      let limitValue = targetPos.limitValue
+      // Fallback to Area restriction
+      if (!limitType && area?.limitType) {
+        limitType = area.limitType
+        limitValue = area.limitValue
+      }
+
+      if (limitType === 'role' && limitValue) {
+        const p = personnel.find(per => per.id === pid)
+        if (p) {
+          if (p.role === limitValue) {
+            score -= 5.0 // Strong preference for exact match
+          } else if (ROLE_HIERARCHY[p.role] > ROLE_HIERARCHY[limitValue]) {
+            score += 2.0 // Slight penalty for overqualified (save them for harder spots)
+          }
+        }
+      }
+
+      const targetPosIsRegular = !targetPos.keyMan
       // If we are filling a regular spot and this brother already has an oversight job
       if (targetPosIsRegular && hasKeymanJob) {
         score += 10.0
@@ -597,8 +621,8 @@ export default function ScheduleView({
 
       // 2. Sort candidates by Workload Score (Lowest first)
       shuffled.sort((a, b) => {
-        const scoreA = getWorkloadScore(a.id, newAssignments, false, slot.shiftId)
-        const scoreB = getWorkloadScore(b.id, newAssignments, false, slot.shiftId)
+        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId)
+        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId)
         return scoreA - scoreB
       })
 
@@ -608,7 +632,7 @@ export default function ScheduleView({
 
       newLog.push({
         type: 'keyman',
-        msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false, slot.shiftId).toFixed(1)}`,
+        msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId).toFixed(1)}`,
       })
     })
 
@@ -631,8 +655,8 @@ export default function ScheduleView({
 
       // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
       shuffled.sort((a, b) => {
-        const scoreA = getWorkloadScore(a.id, newAssignments, true, slot.shiftId)
-        const scoreB = getWorkloadScore(b.id, newAssignments, true, slot.shiftId)
+        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId)
+        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId)
         return scoreA - scoreB
       })
 
@@ -642,7 +666,7 @@ export default function ScheduleView({
 
       newLog.push({
         type: 'rotational',
-        msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true, slot.shiftId).toFixed(1)}`,
+        msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId).toFixed(1)}`,
       })
     })
 

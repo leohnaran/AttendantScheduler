@@ -154,7 +154,7 @@ export default function ConfigView({
       return `Tag: ${t ? t.name : obj.limitValue}`
     }
     if (obj.limitType === 'role') {
-      return `Role: ${obj.limitValue}`
+      return `Role: ${obj.limitValue} (Min)`
     }
     return `${obj.limitType}: ${obj.limitValue}`
   }

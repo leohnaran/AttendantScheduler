@@ -89,9 +89,18 @@ export const parseAssignmentKey = (key, shifts) => {
   return { posId, shiftId }
 }
 
-export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
+export const ROLE_HIERARCHY = {
+  'Elder': 3,
+  'MS': 2,
+  'Exemplary': 1,
+  '': 0
+}
+
+export const checkQualification = (p, pos, shiftId, areas, tags, personnel) => {
+  let qualified = true
+  let reason = null
   const area = areas.find((a) => a.id === pos.areaId)
-  if (!area) return []
+  if (!area) return { qualified: false, reason: 'Area not found' }
   const requiredCap = area.capability
 
   // Determine effective restriction
@@ -111,36 +120,84 @@ export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
     limitValue = area.limitValue
   }
 
+  // Check Assignment Constraints
+  if (limitType && limitValue) {
+    if (limitType === 'keyman') {
+      if (p.keyManId !== parseInt(limitValue)) {
+        qualified = false
+        const km = personnel.find((x) => x.id === parseInt(limitValue))
+        reason = `Restricted to Team: ${km ? km.name : limitValue}`
+      }
+    } else if (limitType === 'congregation') {
+      if (p.congregation !== limitValue) {
+        qualified = false
+        reason = `Restricted to Congregation: ${limitValue}`
+      }
+    } else if (limitType === 'tag') {
+      if (!p.tags || !p.tags.includes(limitValue)) {
+        qualified = false
+        const tObj = tags.find((x) => x.id === limitValue)
+        reason = `Restricted to Tag: ${tObj ? tObj.name : limitValue}`
+      }
+    } else if (limitType === 'role') {
+      const pLevel = ROLE_HIERARCHY[p.role] || 0
+      const limitLevel = ROLE_HIERARCHY[limitValue] || 0
+      if (pLevel < limitLevel) {
+        qualified = false
+        reason = `Restricted to Role: ${limitValue} (Min)`
+      }
+    }
+  }
+
+  // Check Area Restrictions from Tags
+  if (qualified && tags && p.tags) {
+    for (let tid of p.tags) {
+      const tag = tags.find((t) => t.id === tid)
+      if (tag) {
+        if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) {
+          qualified = false
+          reason = `Restricted by your Tag: ${tag.name} (Area)`
+          break
+        }
+        if (tag.restrictedShifts) {
+          if (tag.restrictedShifts.includes(shiftId)) {
+            qualified = false
+            reason = `Restricted by your Tag: ${tag.name} (Shift)`
+            break
+          }
+          if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) {
+            qualified = false
+            reason = `Restricted by your Tag: ${tag.name} (All Day)`
+            break
+          }
+        }
+      }
+    }
+  }
+
+  // Check Capability
+  if (qualified) {
+    if (requiredCap && (!p.caps || !p.caps.includes(requiredCap))) {
+      qualified = false
+      reason = `Missing Capability: ${area.name}`
+    } else if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) {
+      qualified = false
+      reason = `Not a Key Man`
+    }
+  }
+
+  return { qualified, reason }
+}
+
+export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
+  // Determine shiftId from pos if possible, otherwise 'all'
+  // But wait, getCandidatesForPosition doesn't know the shiftId usually
+  // unless it's passed.
+  // In ScheduleView, it's called with (pos, personnel, areas, tags)
+  // Let's assume 'all' for general qualification if shiftId is not provided.
+  
   return personnel.filter((p) => {
-    if (!p.caps || !p.caps.includes(requiredCap)) return false
-    if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) return false
-
-    // Check Area Restrictions from Tags
-    if (tags && p.tags) {
-      for (let tid of p.tags) {
-        const tag = tags.find((t) => t.id === tid)
-        if (
-          tag &&
-          tag.restrictedAreas &&
-          tag.restrictedAreas.includes(pos.areaId)
-        )
-          return false
-      }
-    }
-
-    // Check Assignment Constraints
-    if (limitType && limitValue) {
-      if (limitType === 'keyman') {
-        if (p.keyManId !== parseInt(limitValue)) return false
-      } else if (limitType === 'congregation') {
-        if (p.congregation !== limitValue) return false
-      } else if (limitType === 'tag') {
-        if (!p.tags || !p.tags.includes(limitValue)) return false
-      } else if (limitType === 'role') {
-        if (p.role !== limitValue) return false
-      }
-    }
-
-    return true
+    const { qualified } = checkQualification(p, pos, 'all', areas, tags, personnel)
+    return qualified
   })
 }

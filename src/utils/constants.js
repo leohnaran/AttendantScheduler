@@ -115,14 +115,20 @@ export const DEFAULT_POSITIONS = [
     areaId: "auditorium",
     type: "auditorium",
     keyMan: true,
-    section: "B"
+    section: "B",
+    timeNote: "Baptism Walk",
+    limitType: "role",
+    limitValue: "MS"
   },
   {
     id: "pos10",
     name: "Pos 10 (Sect B)",
     areaId: "auditorium",
     type: "auditorium",
-    section: "B"
+    section: "B",
+    timeNote: "Baptism Walk",
+    limitType: "role",
+    limitValue: "Elder"
   },
   {
     id: "pos14",
@@ -130,9 +136,9 @@ export const DEFAULT_POSITIONS = [
     areaId: "auditorium",
     type: "auditorium",
     section: "C",
-    limitType: "role",
-    limitValue: "MS",
-    timeNote: "Baptism Walk"
+    limitType: "",
+    limitValue: "",
+    timeNote: ""
   },
   {
     id: "pos11",
@@ -140,9 +146,9 @@ export const DEFAULT_POSITIONS = [
     areaId: "auditorium",
     type: "auditorium",
     section: "C",
-    limitType: "role",
-    limitValue: "Elder",
-    timeNote: "Baptism Walk"
+    limitType: "",
+    limitValue: "",
+    timeNote: ""
   },
   {
     id: "pos18",

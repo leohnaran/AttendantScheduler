@@ -5,6 +5,7 @@ import {
   getHeatColor,
   getHeatBg,
   isAutoAssigned,
+  checkQualification,
 } from '../utils/helpers'
 import SearchableSelect from './SearchableSelect'
 
@@ -97,10 +98,8 @@ export default function AssignmentCell({
   }
 
   const getFilteredCandidates = () => {
-    const area = areas.find((a) => a.id === pos.areaId)
-    const requiredCap = area ? area.capability : ''
-
     // Determine effective restriction (Inheritance: Pos > Legacy > Area)
+    const area = areas.find((a) => a.id === pos.areaId)
     let limitType = pos.limitType
     let limitValue = pos.limitValue
     if (!limitType && pos.teamKeyManId) {
@@ -114,73 +113,7 @@ export default function AssignmentCell({
 
     // Create a list of ALL personnel, but mark if they are recommended or not
     let candidates = personnel.map((p) => {
-      let qualified = true
-      let reason = null
-
-      // --- LEVEL 1: POSITION/AREA LEVEL CONSTRAINTS (Most Restrictive) ---
-      if (limitType && limitValue) {
-        if (limitType === 'keyman') {
-          if (p.keyManId !== parseInt(limitValue)) {
-            qualified = false
-            const km = personnel.find((x) => x.id === parseInt(limitValue))
-            reason = `Restricted to Team: ${km ? km.name : limitValue}`
-          }
-        } else if (limitType === 'congregation') {
-          if (p.congregation !== limitValue) {
-            qualified = false
-            reason = `Restricted to Congregation: ${limitValue}`
-          }
-        } else if (limitType === 'tag') {
-          if (!p.tags || !p.tags.includes(limitValue)) {
-            qualified = false
-            const tObj = tags.find((x) => x.id === limitValue)
-            reason = `Restricted to Tag: ${tObj ? tObj.name : limitValue}`
-          }
-        } else if (limitType === 'role') {
-          if (p.role !== limitValue) {
-            qualified = false
-            reason = `Restricted to Role: ${limitValue}`
-          }
-        }
-      }
-
-      // --- LEVEL 2: TAG RESTRICTIONS (Person's own tags) ---
-      if (qualified && tags && p.tags) {
-        for (let tid of p.tags) {
-          const tag = tags.find((t) => t.id === tid)
-          if (tag) {
-            if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) {
-              qualified = false
-              reason = `Restricted by your Tag: ${tag.name} (Area)`
-              break
-            }
-            if (tag.restrictedShifts) {
-              if (tag.restrictedShifts.includes(shiftId)) {
-                qualified = false
-                reason = `Restricted by your Tag: ${tag.name} (Shift)`
-                break
-              }
-              if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) {
-                qualified = false
-                reason = `Restricted by your Tag: ${tag.name} (All Day)`
-                break
-              }
-            }
-          }
-        }
-      }
-
-      // --- LEVEL 3: ROSTER SETTINGS (Missing Caps) ---
-      if (qualified) {
-        if (!p.caps || !p.caps.includes(requiredCap)) {
-          qualified = false
-          reason = `Missing Capability: ${area ? area.name : 'Unknown'}`
-        } else if (pos.keyMan && (!p.caps || !p.caps.includes('keyman'))) {
-          qualified = false
-          reason = `Not a Key Man`
-        }
-      }
-
+      const { qualified, reason } = checkQualification(p, pos, shiftId, areas, tags, personnel)
       return { ...p, qualified, reason }
     })
 
