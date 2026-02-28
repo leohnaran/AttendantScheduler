@@ -18,7 +18,7 @@ export default defineConfig({
 
 				return html
 					.replace('</head>', `${metaTags}\n  </head>`)
-					.replace('<title>Attendant Scheduler v3.6.1</title>', `<title>Attendant Scheduler v3.6.1 (Build: ${timestamp})</title>`);
+					.replace('<title>Attendant Scheduler v3.6.2</title>', `<title>Attendant Scheduler v3.6.2 (Build: ${timestamp})</title>`);
 			},
 		},
 	],

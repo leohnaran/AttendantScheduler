@@ -787,7 +787,7 @@ export default function ScheduleView({
           </div>
 
           <div className="flex gap-3">
-            {orphanedSlots.length > 0 && (
+            {!isScheduleEmpty && orphanedSlots.length > 0 && (
               <button
                 onClick={() => {
                   setResolvingAbsences(true)
