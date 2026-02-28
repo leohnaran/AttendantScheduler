@@ -10,7 +10,7 @@ permissions:
   contents: write # Required for creating releases and uploading assets
 
 jobs:
-  release:
+  build:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -34,8 +34,8 @@ jobs:
       - name: Build and Package Electron App
         # This will run the build script from your package.json
         # The 'electron-builder' automatically detects the OS it is running on.
-        # We add --publish always to create a GitHub Release automatically.
-        run: npm run electron:build -- --publish always
+        # We use --publish never because we publish in a separate job.
+        run: npm run electron:build -- --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,23 +43,42 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npm run build:nocache
 
-      - name: Get package version
+      - name: Copy HTML to release
         if: matrix.os == 'ubuntu-latest'
-        id: get_version
-        run: echo "VERSION=v$(node -p "require('./package.json').version")" >> $GITHUB_ENV
-
-      - name: Upload HTML to Release
-        if: matrix.os == 'ubuntu-latest'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ env.VERSION }}
-          files: schedule.html
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cp schedule.html release/schedule.html
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-build
-          path: release/*.*
+          path: |
+            release/*.*
+            !release/builder-debug.yml
+            !release/builder-effective-config.yaml
           if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Get package version
+        id: get_version
+        run: echo "VERSION=v$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
