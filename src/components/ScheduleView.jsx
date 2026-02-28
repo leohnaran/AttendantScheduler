@@ -240,8 +240,7 @@ export default function ScheduleView({
       if (getAssignId(currentAssignments[key]) === pid) {
         // ONLY count rotational assignments (with underscore) towards work load/time away
         if (key.includes('_')) {
-          const parts = key.split('_')
-          const shiftId = parts[parts.length - 1]
+          const { shiftId } = parseAssignmentKey(key, shifts)
           const shift = shifts.find((s) => s.id === shiftId)
           if (shift) minutesWorking += shift.minutes || 150
         }
@@ -282,16 +281,7 @@ export default function ScheduleView({
 
     for (let aid of activeAssignments) {
       // Find what position and shift the existing assignment (aid) is for
-      let existingPosId = aid
-      let existingShiftId = 'all'
-
-      for (const s of shifts) {
-        if (aid.endsWith(`_${s.id}`)) {
-          existingShiftId = s.id
-          existingPosId = aid.substring(0, aid.length - s.id.length - 1)
-          break
-        }
-      }
+      const { posId: existingPosId, shiftId: existingShiftId } = parseAssignmentKey(aid, shifts)
 
       // If it's the exact same slot we are checking, it's not a conflict
       if (existingPosId === pos.id && existingShiftId === shiftId) continue

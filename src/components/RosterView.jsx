@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { t } from '../i18n/translations'
-import { getLastName, parseCSV, getAssignId } from '../utils/helpers'
+import { getLastName, parseCSV, getAssignId, parseAssignmentKey } from '../utils/helpers'
 import CSVMapperModal from './CSVMapperModal'
 
 export default function RosterView({
@@ -147,12 +147,7 @@ export default function RosterView({
 
       Object.keys(newAssignments).forEach(key => {
         if (getAssignId(newAssignments[key]) === editingId) {
-          const isRotational = key.includes('_');
-          let assignedShiftId = 'all';
-          if (isRotational) {
-            const parts = key.split('_');
-            assignedShiftId = parts[parts.length - 1];
-          }
+          const { shiftId: assignedShiftId } = parseAssignmentKey(key, shifts);
 
           if (newPerson.unavailable.includes('all_day') ||
             newPerson.unavailable.includes(assignedShiftId) ||

@@ -1,6 +1,6 @@
 import React from 'react'
 import { t } from '../i18n/translations'
-import { getAssignId, getLastName } from '../utils/helpers'
+import { getAssignId, getLastName, parseAssignmentKey } from '../utils/helpers'
 
 export default function PrintView({
   personnel,
@@ -13,16 +13,7 @@ export default function PrintView({
     const myAssignments = []
     Object.keys(assignments).forEach((key) => {
       if (getAssignId(assignments[key]) === p.id) {
-        let posId = key
-        let shiftId = 'all'
-        if (key.includes('_')) {
-          const parts = key.split('_')
-          const lastPart = parts[parts.length - 1]
-          if (shifts.find((s) => s.id === lastPart)) {
-            shiftId = lastPart
-            posId = parts.slice(0, parts.length - 1).join('_')
-          }
-        }
+        const { posId, shiftId } = parseAssignmentKey(key, shifts)
         const pos = positions.find((x) => x.id === posId)
         const shift = shifts.find((s) => s.id === shiftId)
         if (pos) {
