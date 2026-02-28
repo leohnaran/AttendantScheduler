@@ -26,6 +26,9 @@ export default function ScheduleView({
   tags,
   language,
 }) {
+  const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas]);
+  const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel]);
+
   const [layoutMode, setLayoutMode] = useState('grid')
   const [search, setSearch] = useState('')
   const [pendingAction, setPendingAction] = useState(null)
@@ -145,7 +148,7 @@ export default function ScheduleView({
       const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
       const conflictingPos = getConflict(parseInt(personId), pos, shiftId, assignments)
       if (conflictingPos) {
-        if (!confirm(`${personnel.find(p => p.id === parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
+        if (!confirm(`${personnelMap.get(parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
           return
         }
       }
@@ -193,7 +196,7 @@ export default function ScheduleView({
         targetValue: assignObj,
         conflictMsg: conflict.msg,
         conflictSourceKey: conflict.key,
-        personName: personnel.find((p) => p.id === parseInt(value))?.name,
+        personName: personnelMap.get(parseInt(value))?.name,
       })
     } else {
       setAssignments((prev) => ({ ...prev, [key]: assignObj }))
@@ -263,7 +266,7 @@ export default function ScheduleView({
       .forEach((pos) => {
         const key = `${pos.id}_${shiftId}`
         const pid = getAssignId(currentAssignments[key])
-        const person = personnel.find((p) => p.id === pid)
+        const person = personnelMap.get(pid)
         if (person && person.caps && person.caps.includes('auditorium')) count++
       })
     return count
@@ -272,7 +275,7 @@ export default function ScheduleView({
   const getConflict = (personId, pos, shiftId, currentAssignments) => {
     if (!personId) return null
     const pid = parseInt(personId)
-    const person = personnel.find((p) => p.id === pid)
+    const person = personnelMap.get(pid)
     if (!person) return null
 
     // 1. Double Booking
@@ -417,7 +420,7 @@ export default function ScheduleView({
     }
 
     // 3. Capabilities
-    const area = areas.find((a) => a.id === pos.areaId)
+    const area = areasMap.get(pos.areaId)
     const requiredCap = area ? area.capability : ''
 
     // RELIEF MODE BYPASS: If enabled, brothers with 'auditorium' capability
@@ -519,7 +522,7 @@ export default function ScheduleView({
       })
 
       // Preference bonus: If person's role exactly matches the restriction
-      const area = areas.find((a) => a.id === targetPos.areaId)
+      const area = areasMap.get(targetPos.areaId)
       let limitType = targetPos.limitType
       let limitValue = targetPos.limitValue
       // Fallback to Area restriction
@@ -529,7 +532,7 @@ export default function ScheduleView({
       }
 
       if (limitType === 'role' && limitValue) {
-        const p = personnel.find(per => per.id === pid)
+        const p = personnelMap.get(pid)
         if (p) {
           if (p.role === limitValue) {
             score -= 5.0 // Strong preference for exact match
