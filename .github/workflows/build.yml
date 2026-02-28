@@ -37,18 +37,6 @@ jobs:
         # We add --publish always to create a GitHub Release automatically.
         run: npm run electron:build -- --publish always
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build HTML Version
-        if: matrix.os == 'ubuntu-latest'
-        run: npm run build:nocache
-
-      - name: Upload HTML to Release
-        if: matrix.os == 'ubuntu-latest'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: schedule.html
-        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifacts
