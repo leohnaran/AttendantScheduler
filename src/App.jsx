@@ -458,8 +458,8 @@ export default function App() {
     <ErrorBoundary>
       <div className="min-h-screen pb-10 text-gray-800 transition-colors duration-300 dark:text-gray-200">
         <header className="glass-header sticky top-0 z-50 px-6 py-3 shadow-sm mb-8 print:hidden">
-          <div className="container mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-6">
+          <div className="container mx-auto flex flex-wrap justify-center xl:justify-between items-center gap-4">
+            <div className="flex flex-wrap justify-center items-center gap-6">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-3">
                 <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md bg-gradient-to-br from-blue-500 to-blue-700">
                   <i className="fa fa-clipboard-user"></i>
@@ -498,7 +498,7 @@ export default function App() {
               </div>
             </div>
 
-            <nav className="flex items-center p-1 bg-gray-100/80 rounded-full overflow-hidden shadow-inner border border-gray-200 dark:bg-slate-800/50 dark:border-slate-700">
+            <nav className="flex flex-wrap justify-center items-center p-1 bg-gray-100/80 rounded-2xl shadow-inner border border-gray-200 dark:bg-slate-800/50 dark:border-slate-700">
               {['schedule', 'roster', 'stats', 'dept', 'log', 'tags', 'print', 'config'].map(
                 (v) => (
                   <button
@@ -529,7 +529,7 @@ export default function App() {
               )}
             </nav>
 
-            <div className="flex gap-3 items-center">
+            <div className="flex flex-wrap justify-center gap-3 items-center">
               {/* Modern Language Dropdown */}
               <div className="relative">
                 <button
