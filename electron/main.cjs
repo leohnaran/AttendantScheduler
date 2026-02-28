@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const CryptoJS = require('crypto-js')
 const { machineIdSync } = require('node-machine-id')
+const { autoUpdater } = require('electron-updater')
 
 // Unique key per machine for local encryption
 const MACHINE_KEY = machineIdSync()
@@ -77,10 +78,31 @@ ipcMain.handle('load-data', async (event) => {
 // ------ APP LIFECYCLE ------
 app.whenReady().then(() => {
     createWindow()
+    
+    // Check for updates after window is created
+    autoUpdater.checkForUpdatesAndNotify()
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
             createWindow()
+        }
+    })
+})
+
+// ------ AUTO UPDATER EVENTS ------
+autoUpdater.on('update-available', () => {
+    console.log('Update available.')
+})
+
+autoUpdater.on('update-downloaded', (info) => {
+    dialog.showMessageBox({
+        type: 'info',
+        title: 'Update Ready',
+        message: `Version ${info.version} has been downloaded and is ready to install.`,
+        buttons: ['Restart and Install', 'Later']
+    }).then((result) => {
+        if (result.response === 0) {
+            autoUpdater.quitAndInstall()
         }
     })
 })

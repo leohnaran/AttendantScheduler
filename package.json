@@ -1,7 +1,7 @@
 {
   "name": "attendant-scheduler",
   "private": true,
-  "version": "3.6.2",
+  "version": "3.6.3",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -15,6 +15,17 @@
   "build": {
     "appId": "com.cameron.attendantscheduler",
     "productName": "Attendant Scheduler",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/leohnaran/AttendantScheduler.git"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "leohnaran",
+        "repo": "AttendantScheduler"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -31,6 +42,7 @@
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
+    "electron-updater": "^6.8.3",
     "html-to-image": "^1.11.13",
     "node-machine-id": "^1.1.12",
     "react": "^18.2.0",

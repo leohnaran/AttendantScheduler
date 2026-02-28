@@ -31,7 +31,8 @@ jobs:
       - name: Build and Package Electron App
         # This will run the build script from your package.json
         # The 'electron-builder' automatically detects the OS it is running on.
-        run: npm run electron:build
+        # We add --publish always to create a GitHub Release automatically.
+        run: npm run electron:build -- --publish always
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
