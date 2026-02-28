@@ -177,7 +177,7 @@ export default function DepartmentView({
 
         <div className="space-y-6 print:space-y-4">
           {/* TEAM ASSIGNMENTS TABLE */}
-          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-after-page">
+          <div className={`glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none ${myOversightAreas.length > 0 ? 'print:break-after-page' : ''}`}>
             <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
               Direct Team Assignments ({myTeam.length})
             </h3>
@@ -265,7 +265,7 @@ export default function DepartmentView({
 
           {/* AREAS OF OVERSIGHT - Only render if there are areas */}
           {myOversightAreas.length > 0 && (
-            <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-before-page">
+            <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none">
                 <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
                 {km.name}'s Areas of Oversight
                 </h3>
