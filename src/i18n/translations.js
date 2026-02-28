@@ -13,7 +13,7 @@ export const TRANSLATIONS = {
     btn_clear_all: 'Clear All',
     btn_clear_auto: 'Clear Auto-Fills',
     btn_fix_conflicts: 'Fix Conflicts',
-    btn_resolve_absences: 'Resolve Absence',
+    btn_resolve_absences: 'Resolve Vacancies',
     btn_export: 'Backup',
     btn_import: 'Restore',
     btn_save: 'Backup',

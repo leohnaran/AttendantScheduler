@@ -143,8 +143,8 @@ export default function ScheduleView({
       }
     } else {
       const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
-      const conflictingPos = getConflictCount(parseInt(personId), shiftId)
-      if (conflictingPos > 0) {
+      const conflictingPos = getConflict(parseInt(personId), pos, shiftId, assignments)
+      if (conflictingPos) {
         if (!confirm(`${personnel.find(p => p.id === parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
           return
         }

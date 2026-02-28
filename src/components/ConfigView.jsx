@@ -868,20 +868,41 @@ export default function ConfigView({
                           ? renderConstraintSelector(editPosForm, setEditPosForm, true)
                           : displayConstraint}
                       </td>
-                      <td className="p-2">
+                      <td className="p-2 flex flex-col items-center gap-1">
                         {isEditing ? (
-                          <input
-                            value={editPosForm.section}
-                            onChange={(e) =>
-                              setEditPosForm({
-                                ...editPosForm,
-                                section: e.target.value,
-                              })
-                            }
-                            className="border p-1 rounded w-8 dark:bg-slate-700 dark:text-white"
-                          />
+                          <>
+                            <input
+                              value={editPosForm.section}
+                              onChange={(e) =>
+                                setEditPosForm({
+                                  ...editPosForm,
+                                  section: e.target.value,
+                                })
+                              }
+                              className="border p-1 rounded w-8 text-center dark:bg-slate-700 dark:text-white"
+                              title="Section"
+                            />
+                            <label className="flex items-center gap-1 cursor-pointer bg-white p-1 border border-gray-200 rounded text-[10px] dark:bg-slate-700 dark:border-slate-600">
+                              <input
+                                type="checkbox"
+                                checked={editPosForm.keyMan}
+                                onChange={(e) =>
+                                  setEditPosForm({ ...editPosForm, keyMan: e.target.checked })
+                                }
+                                className="w-3 h-3 rounded text-blue-600"
+                              />
+                              <span className="font-bold text-gray-700 dark:text-white">KM</span>
+                            </label>
+                          </>
                         ) : (
-                          <span className="text-xs">{p.section || '-'}</span>
+                          <>
+                            <span className="text-xs">{p.section || '-'}</span>
+                            {p.keyMan && (
+                              <span className="bg-yellow-100 text-yellow-800 text-[9px] px-1 py-0.5 rounded font-bold dark:bg-yellow-900/30 dark:text-yellow-400">
+                                KM
+                              </span>
+                            )}
+                          </>
                         )}
                       </td>
                       <td className="p-2">
