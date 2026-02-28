@@ -87,8 +87,10 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const APP_VERSION = 'v3.6.5'
+
 export default function App() {
-  console.log("Attendant Scheduler v3.6.5 - Reset Fix Active");
+  console.log(`Attendant Scheduler ${APP_VERSION} - Reset Fix Active`);
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -96,6 +98,43 @@ export default function App() {
     () => localStorage.getItem('app_language') || 'en',
   )
   const [showLangDropdown, setShowLangDropdown] = useState(false)
+  const [updateAvailable, setUpdateAvailable] = useState(null)
+
+  // Update Checker
+  useEffect(() => {
+    async function checkForUpdates() {
+      try {
+        const response = await fetch('https://api.github.com/repos/leohnaran/AttendantScheduler/releases/latest')
+        if (!response.ok) return
+        const data = await response.json()
+        const latestTag = data.tag_name // e.g. "v3.6.5"
+        
+        if (latestTag && latestTag !== APP_VERSION) {
+          // Compare versions simple way (assuming semantic versioning like vX.Y.Z)
+          const current = APP_VERSION.replace('v', '').split('.').map(Number)
+          const latest = latestTag.replace('v', '').split('.').map(Number)
+          
+          let isNewer = false
+          for (let i = 0; i < Math.max(current.length, latest.length); i++) {
+            const vLatest = latest[i] || 0
+            const vCurrent = current[i] || 0
+            if (vLatest > vCurrent) {
+              isNewer = true
+              break
+            }
+            if (vLatest < vCurrent) break
+          }
+
+          if (isNewer) {
+            setUpdateAvailable(data)
+          }
+        }
+      } catch (err) {
+        console.error('Update check failed:', err)
+      }
+    }
+    checkForUpdates()
+  }, [])
 
   const INITIAL_STATE = useMemo(() => ({
     personnel: INITIAL_ROSTER,
@@ -457,6 +496,32 @@ export default function App() {
   return (
     <ErrorBoundary>
       <div className="min-h-screen pb-10 text-gray-800 transition-colors duration-300 dark:text-gray-200">
+        {/* Update Notification */}
+        {updateAvailable && (
+          <div className="bg-blue-600 text-white px-6 py-2 flex flex-col md:flex-row items-center justify-center gap-2 md:gap-6 animate-in slide-in-from-top duration-500 sticky top-0 z-[100] shadow-lg">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <i className="fa fa-sparkles animate-pulse"></i>
+              <span>New Version Available: {updateAvailable.tag_name}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <a 
+                href={updateAvailable.html_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="bg-white text-blue-600 px-4 py-1 rounded-full text-xs font-black hover:bg-blue-50 transition-colors shadow-sm"
+              >
+                View Release
+              </a>
+              <button 
+                onClick={() => setUpdateAvailable(null)}
+                className="text-white/80 hover:text-white p-1"
+              >
+                <i className="fa fa-times text-xs"></i>
+              </button>
+            </div>
+          </div>
+        )}
+
         <header className="glass-header sticky top-0 z-50 px-6 py-3 shadow-sm mb-8 print:hidden">
           <div className="container mx-auto flex flex-wrap justify-center xl:justify-between items-center gap-4">
             <div className="flex flex-wrap justify-center items-center gap-6">
@@ -466,7 +531,7 @@ export default function App() {
                 </div>
                 <span className="tracking-tight">{t('app_title', language)}</span>
                 <span className="ml-2 text-[10px] font-black bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full dark:bg-blue-900/40 dark:text-blue-400">
-                  v3.6.5
+                  {APP_VERSION}
                 </span>
               </h1>
 
