@@ -1,0 +1,34 @@
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev.log
+
+# Editor
+.vscode/
+.idea/
+
+# Temp
+.tmp/
+tmp/
+repro_utilization.js
+build_output.log
+
+# Vite
+.vite/
+
+# Electron Build
+release/
+dist/
+dist_electron/
+*.AppImage
+*.snap
+*.exe
+*.dmg
+*.zip
+*.7z
