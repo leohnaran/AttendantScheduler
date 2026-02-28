@@ -10,6 +10,12 @@ export default function DepartmentView({
   shifts = [],
   language,
 }) {
+  const personnelMap = useMemo(() => {
+    const map = new Map()
+    personnel.forEach(p => map.set(p.id, p))
+    return map
+  }, [personnel])
+
   const keyMen = useMemo(() => {
     return personnel
       .filter((p) => p.caps && p.caps.includes('keyman'))
@@ -42,7 +48,7 @@ export default function DepartmentView({
   }
 
   const renderSingleReport = (kmId) => {
-    const km = personnel.find(p => p.id === parseInt(kmId))
+    const km = personnelMap.get(parseInt(kmId))
     if (!km) return null
 
     // --- LOGIC: MY DIRECT TEAM ---
@@ -322,7 +328,7 @@ export default function DepartmentView({
                                 }
 
                                 const pid = getAssignId(assignments[assignmentKey])
-                                const assignedPerson = personnel.find((x) => x.id === pid)
+                                const assignedPerson = personnelMap.get(pid)
                                 const itsMe = pid === km.id
 
                                 return (
@@ -341,7 +347,7 @@ export default function DepartmentView({
                                     </td>
                                     <td className="py-1.5 text-right text-gray-400 print:text-black">
                                         {assignedPerson
-                                        ? personnel.find(kman => kman.id === assignedPerson.keyManId)?.name || 'None'
+                                        ? personnelMap.get(assignedPerson.keyManId)?.name || 'None'
                                         : '-'}
                                     </td>
                                     </tr>
