@@ -30,10 +30,7 @@ export async function saveToDatabase(data) {
     return new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readwrite');
       tx.objectStore(STORE_NAME).put(data, DATA_KEY);
-      tx.oncomplete = () => {
-        console.log('Auto-saved to IndexedDB.');
-        resolve();
-      };
+      tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
   } catch (err) {
