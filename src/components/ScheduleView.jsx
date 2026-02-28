@@ -269,10 +269,15 @@ export default function ScheduleView({
     return count
   }
 
+  const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas]);
+  const tagsMap = useMemo(() => new Map(tags.map(t => [t.id, t])), [tags]);
+  const positionsMap = useMemo(() => new Map(positions.map(p => [p.id, p])), [positions]);
+  const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel]);
+
   const getConflict = (personId, pos, shiftId, currentAssignments) => {
     if (!personId) return null
     const pid = parseInt(personId)
-    const person = personnel.find((p) => p.id === pid)
+    const person = personnelMap.get(pid)
     if (!person) return null
 
     // 1. Double Booking
@@ -301,7 +306,7 @@ export default function ScheduleView({
         shiftId === 'all' || existingShiftId === 'all' || shiftId === existingShiftId
 
       if (overlap) {
-        const otherPos = positions.find((p) => p.id === existingPosId)
+        const otherPos = positionsMap.get(existingPosId)
 
         // RELIEF MODE: Allow overlap if one is All-Day ('all') and the other is a specific shift
         const isReliefOverlap = (shiftId === 'all' && existingShiftId !== 'all') || (shiftId !== 'all' && existingShiftId === 'all');
@@ -309,7 +314,7 @@ export default function ScheduleView({
         if (isReliefOverlap && rules.auditoriumRotationMode) {
           // Identify which shift's relief limit we are checking
           const targetRotShiftId = shiftId === 'all' ? existingShiftId : shiftId;
-          const targetAudPos = shiftId === 'all' ? pos : positions.find(p => p.id === existingPosId);
+          const targetAudPos = shiftId === 'all' ? pos : positionsMap.get(existingPosId);
 
           if (targetAudPos && targetAudPos.type === 'auditorium' && targetAudPos.section) {
             const sameSectionPositions = positions.filter(
@@ -388,7 +393,7 @@ export default function ScheduleView({
     // 2a. Tag Restrictions (Shifts & Areas)
     if (tags && person.tags) {
       for (let tid of person.tags) {
-        const tag = tags.find((t) => t.id === tid)
+        const tag = tagsMap.get(tid)
         if (tag) {
           // Check Restricted Areas
           if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) {
@@ -417,7 +422,7 @@ export default function ScheduleView({
     }
 
     // 3. Capabilities
-    const area = areas.find((a) => a.id === pos.areaId)
+    const area = areasMap.get(pos.areaId)
     const requiredCap = area ? area.capability : ''
 
     // RELIEF MODE BYPASS: If enabled, brothers with 'auditorium' capability
