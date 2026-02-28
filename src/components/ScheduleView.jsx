@@ -7,6 +7,7 @@ import {
   isAutoAssigned,
   parseAssignmentKey,
   ROLE_HIERARCHY,
+  shuffleArray,
 } from '../utils/helpers'
 import PersonnelSidebar from './PersonnelSidebar'
 import MobileScheduleView from './MobileScheduleView'
@@ -620,7 +621,7 @@ export default function ScheduleView({
       if (candidates.length === 0) return
 
       // 1. Pre-shuffle candidates for true randomness among equals
-      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      const shuffled = shuffleArray([...candidates]);
 
       // 2. Sort candidates by Workload Score (Lowest first)
       shuffled.sort((a, b) => {
@@ -654,7 +655,7 @@ export default function ScheduleView({
       if (candidates.length === 0) return
 
       // 1. Pre-shuffle candidates for true randomness among equals
-      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      const shuffled = shuffleArray([...candidates]);
 
       // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
       shuffled.sort((a, b) => {

@@ -39,6 +39,30 @@ export const getHeatBg = (count) => {
   return 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
 }
 
+export const getRandomInt = (max) => {
+  if (typeof window !== 'undefined' && window.crypto) {
+    const randomBuffer = new Uint32Array(1)
+    window.crypto.getRandomValues(randomBuffer)
+    return randomBuffer[0] % max
+  } else if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const randomBuffer = new Uint32Array(1)
+    crypto.getRandomValues(randomBuffer)
+    return randomBuffer[0] % max
+  } else {
+    // Fallback if crypto is completely unavailable
+    return Math.floor(Math.random() * max)
+  }
+}
+
+export const shuffleArray = (array) => {
+  const newArray = [...array]
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = getRandomInt(i + 1)
+    ;[newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+  }
+  return newArray
+}
+
 export const parseCSV = (text) => {
   const arr = []
   let quote = false
