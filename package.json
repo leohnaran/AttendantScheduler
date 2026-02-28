@@ -1,5 +1,7 @@
 {
   "name": "attendant-scheduler",
+  "description": "Attendant Scheduler for Jehovah's Witnesses Circuit Assemblies and Regional Conventions",
+  "author": "leohnaran",
   "private": true,
   "version": "3.6.3",
   "type": "module",
@@ -38,6 +40,9 @@
     },
     "win": {
       "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
     }
   },
   "dependencies": {
