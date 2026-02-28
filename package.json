@@ -15,6 +15,7 @@
     "build": "vite build",
     "build:nocache": "npm run build && cp dist/index.html schedule.html",
     "preview": "vite preview",
+    "test": "node --test src/**/*.test.js",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder"
   },
