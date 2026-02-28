@@ -157,7 +157,7 @@ export default function DepartmentView({
     const oversightNotes = getTimeNotesForOversight(myOversightAreas)
 
     return (
-      <div key={km.id} className="space-y-6 print:pt-4">
+      <div key={km.id} className="space-y-6 print:pt-4 print:break-after-page">
         {/* HEADER */}
         <div className="glass-panel p-6 rounded-3xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 print:p-0 print:border-none print:shadow-none print:mb-4">
           <div className="flex items-center gap-4">
