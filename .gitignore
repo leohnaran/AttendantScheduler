@@ -16,6 +16,19 @@ dev.log
 # Temp
 .tmp/
 tmp/
+repro_utilization.js
+build_output.log
 
 # Vite
 .vite/
+
+# Electron Build
+release/
+dist/
+dist_electron/
+*.AppImage
+*.snap
+*.exe
+*.dmg
+*.zip
+*.7z

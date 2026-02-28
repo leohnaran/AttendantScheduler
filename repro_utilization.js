@@ -1,8 +1,8 @@
 
 import { DEFAULT_AREAS, DEFAULT_POSITIONS, DEFAULT_SHIFTS } from './src/utils/constants.js';
 
-// 1. MOCK DATASET: 60 Brothers
-const personnel = Array.from({ length: 60 }, (_, i) => {
+// 1. MOCK DATASET: 20 Brothers
+const personnel = Array.from({ length: 20 }, (_, i) => {
     const id = i + 1;
     const isKeyMan = id <= 10; // 10 Key Men
     return {
@@ -173,7 +173,7 @@ const total1 = stats.filter(s => s.total === 1).length;
 const total2 = stats.filter(s => s.total === 2).length;
 const total3 = stats.filter(s => s.total >= 3).length;
 
-console.log(`Utilization: ${totalAssigned}/60 (${Math.round(totalAssigned/60*100)}%)`);
+console.log(`Utilization: ${totalAssigned}/20 (${Math.round(totalAssigned/20*100)}%)`);
 console.log(`0 Shifts: ${total0}`);
 console.log(`1 Shift:  ${total1}`);
 console.log(`2 Shifts: ${total2}`);

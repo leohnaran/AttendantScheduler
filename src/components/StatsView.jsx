@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { t } from '../i18n/translations'
-import { getAssignId } from '../utils/helpers'
+import { getAssignId, parseAssignmentKey } from '../utils/helpers'
 import { TOTAL_PROGRAM_MINUTES } from '../utils/constants'
 
 export default function StatsView({
@@ -27,16 +27,7 @@ export default function StatsView({
         const assignedId = getAssignId(assignVal)
 
         if (assignedId === p.id) {
-          let posId = key
-          let shiftId = 'all'
-          if (key.includes('_')) {
-            const parts = key.split('_')
-            const lastPart = parts[parts.length - 1]
-            if (shifts.find((s) => s.id === lastPart)) {
-              shiftId = lastPart
-              posId = parts.slice(0, parts.length - 1).join('_')
-            }
-          }
+          const { posId, shiftId } = parseAssignmentKey(key, shifts)
           const pos = positions.find((pos) => pos.id === posId)
           if (pos) {
             const shift = shifts.find((s) => s.id === shiftId)
@@ -52,14 +43,12 @@ export default function StatsView({
             
             // Add primary position
             assignmentLabels.push(`${pos.name} (${shiftLabel})`)
-
-            // Add any positions that MIRROR this one
-            positions.filter(p => p.mirrorOf === pos.id).forEach(mirror => {
-                assignmentLabels.push(`${mirror.name} (${shiftLabel})`)
-            })
           }
         }
       })
+
+      // Ensure assignment labels are unique (in case mirroring logic overlaps in future)
+      assignmentLabels = [...new Set(assignmentLabels)];
 
       const percentage = Math.round(
         (minutesAway / TOTAL_PROGRAM_MINUTES) * 100,

@@ -70,13 +70,18 @@ class ErrorBoundary extends React.Component {
   }
   render() {
     if (this.state.hasError) {
-      return (
-        <div style={{ padding: '20px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', margin: '20px' }}>
-          <h2 style={{ color: '#b91c1c', fontWeight: 'bold' }}>Component Crash</h2>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', marginTop: '10px' }}>{this.state.error?.toString()}</pre>
-          <button onClick={() => window.location.reload()} style={{ marginTop: '10px', padding: '5px 10px' }}>Reload Page</button>
+      <div style={{ padding: '20px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', margin: '20px' }}>
+        <h2 style={{ color: '#b91c1c', fontWeight: 'bold' }}>Component Crash</h2>
+        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', marginTop: '10px' }}>{this.state.error?.toString()}</pre>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+          <button onClick={() => window.location.reload()} style={{ padding: '6px 12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '4px' }}>Reload Page</button>
+          <button onClick={() => {
+            localStorage.removeItem('circuit_scheduler_data');
+            if (window.indexedDB) indexedDB.deleteDatabase('AttendantSchedulerDB');
+            window.location.reload();
+          }} style={{ padding: '6px 12px', cursor: 'pointer', background: '#dc2626', color: 'white', border: '1px solid #dc2626', borderRadius: '4px' }}>Clear Data & Reload</button>
         </div>
-      )
+      </div>
     }
     return this.props.children
   }
@@ -119,6 +124,7 @@ export default function App() {
       auditoriumRotationMode: false,
       auditoriumCoverage: 25,
     },
+    lastUpdated: 0
   }), [])
 
   // Load from database OR localStorage on initialization
@@ -126,7 +132,19 @@ export default function App() {
     try {
       const saved = localStorage.getItem('circuit_scheduler_data')
       if (saved) {
-        const parsed = JSON.parse(saved)
+        let parsed = JSON.parse(saved)
+
+        // MIGRATION: Auto-sync mirror properties from default configurations
+        if (parsed.positions) {
+          parsed.positions = parsed.positions.map(p => {
+            const defaultPos = DEFAULT_POSITIONS.find(dp => dp.id === p.id)
+            if (defaultPos && defaultPos.isMirror && p.mirrorOf === undefined) {
+              return { ...p, isMirror: true, mirrorOf: defaultPos.mirrorOf }
+            }
+            return p
+          })
+        }
+
         return { ...INITIAL_STATE, ...parsed }
       }
     } catch (err) {
@@ -135,9 +153,9 @@ export default function App() {
     return INITIAL_STATE
   })
 
-  const { state, setState, undo, redo, canUndo, canRedo } =
+  const { state, setState, undo, redo, canUndo, canRedo, resetHistory } =
     useUndoRedo(initialData)
-  
+
   // Safety check for state
   if (!state) {
     return <div className="p-10 text-center">Initializing State...</div>
@@ -163,14 +181,51 @@ export default function App() {
   )
   const [password, setPassword] = useState('')
 
-  // 1. ASYNC LOAD FROM INDEXEDDB (High Reliability)
+  // 1. ROBUST LOAD: Combine Electron Native, LocalStorage and IndexedDB
   useEffect(() => {
-    loadFromDatabase().then(dbData => {
-        if (dbData) {
-            console.log("Restored state from robust local database.");
-            setState(dbData);
+    async function loadAll() {
+      let finalState = null;
+
+      // FIRST PASS: Am I running in Electron?
+      if (window.electronAPI) {
+        try {
+          console.log("Electron API detected, attempting native file load...");
+          const result = await window.electronAPI.loadData();
+          if (result && result.success && result.data) {
+            finalState = result.data;
+            console.log("Restored state from native OS file.");
+          }
+        } catch (e) {
+          console.error("Native Load Failed", e);
         }
-    });
+      }
+
+      // SECOND PASS: If no Electron file existed, try web storage
+      if (!finalState) {
+        // Try LocalStorage first (Synchronous data already in initialData, but we check here too for safety)
+        try {
+          const lsRaw = localStorage.getItem('circuit_scheduler_data');
+          if (lsRaw) finalState = JSON.parse(lsRaw);
+        } catch (e) { console.error("LS Load Failed", e); }
+
+        // Try IndexedDB (Async, reliable)
+        try {
+          const dbState = await loadFromDatabase();
+          if (dbState) {
+            // Pick whichever is newer
+            if (!finalState || (dbState.lastUpdated || 0) > (finalState.lastUpdated || 0)) {
+              finalState = dbState;
+              console.log("Restored state from IndexedDB (Newer or Only copy).");
+            }
+          }
+        } catch (e) { console.error("DB Load Failed", e); }
+      }
+
+      if (finalState) {
+        resetHistory({ ...INITIAL_STATE, ...finalState });
+      }
+    }
+    loadAll();
   }, []);
 
   useEffect(() => {
@@ -193,15 +248,25 @@ export default function App() {
     localStorage.setItem('app_language', language)
   }, [language])
 
-  // --- PERSISTENCE: IndexedDB Auto-Save ---
+  // --- PERSISTENCE: Auto-Save to Native File or Database ---
   useEffect(() => {
     if (!state) return
 
-    // Mirror to localStorage for dual-layer safety
+    // Mirror to localStorage for dual-layer safety (Web only fallback)
     localStorage.setItem('circuit_scheduler_data', JSON.stringify(state))
 
-    // Primary Auto-Save to Database
-    saveToDatabase(state);
+    // Primary Auto-Save
+    if (window.electronAPI) {
+      // We are in the Electron Desktop App
+      window.electronAPI.saveData(state)
+        .then(res => {
+          if (!res.success) console.error("Electron Save Error:", res.error)
+        })
+        .catch(err => console.error("Electron IPC Error:", err))
+    } else {
+      // We are on the web 
+      saveToDatabase(state);
+    }
   }, [state])
 
   // --- WIZARD HANDLERS ---
@@ -230,7 +295,7 @@ export default function App() {
   }
 
   // --- WRAPPERS FOR STATE UPDATES ---
-  const updateState = (updates) => setState({ ...state, ...updates })
+  const updateState = (updates) => setState({ ...state, ...updates, lastUpdated: Date.now() })
 
   const setPersonnel = (val) =>
     updateState({
@@ -264,7 +329,7 @@ export default function App() {
       ...p,
       tags: (p.tags || []).filter((tid) => tid !== tagId),
     }))
-    
+
     console.log('App: Setting new state with tag count:', newTags.length)
     updateState({
       tags: newTags,
@@ -285,8 +350,14 @@ export default function App() {
     // 1. Update Assignments
     const newAssignments = { ...assignments }
     Object.keys(newAssignments).forEach((key) => {
-      if (newAssignments[key] === sourceId) {
-        newAssignments[key] = targetId
+      const val = newAssignments[key]
+      const currentId = val && typeof val === 'object' ? val.id : val
+      if (currentId === sourceId) {
+        if (val && typeof val === 'object') {
+          newAssignments[key] = { ...val, id: targetId }
+        } else {
+          newAssignments[key] = targetId
+        }
       }
     })
 
@@ -328,7 +399,7 @@ export default function App() {
     ) {
       // 1. Clear localStorage
       localStorage.removeItem('circuit_scheduler_data');
-      
+
       // 2. Clear IndexedDB
       try {
         await clearDatabase();
@@ -398,18 +469,17 @@ export default function App() {
                   v3.3.6
                 </span>
               </h1>
-                                                                
-                                                                              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
-                                                                
-                                                                              <div className="flex gap-1">
+
+              <div className="h-6 w-px bg-gray-300 hidden sm:block"></div>
+
+              <div className="flex gap-1">
                 <button
                   onClick={undo}
                   disabled={!canUndo}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
-                    !canUndo
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
-                  }`}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!canUndo
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
+                    }`}
                   title="Undo"
                 >
                   <i className="fa fa-undo"></i>
@@ -417,11 +487,10 @@ export default function App() {
                 <button
                   onClick={redo}
                   disabled={!canRedo}
-                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
-                    !canRedo
-                      ? 'text-gray-300 cursor-not-allowed'
-                      : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
-                  }`}
+                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${!canRedo
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-blue-600'
+                    }`}
                   title="Redo"
                 >
                   <i className="fa fa-redo"></i>
@@ -435,27 +504,26 @@ export default function App() {
                   <button
                     key={v}
                     onClick={() => setView(v)}
-                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
-                      view === v
-                        ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
-                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                    }`}
+                    className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${view === v
+                      ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                      }`}
                   >
                     {v === 'schedule'
                       ? t('nav_schedule', language)
                       : v === 'roster'
-                      ? t('nav_roster', language)
-                      : v === 'stats'
-                      ? t('nav_stats', language)
-                      : v === 'dept'
-                      ? 'Key Man Report'
-                      : v === 'log'
-                      ? t('nav_log', language)
-                      : v === 'tags'
-                      ? t('nav_tags', language)
-                      : v === 'print'
-                      ? t('nav_slips', language)
-                      : t('nav_config', language)}
+                        ? t('nav_roster', language)
+                        : v === 'stats'
+                          ? t('nav_stats', language)
+                          : v === 'dept'
+                            ? 'Key Man Report'
+                            : v === 'log'
+                              ? t('nav_log', language)
+                              : v === 'tags'
+                                ? t('nav_tags', language)
+                                : v === 'print'
+                                  ? t('nav_slips', language)
+                                  : t('nav_config', language)}
                   </button>
                 ),
               )}
@@ -464,7 +532,7 @@ export default function App() {
             <div className="flex gap-3 items-center">
               {/* Modern Language Dropdown */}
               <div className="relative">
-                <button 
+                <button
                   onClick={() => setShowLangDropdown(!showLangDropdown)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 transition-all"
                 >
@@ -484,11 +552,10 @@ export default function App() {
                             setLanguage(l);
                             setShowLangDropdown(false);
                           }}
-                          className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${
-                            language === l 
-                              ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' 
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
-                          }`}
+                          className={`w-full text-left px-4 py-2 text-xs font-bold transition-colors ${language === l
+                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700'
+                            }`}
                         >
                           {t(`lang_${l}`, language)}
                         </button>
@@ -500,11 +567,10 @@ export default function App() {
 
               <button
                 onClick={() => setDarkMode(!darkMode)}
-                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${
-                  darkMode
-                    ? 'text-yellow-400 hover:bg-white/10'
-                    : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
-                }`}
+                className={`w-8 h-8 flex items-center justify-center rounded-full transition-all ${darkMode
+                  ? 'text-yellow-400 hover:bg-white/10'
+                  : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'
+                  }`}
                 title="Toggle Dark Mode"
               >
                 <i className={`fa ${darkMode ? 'fa-sun' : 'fa-moon'}`}></i>
@@ -546,6 +612,8 @@ export default function App() {
             <RosterView
               personnel={personnel}
               setPersonnel={setPersonnel}
+              assignments={assignments}
+              setAssignments={setAssignments}
               areas={areas}
               shifts={shifts}
               tags={tags}
@@ -664,17 +732,17 @@ export default function App() {
                   placeholder="Password"
                 />
                 <div className={`transition-all ${!password ? 'opacity-50 grayscale pointer-events-none' : 'opacity-100'}`}>
-                    <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">
-                        {!password ? 'Enter password above to unlock file selection' : 'Select your backup file:'}
-                    </label>
-                    <input 
-                        type="file" 
-                        onChange={handleImport} 
-                        disabled={!password}
-                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-blue-400 mb-4" 
-                    />
+                  <label className="block text-[10px] font-black uppercase text-gray-400 mb-2 ml-1">
+                    {!password ? 'Enter password above to unlock file selection' : 'Select your backup file:'}
+                  </label>
+                  <input
+                    type="file"
+                    onChange={handleImport}
+                    disabled={!password}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-blue-400 mb-4"
+                  />
                 </div>
-                
+
                 <div className="flex justify-end gap-3">
                   <button onClick={() => setShowLoadModal(false)} className="px-6 py-2 text-sm font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">Cancel</button>
                 </div>

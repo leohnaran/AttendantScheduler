@@ -47,7 +47,7 @@ export default function AssignmentCell({
       )
   }
 
-  // Check if THIS cell is being hovered by its mirror counterpart
+  // Check if THIS cell is being hovered or if its source/mirror is being hovered
   const isTargetedByHover = hoveredMirrorKey === assignmentKey
 
   if (isMirror) {
@@ -59,7 +59,7 @@ export default function AssignmentCell({
         onMouseEnter={() => setHoveredMirrorKey(mirrorKey)}
         onMouseLeave={() => setHoveredMirrorKey(null)}
         className={`p-3 mirrored-cell text-xs border-l border-dashed border-gray-200 transition-all ${
-          isTargetedByHover ? 'mirror-highlight' : ''
+          isTargetedByHover || hoveredMirrorKey === mirrorKey ? 'mirror-highlight' : ''
         }`}
       >
         {mirrorPerson ? (
@@ -83,12 +83,8 @@ export default function AssignmentCell({
 
   // Handle hover for source cells (highlight their mirrors)
   const handleMouseEnter = () => {
-    // Dynamically find any positions that mirror THIS one
-    const mirrorPositions = positions.filter(p => p.mirrorOf === pos.id);
-    if (mirrorPositions.length > 0) {
-        // For simplicity in highlight logic, we pick the first mirror to highlight
-        setHoveredMirrorKey(`${mirrorPositions[0].id}_${shiftId}`);
-    }
+    // Set the hovered key to THIS key so that all mirrors can react to it
+    setHoveredMirrorKey(assignmentKey);
   }
 
   const handleDrop = (e) => {

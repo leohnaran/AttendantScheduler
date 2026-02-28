@@ -13,7 +13,7 @@ export default function RulesView({ rules, setRules, language }) {
       </h2>
       <div className="grid gap-4 max-w-2xl">
         {/* 1. Capabilities */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex justify-between items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div>
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_capabilities', language)}
@@ -27,7 +27,7 @@ export default function RulesView({ rules, setRules, language }) {
             <select
               value={rules.capabilitySeverity || 'error'}
               onChange={(e) => setSeverity('capabilitySeverity', e.target.value)}
-              className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+              className="bg-gray-50 border border-gray-200 p-2 rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
             >
               <option value="error">{t('severity_block', language)}</option>
               <option value="warning">{t('severity_warn', language)}</option>
@@ -37,7 +37,7 @@ export default function RulesView({ rules, setRules, language }) {
         </div>
 
         {/* 2. Double Booking */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex justify-between items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div>
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_double_booking', language)}
@@ -50,7 +50,7 @@ export default function RulesView({ rules, setRules, language }) {
           <select
             value={rules.doubleBookingSeverity || 'error'}
             onChange={(e) => setSeverity('doubleBookingSeverity', e.target.value)}
-            className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            className="bg-gray-50 border border-gray-200 p-2 rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
           >
             <option value="error">{t('severity_block', language)}</option>
             <option value="warning">{t('severity_warn', language)}</option>
@@ -59,7 +59,7 @@ export default function RulesView({ rules, setRules, language }) {
         </div>
 
         {/* 3. Unavailability */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex justify-between items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div>
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_unavailability', language)}
@@ -72,7 +72,7 @@ export default function RulesView({ rules, setRules, language }) {
           <select
             value={rules.unavailableSeverity || 'error'}
             onChange={(e) => setSeverity('unavailableSeverity', e.target.value)}
-            className="border rounded p-1 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+            className="bg-gray-50 border border-gray-200 p-2 rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-blue-100 outline-none cursor-pointer transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
           >
             <option value="error">{t('severity_block', language)}</option>
             <option value="warning">{t('severity_warn', language)}</option>
@@ -81,7 +81,7 @@ export default function RulesView({ rules, setRules, language }) {
         </div>
 
         {/* 4. Max Work Percentage */}
-        <div className="p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_max_load', language)} (Program Watch %)
@@ -100,12 +100,12 @@ export default function RulesView({ rules, setRules, language }) {
             step="5"
             value={rules.maxWorkPercent || 50}
             onChange={(e) => setVal('maxWorkPercent', parseInt(e.target.value))}
-            className="w-full"
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:bg-slate-700"
           />
         </div>
 
         {/* 5. Consecutive Shifts */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex justify-between items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div>
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_consecutive', language)} (Auto-Fill)
@@ -124,7 +124,7 @@ export default function RulesView({ rules, setRules, language }) {
         </div>
 
         {/* 6. Anchor Limits */}
-        <div className="flex justify-between items-center p-4 bg-gray-50 rounded border dark:bg-slate-800 dark:border-slate-700">
+        <div className="flex justify-between items-center p-5 bg-white rounded-2xl border border-gray-200 shadow-sm hover:border-blue-200 transition-all dark:bg-slate-800 dark:border-slate-700">
           <div>
             <h3 className="font-bold text-gray-800 dark:text-white">
               {t('rule_anchor_limits', language)} (Auto-Fill)
@@ -137,12 +137,12 @@ export default function RulesView({ rules, setRules, language }) {
             type="checkbox"
             checked={rules.anchorLimits !== false}
             onChange={() => toggleRule('anchorLimits')}
-            className="h-5 w-5"
+            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-200 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer transition-all dark:bg-slate-700 dark:border-slate-600"
           />
         </div>
 
         {/* 7. Auditorium Relief Mode */}
-        <div className="p-4 bg-blue-50 rounded border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800">
+        <div className="p-5 bg-blue-50/50 rounded-2xl border border-blue-100 shadow-sm hover:border-blue-200 transition-all dark:bg-blue-900/20 dark:border-blue-800">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h3 className="font-bold text-blue-900 dark:text-blue-300">
@@ -156,7 +156,7 @@ export default function RulesView({ rules, setRules, language }) {
               type="checkbox"
               checked={rules.auditoriumRotationMode === true}
               onChange={() => toggleRule('auditoriumRotationMode')}
-              className="h-5 w-5"
+              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-200 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer transition-all dark:bg-slate-700 dark:border-slate-600"
             />
           </div>
 
@@ -182,7 +182,7 @@ export default function RulesView({ rules, setRules, language }) {
                 onChange={(e) =>
                   setVal('auditoriumCoverage', parseInt(e.target.value))
                 }
-                className="w-full"
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600 dark:bg-slate-700"
               />
             </div>
           )}

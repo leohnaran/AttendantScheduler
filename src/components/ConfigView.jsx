@@ -96,7 +96,7 @@ export default function ConfigView({
         onChange={(e) =>
           setForm({ ...form, limitType: e.target.value, limitValue: '' })
         }
-        className="border p-1 rounded text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+        className="border border-gray-200 p-2 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
       >
         <option value="">No Constraint</option>
         <option value="keyman">Limit to Team</option>
@@ -108,7 +108,7 @@ export default function ConfigView({
         <select
           value={form.limitValue || ''}
           onChange={(e) => setForm({ ...form, limitValue: e.target.value })}
-          className="border p-1 rounded text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+          className="border border-gray-200 p-2 rounded-xl text-xs bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
         >
           <option value="">-- Select --</option>
           {form.limitType === 'keyman' &&
@@ -328,54 +328,49 @@ export default function ConfigView({
         System Configuration
       </h2>
 
-      <div className="flex border-b border-gray-200 mb-6 dark:border-slate-700">
+      <div className="flex gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-full border border-gray-200 dark:border-slate-700 w-fit mb-8 shadow-inner overflow-x-auto max-w-full">
         <button
           onClick={() => setActiveTab('areas')}
-          className={`px-4 py-2 ${
-            activeTab === 'areas'
-              ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'areas'
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           {t('config_areas', language)}
         </button>
         <button
           onClick={() => setActiveTab('shifts')}
-          className={`px-4 py-2 ${
-            activeTab === 'shifts'
-              ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'shifts'
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           {t('config_shifts', language)}
         </button>
         <button
           onClick={() => setActiveTab('positions')}
-          className={`px-4 py-2 ${
-            activeTab === 'positions'
-              ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'positions'
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           {t('config_positions', language)}
         </button>
         <button
           onClick={() => setActiveTab('blueprints')}
-          className={`px-4 py-2 ${
-            activeTab === 'blueprints'
-              ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'blueprints'
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           {t('config_blueprints', language)}
         </button>
         <button
           onClick={() => setActiveTab('rules')}
-          className={`px-4 py-2 ${
-            activeTab === 'rules'
-              ? 'border-b-2 border-blue-600 font-bold text-blue-600 dark:text-blue-400'
-              : 'text-gray-500 dark:text-gray-400'
-          }`}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap ${activeTab === 'rules'
+            ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5 dark:bg-slate-700 dark:text-white'
+            : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+            }`}
         >
           {t('config_rules', language)}
         </button>
@@ -387,52 +382,61 @@ export default function ConfigView({
             <h3 className="font-bold mb-2 dark:text-white">
               {t('add_new_area', language) || 'Add New Area'}
             </h3>
-            <div className="flex flex-wrap gap-2 items-center">
-              <input
-                placeholder={t('roster_name', language)}
-                value={areaForm.name}
-                onChange={(e) =>
-                  setAreaForm({ ...areaForm, name: e.target.value })
-                }
-                className="border p-2 rounded w-64 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-              <input
-                placeholder={t('roster_perms', language)}
-                value={areaForm.capability}
-                onChange={(e) =>
-                  setAreaForm({ ...areaForm, capability: e.target.value })
-                }
-                className="border p-2 rounded w-32 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-              />
-              <label className="text-sm dark:text-gray-300">
-                {t('bg_color', language) || 'Bg Color'}:
-              </label>
-              <input
-                type="color"
-                value={areaForm.style.backgroundColor}
-                onChange={(e) =>
-                  setAreaForm({
-                    ...areaForm,
-                    style: { ...areaForm.style, backgroundColor: e.target.value },
-                  })
-                }
-              />
-              <label className="text-sm ml-2 dark:text-gray-300">
-                {t('text_color', language) || 'Text Color'}:
-              </label>
-              <input
-                type="color"
-                value={areaForm.style.color}
-                onChange={(e) =>
-                  setAreaForm({
-                    ...areaForm,
-                    style: { ...areaForm.style, color: e.target.value },
-                  })
-                }
-              />
+            <div className="flex flex-wrap gap-4 items-center">
+              <div>
+                <input
+                  placeholder={t('roster_name', language)}
+                  value={areaForm.name}
+                  onChange={(e) =>
+                    setAreaForm({ ...areaForm, name: e.target.value })
+                  }
+                  className="border border-gray-200 p-2.5 rounded-xl w-64 text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
+                />
+              </div>
+              <div>
+                <input
+                  placeholder={t('roster_perms', language)}
+                  value={areaForm.capability}
+                  onChange={(e) =>
+                    setAreaForm({ ...areaForm, capability: e.target.value })
+                  }
+                  className="border border-gray-200 p-2.5 rounded-xl w-32 text-sm bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
+                />
+              </div>
+              <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-sm dark:bg-slate-700 dark:border-slate-600">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-300">
+                  {t('bg_color', language) || 'Bg. Color'}:
+                </label>
+                <input
+                  type="color"
+                  className="cursor-pointer"
+                  value={areaForm.style.backgroundColor}
+                  onChange={(e) =>
+                    setAreaForm({
+                      ...areaForm,
+                      style: { ...areaForm.style, backgroundColor: e.target.value },
+                    })
+                  }
+                />
+                <div className="w-px h-6 bg-gray-200 dark:bg-slate-600 mx-2"></div>
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-300">
+                  {t('text_color', language) || 'Text Color'}:
+                </label>
+                <input
+                  type="color"
+                  className="cursor-pointer"
+                  value={areaForm.style.color}
+                  onChange={(e) =>
+                    setAreaForm({
+                      ...areaForm,
+                      style: { ...areaForm.style, color: e.target.value },
+                    })
+                  }
+                />
+              </div>
               <button
                 onClick={addArea}
-                className="ml-auto bg-blue-600 text-white px-4 py-1 rounded"
+                className="ml-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all dark:shadow-none"
               >
                 {t('btn_add', language)} {t('area', language) || 'Area'}
               </button>
@@ -445,150 +449,152 @@ export default function ConfigView({
             </div>
           </div>
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300">
-                <th className="p-2 text-left">ID</th>
-                <th className="p-2 text-left">{t('roster_name', language)}</th>
-                <th className="p-2 text-left">{t('roster_perms', language)}</th>
-                <th className="p-2 text-left">
-                  {t('restriction', language) || 'Restriction'}
-                </th>
-                <th className="p-2 text-left">
-                  {t('preview', language) || 'Preview'}
-                </th>
-                <th className="p-2 w-24">{t('action', language) || 'Action'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-slate-700">
-              {areas.map((a) => {
-                const isEditing = editingAreaId === a.id
-                return (
-                  <tr key={a.id}>
-                    <td className="p-2 text-xs text-gray-400">{a.id}</td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <input
-                          value={editAreaForm.name}
-                          onChange={(e) =>
-                            setEditAreaForm({
-                              ...editAreaForm,
-                              name: e.target.value,
-                            })
-                          }
-                          className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
-                        />
-                      ) : (
-                        a.name
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <input
-                          value={editAreaForm.capability}
-                          onChange={(e) =>
-                            setEditAreaForm({
-                              ...editAreaForm,
-                              capability: e.target.value,
-                            })
-                          }
-                          className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
-                        />
-                      ) : (
-                        a.capability
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {isEditing
-                        ? renderConstraintSelector(
+          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-slate-800 text-[10px] uppercase font-black tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">{t('roster_name', language)}</th>
+                  <th className="p-3 text-left">{t('roster_perms', language)}</th>
+                  <th className="p-3 text-left">
+                    {t('restriction', language) || 'Restriction'}
+                  </th>
+                  <th className="p-3 text-left">
+                    {t('preview', language) || 'Preview'}
+                  </th>
+                  <th className="p-3 text-center w-24">{t('action', language) || 'Action'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-800">
+                {areas.map((a) => {
+                  const isEditing = editingAreaId === a.id
+                  return (
+                    <tr key={a.id}>
+                      <td className="p-2 text-xs text-gray-400">{a.id}</td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <input
+                            value={editAreaForm.name}
+                            onChange={(e) =>
+                              setEditAreaForm({
+                                ...editAreaForm,
+                                name: e.target.value,
+                              })
+                            }
+                            className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
+                          />
+                        ) : (
+                          a.name
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <input
+                            value={editAreaForm.capability}
+                            onChange={(e) =>
+                              setEditAreaForm({
+                                ...editAreaForm,
+                                capability: e.target.value,
+                              })
+                            }
+                            className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
+                          />
+                        ) : (
+                          a.capability
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {isEditing
+                          ? renderConstraintSelector(
                             editAreaForm,
                             setEditAreaForm,
                             true,
                           )
-                        : getConstraintLabel(a)}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <div className="flex gap-1">
-                          <input
-                            type="color"
-                            value={editAreaForm.style.backgroundColor}
-                            onChange={(e) =>
-                              setEditAreaForm({
-                                ...editAreaForm,
-                                style: {
-                                  ...editAreaForm.style,
-                                  backgroundColor: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                          <input
-                            type="color"
-                            value={editAreaForm.style.color}
-                            onChange={(e) =>
-                              setEditAreaForm({
-                                ...editAreaForm,
-                                style: {
-                                  ...editAreaForm.style,
-                                  color: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </div>
-                      ) : (
-                        <span
-                          style={a.style}
-                          className="px-2 py-0.5 rounded text-[10px] font-bold"
-                        >
-                          ABC
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-2 flex gap-2 justify-center">
-                      {isEditing ? (
+                          : getConstraintLabel(a)}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="color"
+                              value={editAreaForm.style.backgroundColor}
+                              onChange={(e) =>
+                                setEditAreaForm({
+                                  ...editAreaForm,
+                                  style: {
+                                    ...editAreaForm.style,
+                                    backgroundColor: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                            <input
+                              type="color"
+                              value={editAreaForm.style.color}
+                              onChange={(e) =>
+                                setEditAreaForm({
+                                  ...editAreaForm,
+                                  style: {
+                                    ...editAreaForm.style,
+                                    color: e.target.value,
+                                  },
+                                })
+                              }
+                            />
+                          </div>
+                        ) : (
+                          <span
+                            style={a.style}
+                            className="px-2 py-0.5 rounded text-[10px] font-bold"
+                          >
+                            ABC
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 flex gap-4 justify-center">
+                        {isEditing ? (
+                          <button
+                            onClick={saveAreaEdit}
+                            className="text-green-600 hover:text-green-800 font-bold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200 shadow-sm transition-all"
+                          >
+                            <i className="fa fa-check"></i> Save
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => startEditArea(a)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                          >
+                            <i className="fa fa-pencil"></i>
+                          </button>
+                        )}
                         <button
-                          onClick={saveAreaEdit}
-                          className="text-green-600 hover:text-green-800 font-bold"
+                          onClick={() => deleteArea(a.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
                         >
-                          <i className="fa fa-check"></i>
+                          <i className="fa fa-trash"></i>
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => startEditArea(a)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <i className="fa fa-pencil"></i>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deleteArea(a.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <i className="fa fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {activeTab === 'shifts' && (
         <div>
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 dark:bg-slate-800 dark:border-slate-700">
-            <h3 className="font-bold mb-2 dark:text-white">Add New Shift</h3>
-            <div className="flex gap-2 items-center">
+            <h3 className="font-bold mb-3 dark:text-white">Add New Shift</h3>
+            <div className="flex gap-4 items-center">
               <input
                 placeholder="Shift Label (e.g. Morning)"
                 value={shiftForm.label}
                 onChange={(e) =>
                   setShiftForm({ ...shiftForm, label: e.target.value })
                 }
-                className="border p-2 rounded flex-1 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                className="border border-gray-200 p-2.5 rounded-xl text-sm flex-1 bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
               />
               <input
                 type="number"
@@ -600,56 +606,58 @@ export default function ConfigView({
                     minutes: parseInt(e.target.value),
                   })
                 }
-                className="border p-2 rounded w-24 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                className="border border-gray-200 p-2.5 rounded-xl text-sm w-24 bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
               />
               <button
                 onClick={addShift}
-                className="bg-blue-600 text-white px-4 py-1 rounded"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all dark:shadow-none"
               >
                 {t('btn_add', language)}
               </button>
             </div>
           </div>
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-slate-700 dark:text-gray-300">
-                <th className="p-2 text-left">ID</th>
-                <th className="p-2 text-left">{t('label', language) || 'Label'}</th>
-                <th className="p-2 text-left">
-                  {t('minutes', language) || 'Minutes'}
-                </th>
-                <th className="p-2">{t('action', language) || 'Action'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-slate-700">
-              {shifts.map((s) => (
-                <tr key={s.id}>
-                  <td className="p-2 text-xs text-gray-400">{s.id}</td>
-                  <td className="p-2 font-medium">{s.label}</td>
-                  <td className="p-2">{s.minutes}</td>
-                  <td className="p-2 text-center">
-                    <button
-                      onClick={() => deleteShift(s.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <i className="fa fa-trash"></i>
-                    </button>
-                  </td>
+          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-slate-800 text-[10px] uppercase font-black tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">{t('label', language) || 'Label'}</th>
+                  <th className="p-3 text-center">
+                    {t('minutes', language) || 'Minutes'}
+                  </th>
+                  <th className="p-3 text-center w-24">{t('action', language) || 'Action'}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-800">
+                {shifts.map((s) => (
+                  <tr key={s.id}>
+                    <td className="p-2 text-xs text-gray-400">{s.id}</td>
+                    <td className="p-2 font-medium">{s.label}</td>
+                    <td className="p-2">{s.minutes}</td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => deleteShift(s.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <i className="fa fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {activeTab === 'positions' && (
         <div>
           <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6 dark:bg-slate-800 dark:border-slate-700">
-            <h3 className="font-bold mb-2 dark:text-white">Add New Position</h3>
+            <h3 className="font-bold mb-3 dark:text-white">Add New Position</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
                   Name
                 </label>
                 <input
@@ -658,11 +666,11 @@ export default function ConfigView({
                   onChange={(e) =>
                     setPosForm({ ...posForm, name: e.target.value })
                   }
-                  className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  className="border border-gray-200 p-2.5 rounded-xl text-sm w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
                   Area
                 </label>
                 <select
@@ -670,7 +678,7 @@ export default function ConfigView({
                   onChange={(e) =>
                     setPosForm({ ...posForm, areaId: e.target.value })
                   }
-                  className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  className="border border-gray-200 p-2.5 rounded-xl text-sm w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                 >
                   {areas.map((a) => (
                     <option key={a.id} value={a.id}>
@@ -680,7 +688,7 @@ export default function ConfigView({
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
                   Type
                 </label>
                 <select
@@ -688,14 +696,14 @@ export default function ConfigView({
                   onChange={(e) =>
                     setPosForm({ ...posForm, type: e.target.value })
                   }
-                  className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  className="border border-gray-200 p-2.5 rounded-xl text-sm w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                 >
                   <option value="rotational">Rotational (Shifts)</option>
                   <option value="auditorium">All Day (Single Person)</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
                   Section / Key Man / Mirror
                 </label>
                 <div className="flex gap-2">
@@ -705,34 +713,35 @@ export default function ConfigView({
                     onChange={(e) =>
                       setPosForm({ ...posForm, section: e.target.value })
                     }
-                    className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    className="border border-gray-200 p-2.5 rounded-xl text-sm w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                   />
                   <select
                     value={posForm.mirrorOf || ''}
                     onChange={(e) => setPosForm({ ...posForm, mirrorOf: e.target.value })}
-                    className="border p-2 rounded w-full text-xs dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    className="border border-gray-200 p-2.5 rounded-xl text-xs w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                   >
                     <option value="">-- No Mirror --</option>
                     {positions.filter(p => !p.mirrorOf).map(p => (
-                        <option key={p.id} value={p.id}>Mirror: {p.name}</option>
+                      <option key={p.id} value={p.id}>Mirror: {p.name}</option>
                     ))}
                   </select>
-                  <label className="flex items-center gap-1 cursor-pointer min-w-max">
+                  <label className="flex items-center gap-1.5 cursor-pointer min-w-max bg-white p-2.5 border border-gray-200 rounded-xl shadow-sm dark:bg-slate-700 dark:border-slate-600">
                     <input
                       type="checkbox"
                       checked={posForm.keyMan}
                       onChange={(e) =>
                         setPosForm({ ...posForm, keyMan: e.target.checked })
                       }
+                      className="w-4 h-4 rounded text-blue-600"
                     />
-                    <span className="text-sm font-bold">
+                    <span className="text-sm font-bold text-gray-700 dark:text-white">
                       KM
                     </span>
                   </label>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-1 ml-1">
+                <label className="block text-xs font-bold uppercase text-gray-500 mb-1 ml-1 dark:text-gray-400">
                   Specific Time / Note (Optional)
                 </label>
                 <input
@@ -741,37 +750,37 @@ export default function ConfigView({
                   onChange={(e) =>
                     setPosForm({ ...posForm, timeNote: e.target.value })
                   }
-                  className="border p-2 rounded w-full dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  className="border border-gray-200 p-2.5 rounded-xl text-sm w-full bg-white focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all dark:bg-slate-700 dark:border-slate-600 dark:text-white dark:focus:ring-blue-800"
                 />
               </div>
             </div>
 
             <div className="mt-4">
-                <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">
-                  Active During These Shifts (Leave empty for ALL)
-                </label>
-                <div className="flex flex-wrap gap-4 bg-white p-3 rounded-xl border border-gray-200 dark:bg-slate-800 dark:border-slate-700">
-                    {shifts.map(s => {
-                        const currentShifts = posForm.validShifts || [];
-                        const isActive = currentShifts.includes(s.id);
-                        return (
-                            <label key={s.id} className="flex items-center gap-2 cursor-pointer group">
-                                <input 
-                                    type="checkbox" 
-                                    checked={isActive}
-                                    onChange={(e) => {
-                                        const next = e.target.checked 
-                                            ? [...currentShifts, s.id]
-                                            : currentShifts.filter(x => x !== s.id);
-                                        setPosForm({ ...posForm, validShifts: next });
-                                    }}
-                                    className="w-4 h-4 rounded text-blue-600"
-                                />
-                                <span className={`text-xs font-bold ${isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>{s.label}</span>
-                            </label>
-                        )
-                    })}
-                </div>
+              <label className="block text-xs font-bold uppercase text-gray-400 mb-2 ml-1">
+                Active During These Shifts (Leave empty for ALL)
+              </label>
+              <div className="flex flex-wrap gap-4 bg-white p-3 rounded-xl border border-gray-200 dark:bg-slate-800 dark:border-slate-700">
+                {shifts.map(s => {
+                  const currentShifts = posForm.validShifts || [];
+                  const isActive = currentShifts.includes(s.id);
+                  return (
+                    <label key={s.id} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...currentShifts, s.id]
+                            : currentShifts.filter(x => x !== s.id);
+                          setPosForm({ ...posForm, validShifts: next });
+                        }}
+                        className="w-4 h-4 rounded text-blue-600"
+                      />
+                      <span className={`text-xs font-bold ${isActive ? 'text-blue-600' : 'text-gray-500 group-hover:text-gray-700'}`}>{s.label}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="flex justify-between items-center mt-4">
@@ -783,208 +792,210 @@ export default function ConfigView({
               </div>
               <button
                 onClick={addPosition}
-                className="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all dark:shadow-none"
               >
                 Add Position
               </button>
             </div>
           </div>
 
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100 sticky top-0 dark:bg-slate-700 dark:text-gray-300">
-                <th className="p-2 text-left">ID</th>
-                <th className="p-2 text-left">{t('roster_name', language)}</th>
-                <th className="p-2 text-left">{t('area', language) || 'Area'}</th>
-                <th className="p-2 text-left">
-                  {t('restriction', language) || 'Restriction'}
-                </th>
-                <th className="p-2 text-left">
-                  {t('sect', language) || 'Sect'}
-                </th>
-                <th className="p-2 text-left">Mirror</th>
-                <th className="p-2 text-left">Active Shifts</th>
-                <th className="p-2 text-left">
-                  {t('type', language) || 'Type'}
-                </th>
-                <th className="p-2 w-24">{t('action', language) || 'Action'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y dark:divide-slate-700">
-              {positions.map((p) => {
-                const isEditing = editingPosId === p.id
-                const displayConstraint = getConstraintLabel(p)
+          <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-slate-800 text-[10px] uppercase font-black tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-slate-700">
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">{t('roster_name', language)}</th>
+                  <th className="p-3 text-left">{t('area', language) || 'Area'}</th>
+                  <th className="p-3 text-left">
+                    {t('restriction', language) || 'Restriction'}
+                  </th>
+                  <th className="p-3 text-left">
+                    {t('sect', language) || 'Sect'}
+                  </th>
+                  <th className="p-3 text-left">Mirror</th>
+                  <th className="p-3 text-left">Active Shifts</th>
+                  <th className="p-3 text-left">
+                    {t('type', language) || 'Type'}
+                  </th>
+                  <th className="p-3 text-center w-24">{t('action', language) || 'Action'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700/50 bg-white dark:bg-slate-800">
+                {positions.map((p) => {
+                  const isEditing = editingPosId === p.id
+                  const displayConstraint = getConstraintLabel(p)
 
-                return (
-                  <tr key={p.id}>
-                    <td className="p-2 text-xs text-gray-400">{p.id}</td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <input
-                          value={editPosForm.name}
-                          onChange={(e) =>
-                            setEditPosForm({ ...editPosForm, name: e.target.value })
-                          }
-                          className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
-                        />
-                      ) : (
-                        p.name
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <select
-                          value={editPosForm.areaId}
-                          onChange={(e) =>
-                            setEditPosForm({
-                              ...editPosForm,
-                              areaId: e.target.value,
-                            })
-                          }
-                          className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
-                        >
-                          {areas.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        areas.find((a) => a.id === p.areaId)?.name || p.areaId
-                      )}
-                    </td>
-                    <td className="p-2 text-xs">
-                      {isEditing
-                        ? renderConstraintSelector(editPosForm, setEditPosForm, true)
-                        : displayConstraint}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <input
-                          value={editPosForm.section}
-                          onChange={(e) =>
-                            setEditPosForm({
-                              ...editPosForm,
-                              section: e.target.value,
-                            })
-                          }
-                          className="border p-1 rounded w-8 dark:bg-slate-700 dark:text-white"
-                        />
-                      ) : (
-                        <span className="text-xs">{p.section || '-'}</span>
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <div className="flex flex-col gap-1">
+                  return (
+                    <tr key={p.id}>
+                      <td className="p-2 text-xs text-gray-400">{p.id}</td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <input
+                            value={editPosForm.name}
+                            onChange={(e) =>
+                              setEditPosForm({ ...editPosForm, name: e.target.value })
+                            }
+                            className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
+                          />
+                        ) : (
+                          p.name
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <select
+                            value={editPosForm.areaId}
+                            onChange={(e) =>
+                              setEditPosForm({
+                                ...editPosForm,
+                                areaId: e.target.value,
+                              })
+                            }
+                            className="border p-1 rounded w-full dark:bg-slate-700 dark:text-white"
+                          >
+                            {areas.map((a) => (
+                              <option key={a.id} value={a.id}>
+                                {a.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          areas.find((a) => a.id === p.areaId)?.name || p.areaId
+                        )}
+                      </td>
+                      <td className="p-2 text-xs">
+                        {isEditing
+                          ? renderConstraintSelector(editPosForm, setEditPosForm, true)
+                          : displayConstraint}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <input
+                            value={editPosForm.section}
+                            onChange={(e) =>
+                              setEditPosForm({
+                                ...editPosForm,
+                                section: e.target.value,
+                              })
+                            }
+                            className="border p-1 rounded w-8 dark:bg-slate-700 dark:text-white"
+                          />
+                        ) : (
+                          <span className="text-xs">{p.section || '-'}</span>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <div className="flex flex-col gap-1">
                             <input
-                                placeholder="Time Note"
-                                value={editPosForm.timeNote || ''}
-                                onChange={(e) => setEditPosForm({ ...editPosForm, timeNote: e.target.value })}
-                                className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
+                              placeholder="Time Note"
+                              value={editPosForm.timeNote || ''}
+                              onChange={(e) => setEditPosForm({ ...editPosForm, timeNote: e.target.value })}
+                              className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
                             />
                             <select
-                                value={editPosForm.mirrorOf || ''}
-                                onChange={(e) => setEditPosForm({ ...editPosForm, mirrorOf: e.target.value })}
-                                className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
+                              value={editPosForm.mirrorOf || ''}
+                              onChange={(e) => setEditPosForm({ ...editPosForm, mirrorOf: e.target.value })}
+                              className="border p-1 rounded w-full text-[10px] dark:bg-slate-700 dark:text-white"
                             >
-                                <option value="">-- No Mirror --</option>
-                                {positions.filter(pos => pos.id !== p.id && !pos.mirrorOf).map(pos => (
-                                    <option key={pos.id} value={pos.id}>{pos.name}</option>
-                                ))}
+                              <option value="">-- No Mirror --</option>
+                              {positions.filter(pos => pos.id !== p.id && !pos.mirrorOf).map(pos => (
+                                <option key={pos.id} value={pos.id}>{pos.name}</option>
+                              ))}
                             </select>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1">
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-1">
                             {p.timeNote && (
-                                <span className="text-[10px] bg-yellow-50 text-yellow-700 px-1 rounded font-black border border-yellow-100 uppercase">
-                                    🕒 {p.timeNote}
-                                </span>
+                              <span className="text-[10px] bg-yellow-50 text-yellow-700 px-1 rounded font-black border border-yellow-100 uppercase">
+                                🕒 {p.timeNote}
+                              </span>
                             )}
                             <span className="text-[10px] text-orange-600 font-bold uppercase">
-                                {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : ''}
+                              {p.mirrorOf ? `Linked to ${positions.find(x => x.id === p.mirrorOf)?.name}` : ''}
                             </span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2">
-                      {isEditing ? (
-                        <div className="flex flex-col gap-1">
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2">
+                        {isEditing ? (
+                          <div className="flex flex-col gap-1">
                             {shifts.map(s => (
-                                <label key={s.id} className="flex items-center gap-1 text-[9px] font-bold">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={(editPosForm.validShifts || []).includes(s.id)}
-                                        onChange={(e) => {
-                                            const current = editPosForm.validShifts || [];
-                                            const next = e.target.checked 
-                                                ? [...current, s.id]
-                                                : current.filter(x => x !== s.id);
-                                            setEditPosForm({ ...editPosForm, validShifts: next });
-                                        }}
-                                    />
-                                    {s.label.split(' ')[0]}
-                                </label>
+                              <label key={s.id} className="flex items-center gap-1 text-[9px] font-bold">
+                                <input
+                                  type="checkbox"
+                                  checked={(editPosForm.validShifts || []).includes(s.id)}
+                                  onChange={(e) => {
+                                    const current = editPosForm.validShifts || [];
+                                    const next = e.target.checked
+                                      ? [...current, s.id]
+                                      : current.filter(x => x !== s.id);
+                                    setEditPosForm({ ...editPosForm, validShifts: next });
+                                  }}
+                                />
+                                {s.label.split(' ')[0]}
+                              </label>
                             ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
+                          </div>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
                             {(!p.validShifts || p.validShifts.length === 0) ? (
-                                <span className="text-[9px] text-gray-400">All Shifts</span>
+                              <span className="text-[9px] text-gray-400">All Shifts</span>
                             ) : (
-                                p.validShifts.map(sid => (
-                                    <span key={sid} className="text-[9px] bg-blue-50 text-blue-600 px-1 rounded font-bold">
-                                        {shifts.find(s => s.id === sid)?.label.split(' ')[0] || sid}
-                                    </span>
-                                ))
+                              p.validShifts.map(sid => (
+                                <span key={sid} className="text-[9px] bg-blue-50 text-blue-600 px-1 rounded font-bold">
+                                  {shifts.find(s => s.id === sid)?.label.split(' ')[0] || sid}
+                                </span>
+                              ))
                             )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-2 text-xs">
-                      {isEditing ? (
-                        <select
-                          value={editPosForm.type}
-                          onChange={(e) =>
-                            setEditPosForm({ ...editPosForm, type: e.target.value })
-                          }
-                          className="border p-1 rounded dark:bg-slate-700 dark:text-white"
-                        >
-                          <option value="rotational">Rot</option>
-                          <option value="auditorium">All</option>
-                        </select>
-                      ) : (
-                        p.type
-                      )}
-                    </td>
-                    <td className="p-2 flex gap-2 justify-center">
-                      {isEditing ? (
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2 text-xs">
+                        {isEditing ? (
+                          <select
+                            value={editPosForm.type}
+                            onChange={(e) =>
+                              setEditPosForm({ ...editPosForm, type: e.target.value })
+                            }
+                            className="border p-1 rounded dark:bg-slate-700 dark:text-white"
+                          >
+                            <option value="rotational">Rot</option>
+                            <option value="auditorium">All</option>
+                          </select>
+                        ) : (
+                          p.type
+                        )}
+                      </td>
+                      <td className="p-3 flex gap-4 justify-center">
+                        {isEditing ? (
+                          <button
+                            onClick={savePosEdit}
+                            className="text-green-600 hover:text-green-800 font-bold bg-green-50 px-3 py-1.5 rounded-lg border border-green-200 shadow-sm transition-all"
+                          >
+                            <i className="fa fa-check"></i> Save
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => startEditPos(p)}
+                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                          >
+                            <i className="fa fa-pencil"></i>
+                          </button>
+                        )}
                         <button
-                          onClick={savePosEdit}
-                          className="text-green-600 hover:text-green-800 font-bold"
+                          onClick={() => deletePosition(p.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
                         >
-                          <i className="fa fa-check"></i>
+                          <i className="fa fa-trash"></i>
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => startEditPos(p)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <i className="fa fa-pencil"></i>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deletePosition(p.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <i className="fa fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -998,18 +1009,18 @@ export default function ConfigView({
               {t('save_layout_desc', language)}
             </p>
             <div className="flex gap-3">
-                <button
+              <button
                 onClick={saveBlueprint}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center gap-2"
-                >
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 dark:shadow-none"
+              >
                 <i className="fa fa-save"></i>
                 {t('btn_save_blueprint', language)}
-                </button>
-                <label className="bg-white border border-blue-200 text-blue-700 px-6 py-2.5 rounded-xl font-bold cursor-pointer hover:bg-blue-50 transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400">
-                    <i className="fa fa-file-import"></i>
-                    Import .assemblyhall
-                    <input type="file" accept=".assemblyhall" onChange={handleImportBlueprint} className="hidden" />
-                </label>
+              </button>
+              <label className="bg-white border border-gray-200 text-gray-700 px-6 py-2.5 rounded-full text-sm font-bold cursor-pointer hover:bg-gray-50 hover:text-blue-600 shadow-sm transition-all flex items-center gap-2 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400 dark:hover:bg-slate-700 active:scale-95">
+                <i className="fa fa-file-import"></i>
+                Import .assemblyhall
+                <input type="file" accept=".assemblyhall" onChange={handleImportBlueprint} className="hidden" />
+              </label>
             </div>
           </div>
 
@@ -1046,14 +1057,14 @@ export default function ConfigView({
                   <div className="flex gap-2">
                     <button
                       onClick={() => loadBlueprint(bp)}
-                      className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400"
+                      className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-100 transition-all active:scale-95 dark:bg-blue-900/30 dark:text-blue-400"
                       title="Apply this template"
                     >
                       {t('btn_load_template', language)}
                     </button>
                     <button
                       onClick={() => handleExportBlueprint(bp)}
-                      className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-100 dark:bg-slate-700 dark:text-gray-300"
+                      className="bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 hover:bg-white hover:text-blue-600 shadow-sm transition-all active:scale-95 dark:bg-slate-700 dark:text-gray-300 dark:border-slate-600"
                       title="Export as .assemblyhall"
                     >
                       <i className="fa fa-share-nodes"></i>
@@ -1061,7 +1072,7 @@ export default function ConfigView({
                     {bp.id !== 'bp_default_assembly' && (
                       <button
                         onClick={() => deleteBlueprint(bp.id)}
-                        className="text-red-400 hover:text-red-600 transition-colors px-2"
+                        className="text-gray-300 hover:text-red-500 transition-colors px-2"
                       >
                         <i className="fa fa-trash"></i>
                       </button>

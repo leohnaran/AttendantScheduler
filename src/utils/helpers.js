@@ -75,6 +75,20 @@ export const parseCSV = (text) => {
 }
 
 // --- CENTRALIZED CANDIDATE FINDER (Now relies on props) ---
+export const parseAssignmentKey = (key, shifts) => {
+  let posId = key
+  let shiftId = 'all'
+  if (key.includes('_')) {
+    const parts = key.split('_')
+    const lastPart = parts[parts.length - 1]
+    if (shifts.some((s) => s.id === lastPart)) {
+      shiftId = lastPart
+      posId = parts.slice(0, parts.length - 1).join('_')
+    }
+  }
+  return { posId, shiftId }
+}
+
 export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
   const area = areas.find((a) => a.id === pos.areaId)
   if (!area) return []

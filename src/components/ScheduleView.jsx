@@ -5,6 +5,7 @@ import {
   getAssignId,
   getCandidatesForPosition,
   isAutoAssigned,
+  parseAssignmentKey,
 } from '../utils/helpers'
 import PersonnelSidebar from './PersonnelSidebar'
 import MobileScheduleView from './MobileScheduleView'
@@ -29,6 +30,9 @@ export default function ScheduleView({
   const [pendingAction, setPendingAction] = useState(null)
   const [replacementSlot, setReplacementSlot] = useState(null)
   const [hoveredMirrorKey, setHoveredMirrorKey] = useState(null)
+
+  const [resolvingAbsences, setResolvingAbsences] = useState(false)
+  const [resolveQueue, setResolveQueue] = useState([])
 
   const [showActionMenu, setShowActionMenu] = useState(false)
   const [showPrintMenu, setShowPrintMenu] = useState(false)
@@ -63,9 +67,17 @@ export default function ScheduleView({
     // Target the wrapper that has the overflow-auto
     const scrollEl = gridRef.current?.querySelector('.overflow-auto');
     if (!scrollEl) return;
-    
+
     setShowPrintMenu(false);
-    
+
+    // Temporarily force light mode for clean white background
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      // Give the browser a moment to apply the removed class
+      await new Promise(r => setTimeout(r, 50));
+    }
+
     try {
       // Use the actual scrollable dimensions
       const width = scrollEl.scrollWidth;
@@ -75,26 +87,26 @@ export default function ScheduleView({
         width: width,
         height: height,
         style: {
-            width: width + 'px',
-            height: height + 'px',
-            overflow: 'visible',
-            transform: 'none'
+          width: width + 'px',
+          height: height + 'px',
+          overflow: 'visible',
+          transform: 'none'
         },
         backgroundColor: '#ffffff',
         // CRITICAL: Explicitly filter out UI elements during PNG capture
         filter: (node) => {
-            const classList = node.classList;
-            if (classList && (
-                classList.contains('print:hidden') || 
-                node.tagName === 'BUTTON' ||
-                classList.contains('fa')
-            )) {
-                return false;
-            }
-            return true;
+          const classList = node.classList;
+          if (classList && (
+            classList.contains('print:hidden') ||
+            node.tagName === 'BUTTON' ||
+            classList.contains('fa')
+          )) {
+            return false;
+          }
+          return true;
         }
       });
-      
+
       const link = document.createElement('a');
       link.download = `schedule-${new Date().toISOString().split('T')[0]}.png`;
       link.href = dataUrl;
@@ -102,6 +114,10 @@ export default function ScheduleView({
     } catch (err) {
       console.error('oops, something went wrong!', err);
       alert('PNG Export failed. Try standard Print instead.');
+    } finally {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
     }
   }
 
@@ -109,11 +125,51 @@ export default function ScheduleView({
     setReplacementSlot({ pos, shiftId })
   }
 
-  const handleReplacementAssign = (pos, shiftId, personId) => {
-    const assignmentKey =
-      pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
-    handleAssignAttempt(assignmentKey, personId)
-    setReplacementSlot(null)
+  const handleReplacementAssign = (pos, shiftId, personId, isDominoSwap = false, dominoData = null) => {
+    let newAssignments = { ...assignments }
+
+    if (isDominoSwap && dominoData) {
+      // 1. Assign Brother B to the new target slot
+      const targetKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
+      newAssignments[targetKey] = { id: parseInt(personId), isAuto: false }
+
+      // 2. Assign Brother C to Brother B's old slot, or clear it if no replacement
+      const oldSlotKey = dominoData.pos.type === 'auditorium' ? dominoData.pos.id : `${dominoData.pos.id}_${dominoData.shiftId}`
+      if (dominoData.replacementId) {
+        newAssignments[oldSlotKey] = { id: parseInt(dominoData.replacementId), isAuto: false }
+      } else {
+        newAssignments[oldSlotKey] = null
+      }
+    } else {
+      const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
+      const conflictingPos = getConflictCount(parseInt(personId), shiftId)
+      if (conflictingPos > 0) {
+        if (!confirm(`${personnel.find(p => p.id === parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
+          return
+        }
+      }
+      newAssignments[assignmentKey] = { id: parseInt(personId), isAuto: false }
+    }
+
+    setAssignments(newAssignments)
+
+    if (resolvingAbsences && resolveQueue.length > 0) {
+      const remainingQueue = resolveQueue.filter(slot => {
+        // Remove the slot we just filled
+        return !(slot.pos.id === pos.id && slot.shiftId === shiftId)
+      })
+
+      if (remainingQueue.length > 0) {
+        setResolveQueue(remainingQueue)
+        setReplacementSlot(remainingQueue[0])
+      } else {
+        setResolvingAbsences(false)
+        setResolveQueue([])
+        setReplacementSlot(null)
+      }
+    } else {
+      setReplacementSlot(null)
+    }
   }
 
   const handleAssignAttempt = (key, personId) => {
@@ -121,16 +177,7 @@ export default function ScheduleView({
     const pid = parseInt(personId)
     const assignObj = value ? { id: parseInt(value), isAuto: false } : null
 
-    let posId = key
-    let shiftId = 'all'
-    if (key.includes('_')) {
-      const parts = key.split('_')
-      const lastPart = parts[parts.length - 1]
-      if (shifts.find((s) => s.id === lastPart)) {
-        shiftId = lastPart
-        posId = parts.slice(0, parts.length - 1).join('_')
-      }
-    }
+    const { posId, shiftId } = parseAssignmentKey(key, shifts)
 
     const pos = positions.find((p) => p.id === posId)
     if (!pos) {
@@ -175,26 +222,17 @@ export default function ScheduleView({
 
   const getRotationalShiftCount = (pid, currentAssignments) => {
     let count = 0
-    Object.keys(currentAssignments).forEach((key) => {
-      if (getAssignId(currentAssignments[key]) === pid) {
-        let posId = key
-        if (key.includes('_')) {
-          const parts = key.split('_')
-          // Check if the last part is a valid shift ID
-          if (shifts.some(s => s.id === parts[parts.length - 1])) {
-            posId = parts.slice(0, parts.length - 1).join('_')
-          }
-        }
-        
-        const pos = positions.find((p) => p.id === posId)
-        if (pos && pos.type !== 'auditorium') {
-          count++
-        }
-      }
-    })
-    return count
-  }
-
+        Object.keys(currentAssignments).forEach((key) => {
+          if (getAssignId(currentAssignments[key]) === pid) {
+            const { posId } = parseAssignmentKey(key, shifts)
+            const pos = positions.find((p) => p.id === posId)
+            if (pos && pos.type !== 'auditorium') {
+              count++
+            }
+                }
+              })
+              return count
+            }
   const getWorkPercentage = (pid, currentAssignments) => {
     let minutesWorking = 0
     Object.keys(currentAssignments).forEach((key) => {
@@ -311,7 +349,7 @@ export default function ScheduleView({
           const otherReliefCount = allAudPositions.filter((ap) => {
             const apPid = getAssignId(currentAssignments[ap.id])
             if (!apPid || apPid === pid) return false
-            
+
             return Object.keys(currentAssignments).some((k) => {
               if (!k.endsWith(`_${targetRotShiftId}`)) return false
               return getAssignId(currentAssignments[k]) === apPid
@@ -432,11 +470,11 @@ export default function ScheduleView({
 
   const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
     if (rules.anchorLimits === false) return true
-    
+
     // Check if he's an anchor (Auditorium assignment)
     const isAnchor = Object.keys(currentAssignments).some(k => {
-        const pos = positions.find(p => p.id === k);
-        return pos && pos.type === 'auditorium' && getAssignId(currentAssignments[k]) === person.id;
+      const pos = positions.find(p => p.id === k);
+      return pos && pos.type === 'auditorium' && getAssignId(currentAssignments[k]) === person.id;
     });
 
     if (!isAnchor) return true;
@@ -466,32 +504,18 @@ export default function ScheduleView({
       let score = 0
       let hasKeymanJob = false
 
-      Object.keys(currentAssignments).forEach((key) => {
-        if (getAssignId(currentAssignments[key]) === pid) {
-          // Identify position type from key
-          let posId = key
-          if (key.includes('_')) {
-            const parts = key.split('_')
-            // Check if last part is a shift ID
-            if (shifts.some(s => s.id === parts[parts.length - 1])) {
-                posId = parts.slice(0, parts.length - 1).join('_')
-            }
-          }
-          const pos = positions.find((p) => p.id === posId)
-          if (pos) {
-            if (pos.type === 'auditorium') score += 0.1
-            else score += 1.0
-
-            if (pos.keyMan) hasKeymanJob = true
-          }
-        }
-      })
-
-      // CONSECUTIVE PENALTY: Heavily penalize anyone who worked an adjacent shift
-      if (workedAdjacentShift(pid, targetShiftId, currentAssignments)) {
-          score += 5.0;
-      }
-
+            Object.keys(currentAssignments).forEach((key) => {
+              if (getAssignId(currentAssignments[key]) === pid) {
+                const { posId } = parseAssignmentKey(key, shifts)
+                const pos = positions.find((p) => p.id === posId)
+                if (pos) {
+                  if (pos.type === 'auditorium') score += 0.1
+                  else score += 1.0
+      
+                  if (pos.keyMan) hasKeymanJob = true
+                }
+              }
+            })
       // If we are filling a regular spot and this brother already has an oversight job
       if (targetPosIsRegular && hasKeymanJob) {
         score += 10.0
@@ -499,7 +523,6 @@ export default function ScheduleView({
 
       return score
     }
-
     // HELPER: Get valid candidates based on current state
     const getValidCandidates = (pos, shiftId, currentAssignments) => {
       let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
@@ -512,7 +535,7 @@ export default function ScheduleView({
             p.caps.includes('auditorium') &&
             !candidates.some((c) => c.id === p.id),
         )
-        
+
         // RELIEF MODE RESTRICTION: Key Men should ONLY be available for relief duty 
         // if the target position is also a Key Man position.
         if (!pos.keyMan) {
@@ -524,7 +547,7 @@ export default function ScheduleView({
             return !isKM;
           });
         }
-        
+
         candidates = [...candidates, ...audPotential]
       }
 
@@ -557,78 +580,78 @@ export default function ScheduleView({
 
     // --- PHASE 1: PROCESS KEYMAN SLOTS ---
     const keymanSlots = allSlots.filter((s) => s.pos.keyMan && !newAssignments[s.key])
-    
+
     // Sort Keyman slots by "Hardness" (Pool Size - static)
     keymanSlots.sort((a, b) => {
-        const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
-        const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
-        return poolA - poolB
+      const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
+      const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
+      return poolA - poolB
     })
 
     keymanSlots.forEach(slot => {
-        const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
-        if (candidates.length === 0) return
+      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+      if (candidates.length === 0) return
 
-        // 1. Pre-shuffle candidates for true randomness among equals
-        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      // 1. Pre-shuffle candidates for true randomness among equals
+      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
 
-        // 2. Sort candidates by Workload Score (Lowest first)
-        shuffled.sort((a, b) => {
-            const scoreA = getWorkloadScore(a.id, newAssignments, false, slot.shiftId)
-            const scoreB = getWorkloadScore(b.id, newAssignments, false, slot.shiftId)
-            return scoreA - scoreB
-        })
+      // 2. Sort candidates by Workload Score (Lowest first)
+      shuffled.sort((a, b) => {
+        const scoreA = getWorkloadScore(a.id, newAssignments, false, slot.shiftId)
+        const scoreB = getWorkloadScore(b.id, newAssignments, false, slot.shiftId)
+        return scoreA - scoreB
+      })
 
-        const chosen = shuffled[0]
-        newAssignments[slot.key] = { id: chosen.id, isAuto: true }
-        filledCount++
-        
-        newLog.push({
-            type: 'keyman',
-            msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false, slot.shiftId).toFixed(1)}`,
-        })
+      const chosen = shuffled[0]
+      newAssignments[slot.key] = { id: chosen.id, isAuto: true }
+      filledCount++
+
+      newLog.push({
+        type: 'keyman',
+        msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, false, slot.shiftId).toFixed(1)}`,
+      })
     })
 
     // --- PHASE 2: PROCESS REGULAR SLOTS ---
     const regularSlots = allSlots.filter((s) => !s.pos.keyMan && !newAssignments[s.key])
-    
+
     // Sort Regular slots by "Hardness"
     regularSlots.sort((a, b) => {
-        const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
-        const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
-        return poolA - poolB
+      const poolA = getValidCandidates(a.pos, a.shiftId, {}).length
+      const poolB = getValidCandidates(b.pos, b.shiftId, {}).length
+      return poolA - poolB
     })
 
     regularSlots.forEach(slot => {
-        const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
-        if (candidates.length === 0) return
+      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+      if (candidates.length === 0) return
 
-        // 1. Pre-shuffle candidates for true randomness among equals
-        const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      // 1. Pre-shuffle candidates for true randomness among equals
+      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
 
-        // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
-        shuffled.sort((a, b) => {
-            const scoreA = getWorkloadScore(a.id, newAssignments, true, slot.shiftId)
-            const scoreB = getWorkloadScore(b.id, newAssignments, true, slot.shiftId)
-            return scoreA - scoreB
-        })
+      // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
+      shuffled.sort((a, b) => {
+        const scoreA = getWorkloadScore(a.id, newAssignments, true, slot.shiftId)
+        const scoreB = getWorkloadScore(b.id, newAssignments, true, slot.shiftId)
+        return scoreA - scoreB
+      })
 
-        const chosen = shuffled[0]
-        newAssignments[slot.key] = { id: chosen.id, isAuto: true }
-        filledCount++
-        
-        newLog.push({
-            type: 'rotational',
-            msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true, slot.shiftId).toFixed(1)}`,
-        })
+      const chosen = shuffled[0]
+      newAssignments[slot.key] = { id: chosen.id, isAuto: true }
+      filledCount++
+
+      newLog.push({
+        type: 'rotational',
+        msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, true, slot.shiftId).toFixed(1)}`,
+      })
     })
 
     // --- DIAGNOSTICS FOR EMPTY SLOTS ---
     allSlots.filter(s => !newAssignments[s.key]).forEach(s => {
-        newLog.push({
-            type: 'error',
-            msg: `FAILED TO FILL: ${s.pos.name} (${s.shiftId}). No qualified candidates passed all rules.`,
-        })
+      newLog.push({
+        type: 'error',
+        msg: `FAILED TO FILL: ${s.pos.name} (${s.shiftId}). No qualified candidates passed all rules.`,
+      })
     })
 
     const assignedIds = new Set()
@@ -638,9 +661,9 @@ export default function ScheduleView({
     })
 
     const emptyCount = allSlots.filter(s => !newAssignments[s.key]).length;
-    const vacancyWarning = emptyCount > 0 
-        ? `\n\n⚠️ WARNING: ${emptyCount} positions could not be filled! Check for red cells in the schedule.`
-        : `\n\n✅ All positions were successfully filled.`;
+    const vacancyWarning = emptyCount > 0
+      ? `\n\n⚠️ WARNING: ${emptyCount} positions could not be filled! Check for red cells in the schedule.`
+      : `\n\n✅ All positions were successfully filled.`;
 
     onAutoFill(newAssignments, newLog)
     alert(
@@ -679,13 +702,7 @@ export default function ScheduleView({
       const val = newAssignments[key]
       if (!val) return
       const pid = getAssignId(val)
-      let posId = key
-      let shiftId = 'all'
-      if (key.includes('_')) {
-        const parts = key.split('_')
-        shiftId = parts[parts.length - 1]
-        posId = parts.slice(0, parts.length - 1).join('_')
-      }
+      const { posId, shiftId } = parseAssignmentKey(key, shifts)
       const pos = positions.find((p) => p.id === posId)
       if (!pos) return
 
@@ -713,6 +730,27 @@ export default function ScheduleView({
     )
   }, [assignments])
 
+  const orphanedSlots = useMemo(() => {
+    let empty = []
+    positions.forEach(pos => {
+      if (pos.type === 'auditorium') {
+        const slotId = pos.id
+        if (!assignments[slotId]) {
+          empty.push({ pos, shiftId: 'all' })
+        }
+      } else if (pos.type === 'rotational' && !pos.isMirror) {
+        shifts.forEach(shift => {
+          if (pos.validShifts && !pos.validShifts.includes(shift.id)) return
+          const slotId = `${pos.id}_${shift.id}`
+          if (!assignments[slotId]) {
+            empty.push({ pos, shiftId: shift.id })
+          }
+        })
+      }
+    })
+    return empty
+  }, [positions, shifts, assignments])
+
   return (
     <div className="flex h-[calc(100vh-160px)] gap-6 animate-in fade-in duration-500">
       {layoutMode === 'grid' && (
@@ -727,37 +765,48 @@ export default function ScheduleView({
 
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex justify-between items-center mb-6 gap-4 print:hidden">
-          <div className="flex gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
+          <div className="flex gap-2 p-1 bg-gray-100 dark:bg-slate-800 rounded-full border border-gray-200 dark:border-slate-700">
             <button
               onClick={() => setLayoutMode('grid')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                layoutMode === 'grid'
-                  ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${layoutMode === 'grid'
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
             >
               <i className="fa fa-table-cells mr-2"></i> Grid View
             </button>
             <button
               onClick={() => setLayoutMode('mobile')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                layoutMode === 'mobile'
-                  ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
-                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${layoutMode === 'mobile'
+                ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400'
+                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                }`}
             >
               <i className="fa fa-mobile-screen mr-2"></i> Card View
             </button>
           </div>
 
           <div className="flex gap-3">
+            {orphanedSlots.length > 0 && (
+              <button
+                onClick={() => {
+                  setResolvingAbsences(true)
+                  setResolveQueue([...orphanedSlots])
+                  setReplacementSlot(orphanedSlots[0])
+                }}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-orange-200 transition-all active:scale-95 flex items-center gap-2 dark:shadow-none animate-pulse"
+              >
+                <i className="fa fa-triangle-exclamation"></i> {t('btn_resolve_absences', language) || `Resolve ${orphanedSlots.length} Missing`}
+              </button>
+            )}
+
             <button
               onClick={handleAutoFill}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center gap-2 dark:shadow-none"
             >
               <i className="fa fa-robot"></i> {t('btn_auto_fill', language)}
             </button>
-            
+
             <div className="relative" ref={printMenuRef}>
               <button
                 onClick={() => setShowPrintMenu(!showPrintMenu)}
@@ -896,13 +945,13 @@ export default function ScheduleView({
                               <div className="flex flex-col">
                                 <span>{pos.name}</span>
                                 {pos.timeNote && (
-                                    <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider mt-0.5">
-                                        🕒 {pos.timeNote}
-                                    </span>
+                                  <span className="text-[9px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider mt-0.5">
+                                    🕒 {pos.timeNote}
+                                  </span>
                                 )}
                               </div>
                               {pos.type === 'auditorium' && (
-                                <span 
+                                <span
                                   title="Assigned for the whole day (all shifts)"
                                   className="ml-2 inline-block text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-bold dark:bg-blue-900 dark:text-blue-300">
                                   ALL DAY
@@ -1032,7 +1081,11 @@ export default function ScheduleView({
           shifts={shifts}
           tags={tags}
           onAssign={handleReplacementAssign}
-          onClose={() => setReplacementSlot(null)}
+          onClose={() => {
+            setReplacementSlot(null)
+            setResolvingAbsences(false)
+            setResolveQueue([])
+          }}
           language={language}
         />
       )}
