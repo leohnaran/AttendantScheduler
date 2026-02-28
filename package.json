@@ -36,6 +36,9 @@
     "mac": {
       "target": "dmg"
     },
+    "linux": {
+      "target": "AppImage"
+    },
     "win": {
       "target": "nsis"
     }
