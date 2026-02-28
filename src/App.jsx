@@ -87,7 +87,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v3.6.5'
+const APP_VERSION = 'v3.6.6'
 
 export default function App() {
   console.log(`Attendant Scheduler ${APP_VERSION} - Reset Fix Active`);
@@ -107,7 +107,7 @@ export default function App() {
         const response = await fetch('https://api.github.com/repos/leohnaran/AttendantScheduler/releases/latest')
         if (!response.ok) return
         const data = await response.json()
-        const latestTag = data.tag_name // e.g. "v3.6.5"
+        const latestTag = data.tag_name // e.g. "v3.6.6"
         
         if (latestTag && latestTag !== APP_VERSION) {
           // Compare versions simple way (assuming semantic versioning like vX.Y.Z)

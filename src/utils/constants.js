@@ -90,6 +90,17 @@ export const DEFAULT_AREAS = [
       backgroundColor: "#fefe92",
       color: "#000000"
     }
+  },
+  {
+    id: "area_1772310040895",
+    name: "Baptism",
+    capability: "baptism",
+    style: {
+      backgroundColor: "#ffffff",
+      color: "#000000"
+    },
+    limitType: "",
+    limitValue: ""
   }
 ]
 
@@ -484,6 +495,76 @@ export const DEFAULT_POSITIONS = [
       "second",
       "late",
       "concluding"
+    ]
+  },
+  {
+    id: "pos_1772310684525",
+    name: "Baptism (Stage - Entrance)",
+    areaId: "auditorium",
+    type: "rotational",
+    limitType: "role",
+    limitValue: "Elder",
+    section: "",
+    timeNote: "During Baptism",
+    validShifts: [
+      "second",
+      "morning"
+    ]
+  },
+  {
+    id: "pos_1772310774496",
+    name: "Baptism (Stage - Exit)",
+    areaId: "auditorium",
+    type: "rotational",
+    limitType: "role",
+    limitValue: "MS",
+    section: "",
+    timeNote: "During Baptism",
+    mirrorOf: "",
+    validShifts: [
+      "second"
+    ]
+  },
+  {
+    id: "pos_1772311120133",
+    name: "Baptism (In Front of Stage Floor -Center)",
+    areaId: "auditorium",
+    type: "rotational",
+    limitType: "role",
+    limitValue: "Elder",
+    section: "",
+    timeNote: "During Baptism",
+    mirrorOf: "",
+    validShifts: [
+      "second"
+    ]
+  },
+  {
+    id: "pos_1772311209274",
+    name: "Baptism (In Front of Stage Floor - Left)",
+    areaId: "auditorium",
+    type: "rotational",
+    limitType: "",
+    limitValue: "",
+    section: "",
+    timeNote: "During Baptism",
+    mirrorOf: "",
+    validShifts: [
+      "second"
+    ]
+  },
+  {
+    id: "pos_1772311298475",
+    name: "Baptism (In Front of Stage Floor - Right)",
+    areaId: "auditorium",
+    type: "rotational",
+    limitType: "",
+    limitValue: "",
+    section: "",
+    timeNote: "During Baptism",
+    mirrorOf: "",
+    validShifts: [
+      "second"
     ]
   }
 ]
