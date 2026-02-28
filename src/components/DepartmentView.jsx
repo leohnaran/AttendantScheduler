@@ -179,7 +179,7 @@ export default function DepartmentView({
           {/* TEAM ASSIGNMENTS TABLE */}
           <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-after-page">
             <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
-              {km.name.split(' ')[0]}'s Direct Team Assignments ({myTeam.length})
+              {km.name}'s Direct Team Assignments ({myTeam.length})
             </h3>
 
             {myTeam.length === 0 ? (
@@ -267,7 +267,7 @@ export default function DepartmentView({
           {myOversightAreas.length > 0 && (
             <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-before-page">
                 <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
-                {km.name.split(' ')[0]}'s Areas of Oversight
+                {km.name}'s Areas of Oversight
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
