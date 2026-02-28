@@ -32,6 +32,7 @@
   "dependencies": {
     "crypto-js": "^4.2.0",
     "html-to-image": "^1.11.13",
+    "node-machine-id": "^1.1.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

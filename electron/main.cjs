@@ -1,10 +1,27 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const CryptoJS = require('crypto-js')
+const { machineIdSync } = require('node-machine-id')
+
+// Unique key per machine for local encryption
+const MACHINE_KEY = machineIdSync()
+const ENCRYPTION_MARKER = 'ENCRYPTED_V1:'
 
 // Using the OS AppData/Documents folder for safe, permanent storage
 const userDataPath = app.getPath('userData')
 const backupFilePath = path.join(userDataPath, 'scheduler_database.json')
+
+function encrypt(text) {
+    return ENCRYPTION_MARKER + CryptoJS.AES.encrypt(text, MACHINE_KEY).toString()
+}
+
+function decrypt(ciphertext) {
+    if (!ciphertext.startsWith(ENCRYPTION_MARKER)) return ciphertext // Not encrypted yet
+    const actualCiphertext = ciphertext.replace(ENCRYPTION_MARKER, '')
+    const bytes = CryptoJS.AES.decrypt(actualCiphertext, MACHINE_KEY)
+    return bytes.toString(CryptoJS.enc.Utf8)
+}
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -34,7 +51,8 @@ function createWindow() {
 // ------ NATIVE FILE SYSTEM HANDLERS ------
 ipcMain.handle('save-data', async (event, data) => {
     try {
-        fs.writeFileSync(backupFilePath, JSON.stringify(data, null, 2))
+        const encrypted = encrypt(JSON.stringify(data, null, 2))
+        fs.writeFileSync(backupFilePath, encrypted)
         return { success: true }
     } catch (err) {
         console.error('Failed to save data natively:', err)
@@ -45,8 +63,9 @@ ipcMain.handle('save-data', async (event, data) => {
 ipcMain.handle('load-data', async (event) => {
     try {
         if (fs.existsSync(backupFilePath)) {
-            const rawData = fs.readFileSync(backupFilePath, 'utf-8')
-            return { success: true, data: JSON.parse(rawData) }
+            const rawContent = fs.readFileSync(backupFilePath, 'utf-8')
+            const decrypted = decrypt(rawContent)
+            return { success: true, data: JSON.parse(decrypted) }
         }
         return { success: true, data: null } // No file yet
     } catch (err) {
