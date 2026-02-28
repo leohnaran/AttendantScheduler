@@ -43,10 +43,16 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npm run build:nocache
 
+      - name: Get package version
+        if: matrix.os == 'ubuntu-latest'
+        id: get_version
+        run: echo "VERSION=v$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
       - name: Upload HTML to Release
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.VERSION }}
           files: schedule.html
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
