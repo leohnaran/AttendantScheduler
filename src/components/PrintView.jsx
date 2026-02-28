@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { t } from '../i18n/translations'
 import { getAssignId, getLastName } from '../utils/helpers'
 
@@ -9,56 +9,75 @@ export default function PrintView({
   shifts,
   language,
 }) {
-  const getBrotherAssignments = (p) => {
-    const myAssignments = []
+  const assignmentLookup = useMemo(() => {
+    const lookup = {}
+
+    // Group all assignments by person ID
     Object.keys(assignments).forEach((key) => {
-      if (getAssignId(assignments[key]) === p.id) {
-        let posId = key
-        let shiftId = 'all'
-        if (key.includes('_')) {
-          const parts = key.split('_')
-          const lastPart = parts[parts.length - 1]
-          if (shifts.find((s) => s.id === lastPart)) {
-            shiftId = lastPart
-            posId = parts.slice(0, parts.length - 1).join('_')
-          }
-        }
-        const pos = positions.find((x) => x.id === posId)
-        const shift = shifts.find((s) => s.id === shiftId)
-        if (pos) {
-          const shiftLabel = shift
-              ? shift.label
-              : language === 'en'
-              ? 'Full Day'
-              : t('grid_all_day', language);
+      const pId = getAssignId(assignments[key])
+      if (!pId) return
 
-          // Find any positions that MIRROR this one
-          const mirrors = positions.filter(p => p.mirrorOf === pos.id).map(m => m.name);
-          const fullPosName = [pos.name, ...mirrors].join(' + ');
-
-          myAssignments.push({
-            posName: fullPosName,
-            time: shiftLabel,
-            shiftId: shiftId,
-          })
+      let posId = key
+      let shiftId = 'all'
+      if (key.includes('_')) {
+        const parts = key.split('_')
+        const lastPart = parts[parts.length - 1]
+        if (shifts.find((s) => s.id === lastPart)) {
+          shiftId = lastPart
+          posId = parts.slice(0, parts.length - 1).join('_')
         }
       }
+      const pos = positions.find((x) => x.id === posId)
+      const shift = shifts.find((s) => s.id === shiftId)
+
+      if (pos) {
+        const shiftLabel = shift
+            ? shift.label
+            : language === 'en'
+            ? 'Full Day'
+            : t('grid_all_day', language);
+
+        // Find any positions that MIRROR this one
+        const mirrors = positions.filter(p => p.mirrorOf === pos.id).map(m => m.name);
+        const fullPosName = [pos.name, ...mirrors].join(' + ');
+
+        if (!lookup[pId]) {
+          lookup[pId] = []
+        }
+
+        lookup[pId].push({
+          posName: fullPosName,
+          time: shiftLabel,
+          shiftId: shiftId,
+        })
+      }
     })
-    // Sort by time/shift index
-    myAssignments.sort((a, b) => {
-      const aIdx = shifts.findIndex((s) => s.id === a.shiftId)
-      const bIdx = shifts.findIndex((s) => s.id === b.shiftId)
-      return aIdx - bIdx
+
+    // Sort assignments for each person by time/shift index
+    Object.keys(lookup).forEach(pId => {
+      lookup[pId].sort((a, b) => {
+        const aIdx = shifts.findIndex((s) => s.id === a.shiftId)
+        const bIdx = shifts.findIndex((s) => s.id === b.shiftId)
+        return aIdx - bIdx
+      })
     })
-    return myAssignments
+
+    return lookup
+  }, [assignments, positions, shifts, language])
+
+  const getBrotherAssignments = (p) => {
+    return assignmentLookup[p.id] || []
   }
 
-  const brothersWithAssignments = personnel.filter(
-    (p) => getBrotherAssignments(p).length > 0,
-  )
-  brothersWithAssignments.sort((a, b) =>
-    getLastName(a.name).localeCompare(getLastName(b.name)),
-  )
+  const brothersWithAssignments = useMemo(() => {
+    const filtered = personnel.filter(
+      (p) => getBrotherAssignments(p).length > 0,
+    )
+    filtered.sort((a, b) =>
+      getLastName(a.name).localeCompare(getLastName(b.name)),
+    )
+    return filtered
+  }, [personnel, assignmentLookup])
 
   return (
     <div className="glass-panel p-8 rounded-3xl shadow-sm print:shadow-none print:border-none print:bg-white">
