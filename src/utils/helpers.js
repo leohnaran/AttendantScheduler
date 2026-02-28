@@ -1,4 +1,4 @@
-import { t } from '../i18n/translations'
+import { t } from '../i18n/translations.js'
 
 export const getAssignId = (val) => {
   if (!val) return null
