@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch: # Allows you to run this manually from the GitHub "Actions" tab
 
+permissions:
+  contents: write # Required for creating releases and uploading assets
+
 jobs:
   release:
     runs-on: ${{ matrix.os }}
