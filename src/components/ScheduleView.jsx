@@ -256,6 +256,10 @@ export default function ScheduleView({
     return pct >= limit
   }
 
+  const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel])
+  const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas])
+  const positionsMap = useMemo(() => new Map(positions.map(p => [p.id, p])), [positions])
+
   const getReliefUsedCount = (shiftId, currentAssignments) => {
     let count = 0
     positions
@@ -263,16 +267,16 @@ export default function ScheduleView({
       .forEach((pos) => {
         const key = `${pos.id}_${shiftId}`
         const pid = getAssignId(currentAssignments[key])
-        const person = personnel.find((p) => p.id === pid)
+        const person = personnelMap ? personnelMap.get(pid) : personnel.find((p) => p.id === pid)
         if (person && person.caps && person.caps.includes('auditorium')) count++
       })
     return count
   }
 
-  const getConflict = (personId, pos, shiftId, currentAssignments) => {
+  const getConflict = useCallback((personId, pos, shiftId, currentAssignments) => {
     if (!personId) return null
     const pid = parseInt(personId)
-    const person = personnel.find((p) => p.id === pid)
+    const person = personnelMap ? personnelMap.get(pid) : personnel.find((p) => p.id === pid)
     if (!person) return null
 
     // 1. Double Booking
@@ -301,7 +305,7 @@ export default function ScheduleView({
         shiftId === 'all' || existingShiftId === 'all' || shiftId === existingShiftId
 
       if (overlap) {
-        const otherPos = positions.find((p) => p.id === existingPosId)
+        const otherPos = positionsMap ? positionsMap.get(existingPosId) : positions.find((p) => p.id === existingPosId)
 
         // RELIEF MODE: Allow overlap if one is All-Day ('all') and the other is a specific shift
         const isReliefOverlap = (shiftId === 'all' && existingShiftId !== 'all') || (shiftId !== 'all' && existingShiftId === 'all');
@@ -309,7 +313,7 @@ export default function ScheduleView({
         if (isReliefOverlap && rules.auditoriumRotationMode) {
           // Identify which shift's relief limit we are checking
           const targetRotShiftId = shiftId === 'all' ? existingShiftId : shiftId;
-          const targetAudPos = shiftId === 'all' ? pos : positions.find(p => p.id === existingPosId);
+          const targetAudPos = shiftId === 'all' ? pos : (positionsMap ? positionsMap.get(existingPosId) : positions.find(p => p.id === existingPosId));
 
           if (targetAudPos && targetAudPos.type === 'auditorium' && targetAudPos.section) {
             const sameSectionPositions = positions.filter(
@@ -417,7 +421,7 @@ export default function ScheduleView({
     }
 
     // 3. Capabilities
-    const area = areas.find((a) => a.id === pos.areaId)
+    const area = areasMap ? areasMap.get(pos.areaId) : areas.find((a) => a.id === pos.areaId)
     const requiredCap = area ? area.capability : ''
 
     // RELIEF MODE BYPASS: If enabled, brothers with 'auditorium' capability
@@ -439,7 +443,7 @@ export default function ScheduleView({
     }
 
     return null
-  }
+  }, [personnelMap, areasMap, positionsMap, shifts, tags, rules])
 
   const workedAdjacentShift = (pid, shiftId, currentAssignments) => {
     if (rules.avoidConsecutive === false) return false
@@ -508,7 +512,7 @@ export default function ScheduleView({
       Object.keys(currentAssignments).forEach((key) => {
         if (getAssignId(currentAssignments[key]) === pid) {
           const { posId } = parseAssignmentKey(key, shifts)
-          const pos = positions.find((p) => p.id === posId)
+          const pos = positionsMap ? positionsMap.get(posId) : positions.find((p) => p.id === posId)
           if (pos) {
             if (pos.type === 'auditorium') score += 0.1
             else score += 1.0
@@ -519,7 +523,7 @@ export default function ScheduleView({
       })
 
       // Preference bonus: If person's role exactly matches the restriction
-      const area = areas.find((a) => a.id === targetPos.areaId)
+      const area = areasMap ? areasMap.get(targetPos.areaId) : areas.find((a) => a.id === targetPos.areaId)
       let limitType = targetPos.limitType
       let limitValue = targetPos.limitValue
       // Fallback to Area restriction
@@ -529,7 +533,7 @@ export default function ScheduleView({
       }
 
       if (limitType === 'role' && limitValue) {
-        const p = personnel.find(per => per.id === pid)
+        const p = personnelMap ? personnelMap.get(pid) : personnel.find(per => per.id === pid)
         if (p) {
           if (p.role === limitValue) {
             score -= 5.0 // Strong preference for exact match
