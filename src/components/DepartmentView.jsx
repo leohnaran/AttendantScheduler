@@ -46,8 +46,9 @@ export default function DepartmentView({
     if (!km) return null
 
     // --- LOGIC: MY DIRECT TEAM ---
+    // Include the Key Man himself in the direct team list as requested
     const myTeam = personnel
-      .filter((p) => p.keyManId === parseInt(kmId))
+      .filter((p) => p.keyManId === parseInt(kmId) || p.id === km.id)
       .sort((a, b) => a.name.localeCompare(b.name))
 
     // --- LOGIC: MY AREAS OF OVERSIGHT ---
@@ -86,8 +87,77 @@ export default function DepartmentView({
         })
       })
 
+    // Helper to find time notes for anyone on a page
+    const getTimeNotesForTeam = (team) => {
+      const notes = []
+      team.forEach(member => {
+        // Check all shifts for this member
+        shifts.forEach(s => {
+          // Check rotational
+          const rotKey = Object.keys(assignments).find(key => 
+            key.endsWith(`_${s.id}`) && getAssignId(assignments[key]) === member.id
+          )
+          if (rotKey) {
+            const posId = rotKey.split('_').slice(0, -1).join('_')
+            const pos = positions.find(p => p.id === posId)
+            if (pos?.timeNote) {
+              notes.push({ label: pos.name, note: pos.timeNote })
+            }
+            // Check if this position is mirrored from something that has a timeNote
+            if (pos?.mirrorOf) {
+              const sourcePos = positions.find(p => p.id === pos.mirrorOf)
+              if (sourcePos?.timeNote) {
+                notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
+              }
+            }
+            // Also check if any position mirrors THIS one and has a timeNote (unlikely but safe)
+            positions.filter(p => p.mirrorOf === pos?.id).forEach(m => {
+              if (m.timeNote) notes.push({ label: m.name, note: m.timeNote })
+            })
+          }
+
+          // Check auditorium (all day)
+          const audPos = positions.find(p => p.type === 'auditorium' && getAssignId(assignments[p.id]) === member.id)
+          if (audPos?.timeNote) {
+            notes.push({ label: audPos.name, note: audPos.timeNote })
+          }
+          if (audPos?.mirrorOf) {
+            const sourcePos = positions.find(p => p.id === audPos.mirrorOf)
+            if (sourcePos?.timeNote) {
+              notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
+            }
+          }
+        })
+      })
+      
+      // Deduplicate by label+note
+      return Array.from(new Set(notes.map(n => JSON.stringify(n)))).map(s => JSON.parse(s))
+    }
+
+    const getTimeNotesForOversight = (oversightList) => {
+        const notes = []
+        oversightList.forEach(ov => {
+            const areaPos = positions.filter(p => p.areaId === ov.area?.id)
+            areaPos.forEach(pos => {
+                if (pos.timeNote) {
+                    notes.push({ label: pos.name, note: pos.timeNote })
+                }
+                if (pos.mirrorOf) {
+                    const sourcePos = positions.find(p => p.id === pos.mirrorOf)
+                    if (sourcePos?.timeNote) {
+                        notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
+                    }
+                }
+            })
+        })
+        return Array.from(new Set(notes.map(n => JSON.stringify(n)))).map(s => JSON.parse(s))
+    }
+
+    const teamNotes = getTimeNotesForTeam(myTeam)
+    const oversightNotes = getTimeNotesForOversight(myOversightAreas)
+
     return (
-      <div key={km.id} className="space-y-6 print:break-after-page print:pt-4">
+      <div key={km.id} className="space-y-6 print:pt-4">
         {/* HEADER */}
         <div className="glass-panel p-6 rounded-3xl shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 print:p-0 print:border-none print:shadow-none print:mb-4">
           <div className="flex items-center gap-4">
@@ -107,9 +177,9 @@ export default function DepartmentView({
 
         <div className="space-y-6 print:space-y-4">
           {/* TEAM ASSIGNMENTS TABLE */}
-          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none">
+          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-after-page">
             <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
-              My Direct Team Assignments ({myTeam.length})
+              {km.name.split(' ')[0]}'s Direct Team Assignments ({myTeam.length})
             </h3>
 
             {myTeam.length === 0 ? (
@@ -129,9 +199,9 @@ export default function DepartmentView({
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 print:divide-black">
                     {myTeam.map(member => (
-                      <tr key={member.id} className="text-xs print:text-[11px]">
+                      <tr key={member.id} className={`text-xs print:text-[11px] ${member.id === km.id ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}>
                         <td className="py-2 pr-4 font-bold text-gray-900 dark:text-white print:text-black">
-                          {member.name}
+                          {member.name} {member.id === km.id && '(YOU)'}
                         </td>
                         {shifts.map(s => {
                           let assignment = '-'
@@ -175,106 +245,130 @@ export default function DepartmentView({
                     ))}
                   </tbody>
                 </table>
+
+                {/* TIME NOTES FOR TEAM */}
+                {teamNotes.length > 0 && (
+                    <div className="mt-4 pt-2 border-t border-gray-100 dark:border-slate-800 print:border-black">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 print:text-black">Team Schedule Notes:</h4>
+                        <div className="space-y-1">
+                            {teamNotes.map((tn, i) => (
+                                <div key={i} className="text-[10px] print:text-[11px] font-medium text-gray-600 print:text-black">
+                                    <span className="font-bold">{tn.label}:</span> 🕒 {tn.note}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* AREAS OF OVERSIGHT */}
-          <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-before-page">
-            <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
-              My Areas of Oversight
-            </h3>
+          {/* AREAS OF OVERSIGHT - Only render if there are areas */}
+          {myOversightAreas.length > 0 && (
+            <div className="glass-panel p-6 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 print:p-0 print:border-none print:shadow-none print:break-before-page">
+                <h3 className="font-black uppercase tracking-widest text-[10px] text-gray-400 mb-4 print:text-sm print:text-black print:mb-2 border-b border-gray-100 pb-2">
+                {km.name.split(' ')[0]}'s Areas of Oversight
+                </h3>
 
-            {myOversightAreas.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 italic text-sm">
-                No oversight positions assigned.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
-                {myOversightAreas.map((oversight, idx) => (
-                  <div
-                    key={idx}
-                    className="border border-gray-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm break-inside-avoid print:border-black print:rounded-none"
-                  >
-                    <div className="bg-gray-100 dark:bg-slate-800 p-3 flex justify-between items-center print:bg-gray-200 print:border-b print:border-black">
-                      <div>
-                        <h4 className="font-black uppercase tracking-widest text-[10px] print:text-xs">
-                          {oversight.area?.name} Oversight
-                        </h4>
-                        <p className="text-[9px] opacity-60 uppercase font-bold print:text-[10px] print:text-black">
-                          {oversight.shiftId === 'all'
-                            ? 'Full Day'
-                            : `Shift: ${oversight.shiftLabel}`}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[8px] opacity-60 uppercase font-black block">My Post</span>
-                        <span className="font-black text-xs">{oversight.posName}</span>
-                      </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-1 print:gap-4">
+                    {myOversightAreas.map((oversight, idx) => (
+                    <div
+                        key={idx}
+                        className="border border-gray-100 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm break-inside-avoid print:border-black print:rounded-none"
+                    >
+                        <div className="bg-gray-100 dark:bg-slate-800 p-3 flex justify-between items-center print:bg-gray-200 print:border-b print:border-black">
+                        <div>
+                            <h4 className="font-black uppercase tracking-widest text-[10px] print:text-xs">
+                            {oversight.area?.name} Oversight
+                            </h4>
+                            <p className="text-[9px] opacity-60 uppercase font-bold print:text-[10px] print:text-black">
+                            {oversight.shiftId === 'all'
+                                ? 'Full Day'
+                                : `Shift: ${oversight.shiftLabel}`}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-[8px] opacity-60 uppercase font-black block">My Post</span>
+                            <span className="font-black text-xs">{oversight.posName}</span>
+                        </div>
+                        </div>
+
+                        <div className="p-3 bg-white dark:bg-slate-900">
+                        <table className="w-full text-[10px] print:text-[11px]">
+                            <thead>
+                            <tr className="text-[8px] uppercase text-gray-400 border-b border-gray-50 print:text-black print:border-black">
+                                <th className="pb-1 text-left">Post</th>
+                                <th className="pb-1 text-left">Brother</th>
+                                <th className="pb-1 text-right">Oversight</th>
+                            </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
+                            {positions
+                                .filter((p) => p.areaId === oversight.area?.id)
+                                .filter((p) => p.type === oversight.type)
+                                .map((pos) => {
+                                const isMirror = !!pos.mirrorOf
+                                const sourcePosId = pos.mirrorOf
+
+                                let assignmentKey = (oversight.type === 'auditorium'
+                                    ? pos.id
+                                    : `${pos.id}_${oversight.shiftId}`)
+
+                                if (isMirror) {
+                                    const sourcePos = positions.find(x => x.id === sourcePosId)
+                                    assignmentKey = (sourcePos && sourcePos.type === 'auditorium')
+                                        ? sourcePosId
+                                        : `${sourcePosId}_${oversight.shiftId}`
+                                }
+
+                                const pid = getAssignId(assignments[assignmentKey])
+                                const assignedPerson = personnel.find((x) => x.id === pid)
+                                const itsMe = pid === km.id
+
+                                return (
+                                    <tr key={pos.id} className={itsMe ? 'bg-blue-50/50' : ''}>
+                                    <td className="py-1.5 font-bold text-gray-600 print:text-black">
+                                        {pos.name}
+                                    </td>
+                                    <td className="py-1.5 font-bold">
+                                        {assignedPerson ? (
+                                        <span className={itsMe ? 'text-blue-600' : 'print:text-black'}>
+                                            {assignedPerson.name} {itsMe && '(YOU)'}
+                                        </span>
+                                        ) : (
+                                        <span className="text-red-500 italic">VACANT</span>
+                                        )}
+                                    </td>
+                                    <td className="py-1.5 text-right text-gray-400 print:text-black">
+                                        {assignedPerson
+                                        ? personnel.find(kman => kman.id === assignedPerson.keyManId)?.name || 'None'
+                                        : '-'}
+                                    </td>
+                                    </tr>
+                                )
+                                })}
+                            </tbody>
+                        </table>
+                        </div>
                     </div>
+                    ))}
+                </div>
 
-                    <div className="p-3 bg-white dark:bg-slate-900">
-                      <table className="w-full text-[10px] print:text-[11px]">
-                        <thead>
-                          <tr className="text-[8px] uppercase text-gray-400 border-b border-gray-50 print:text-black print:border-black">
-                            <th className="pb-1 text-left">Post</th>
-                            <th className="pb-1 text-left">Brother</th>
-                            <th className="pb-1 text-right">Oversight</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-slate-800">
-                          {positions
-                            .filter((p) => p.areaId === oversight.area?.id)
-                            .filter((p) => p.type === oversight.type)
-                            .map((pos) => {
-                              const isMirror = !!pos.mirrorOf
-                              const sourcePosId = pos.mirrorOf
-
-                              let assignmentKey = (oversight.type === 'auditorium'
-                                ? pos.id
-                                : `${pos.id}_${oversight.shiftId}`)
-
-                              if (isMirror) {
-                                const sourcePos = positions.find(x => x.id === sourcePosId)
-                                assignmentKey = (sourcePos && sourcePos.type === 'auditorium')
-                                    ? sourcePosId
-                                    : `${sourcePosId}_${oversight.shiftId}`
-                              }
-
-                              const pid = getAssignId(assignments[assignmentKey])
-                              const assignedPerson = personnel.find((x) => x.id === pid)
-                              const itsMe = pid === km.id
-
-                              return (
-                                <tr key={pos.id} className={itsMe ? 'bg-blue-50/50' : ''}>
-                                  <td className="py-1.5 font-bold text-gray-600 print:text-black">
-                                    {pos.name}
-                                  </td>
-                                  <td className="py-1.5 font-bold">
-                                    {assignedPerson ? (
-                                      <span className={itsMe ? 'text-blue-600' : 'print:text-black'}>
-                                        {assignedPerson.name} {itsMe && '(YOU)'}
-                                      </span>
-                                    ) : (
-                                      <span className="text-red-500 italic">VACANT</span>
-                                    )}
-                                  </td>
-                                  <td className="py-1.5 text-right text-gray-400 print:text-black">
-                                    {assignedPerson
-                                      ? personnel.find(kman => kman.id === assignedPerson.keyManId)?.name || 'None'
-                                      : '-'}
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                        </tbody>
-                      </table>
+                {/* TIME NOTES FOR OVERSIGHT */}
+                {oversightNotes.length > 0 && (
+                    <div className="mt-6 pt-2 border-t border-gray-100 dark:border-slate-800 print:border-black">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 print:text-black">Area Schedule Notes:</h4>
+                        <div className="space-y-1">
+                            {oversightNotes.map((tn, i) => (
+                                <div key={i} className="text-[10px] print:text-[11px] font-medium text-gray-600 print:text-black">
+                                    <span className="font-bold">{tn.label}:</span> 🕒 {tn.note}
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                )}
+            </div>
+          )}
         </div>
       </div>
     )
