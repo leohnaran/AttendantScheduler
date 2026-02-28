@@ -11,6 +11,7 @@
   },
   "main": "electron/main.cjs",
   "scripts": {
+    "test": "node --test",
     "dev": "vite",
     "build": "vite build",
     "build:nocache": "npm run build && cp dist/index.html schedule.html",
