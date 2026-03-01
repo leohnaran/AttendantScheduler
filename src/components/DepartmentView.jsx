@@ -93,6 +93,43 @@ export default function DepartmentView({
         })
       })
 
+    // --- OPTIMIZATION MAPS ---
+    const positionsMap = new Map()
+    const mirrorsMap = new Map() // sourcePosId -> array of mirror POS objects
+    const mirrorsNameMap = new Map() // sourcePosId -> array of mirror names
+
+    positions.forEach(p => {
+      positionsMap.set(p.id, p)
+      if (p.mirrorOf) {
+        if (!mirrorsMap.has(p.mirrorOf)) mirrorsMap.set(p.mirrorOf, [])
+        mirrorsMap.get(p.mirrorOf).push(p)
+
+        if (!mirrorsNameMap.has(p.mirrorOf)) mirrorsNameMap.set(p.mirrorOf, [])
+        mirrorsNameMap.get(p.mirrorOf).push(p.name)
+      }
+    })
+
+    const rotationalAssignmentsByMemberAndShift = new Map()
+    const auditoriumAssignmentsByMember = new Map()
+
+    Object.entries(assignments).forEach(([key, val]) => {
+      const pId = getAssignId(val)
+      if (!pId) return
+
+      const shiftMatch = shifts.find(s => key.endsWith(`_${s.id}`))
+      if (shiftMatch) {
+        const shiftId = shiftMatch.id
+        const parts = key.split('_')
+        const posId = parts.slice(0, parts.length - 1).join('_')
+        rotationalAssignmentsByMemberAndShift.set(`${pId}_${shiftId}`, posId)
+      } else {
+        const pos = positionsMap.get(key)
+        if (pos && pos.type === 'auditorium') {
+            auditoriumAssignmentsByMember.set(pId, key)
+        }
+      }
+    })
+
     // Helper to find time notes for anyone on a page
     const getTimeNotesForTeam = (team) => {
       const notes = []
@@ -100,37 +137,38 @@ export default function DepartmentView({
         // Check all shifts for this member
         shifts.forEach(s => {
           // Check rotational
-          const rotKey = Object.keys(assignments).find(key => 
-            key.endsWith(`_${s.id}`) && getAssignId(assignments[key]) === member.id
-          )
-          if (rotKey) {
-            const posId = rotKey.split('_').slice(0, -1).join('_')
-            const pos = positions.find(p => p.id === posId)
+          const posId = rotationalAssignmentsByMemberAndShift.get(`${member.id}_${s.id}`)
+          if (posId !== undefined) {
+            const pos = positionsMap.get(posId)
             if (pos?.timeNote) {
               notes.push({ label: pos.name, note: pos.timeNote })
             }
             // Check if this position is mirrored from something that has a timeNote
             if (pos?.mirrorOf) {
-              const sourcePos = positions.find(p => p.id === pos.mirrorOf)
+              const sourcePos = positionsMap.get(pos.mirrorOf)
               if (sourcePos?.timeNote) {
                 notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
               }
             }
-            // Also check if any position mirrors THIS one and has a timeNote (unlikely but safe)
-            positions.filter(p => p.mirrorOf === pos?.id).forEach(m => {
+            // Also check if any position mirrors THIS one and has a timeNote
+            const mirrors = mirrorsMap.get(pos?.id) || []
+            mirrors.forEach(m => {
               if (m.timeNote) notes.push({ label: m.name, note: m.timeNote })
             })
           }
 
           // Check auditorium (all day)
-          const audPos = positions.find(p => p.type === 'auditorium' && getAssignId(assignments[p.id]) === member.id)
-          if (audPos?.timeNote) {
-            notes.push({ label: audPos.name, note: audPos.timeNote })
-          }
-          if (audPos?.mirrorOf) {
-            const sourcePos = positions.find(p => p.id === audPos.mirrorOf)
-            if (sourcePos?.timeNote) {
-              notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
+          const audPosId = auditoriumAssignmentsByMember.get(member.id)
+          if (audPosId !== undefined) {
+            const audPos = positionsMap.get(audPosId)
+            if (audPos?.timeNote) {
+              notes.push({ label: audPos.name, note: audPos.timeNote })
+            }
+            if (audPos?.mirrorOf) {
+              const sourcePos = positionsMap.get(audPos.mirrorOf)
+              if (sourcePos?.timeNote) {
+                notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
+              }
             }
           }
         })
@@ -149,7 +187,7 @@ export default function DepartmentView({
                     notes.push({ label: pos.name, note: pos.timeNote })
                 }
                 if (pos.mirrorOf) {
-                    const sourcePos = positions.find(p => p.id === pos.mirrorOf)
+                    const sourcePos = positionsMap.get(pos.mirrorOf)
                     if (sourcePos?.timeNote) {
                         notes.push({ label: sourcePos.name, note: sourcePos.timeNote })
                     }
@@ -224,31 +262,28 @@ export default function DepartmentView({
                           let assignment = '-'
                           let colorClass = 'text-gray-300 print:text-gray-400'
 
-                          const rotKey = Object.keys(assignments).find(key => {
-                              return key.endsWith(`_${s.id}`) && getAssignId(assignments[key]) === member.id;
-                          });
+                          const posId = rotationalAssignmentsByMemberAndShift.get(`${member.id}_${s.id}`)
 
-                          if (rotKey) {
-                            const parts = rotKey.split('_');
-                            const posId = parts.slice(0, parts.length - 1).join('_');
-                            const foundPos = positions.find((p) => p.id === posId);
+                          if (posId !== undefined) {
+                            const foundPos = positionsMap.get(posId)
                             
                             if (foundPos) {
-                                const mirrors = positions.filter(p => p.mirrorOf === foundPos.id).map(m => m.name);
+                                const mirrors = mirrorsNameMap.get(foundPos.id) || [];
                                 assignment = [foundPos.name, ...mirrors].join(' + ');
                             } else {
                                 assignment = 'Assigned';
                             }
                             colorClass = 'text-blue-600 font-bold print:text-black'
                           } else {
-                            const audKey = positions
-                              .filter((pos) => pos.type === 'auditorium')
-                              .find((pos) => getAssignId(assignments[pos.id]) === member.id)
+                            const audPosId = auditoriumAssignmentsByMember.get(member.id)
                             
-                            if (audKey) {
-                              const mirrors = positions.filter(p => p.mirrorOf === audKey.id).map(m => m.name);
-                              assignment = [audKey.name, ...mirrors].join(' + ');
-                              colorClass = 'text-purple-600 font-bold print:text-black'
+                            if (audPosId !== undefined) {
+                              const audPos = positionsMap.get(audPosId)
+                              if (audPos && audPos.type === 'auditorium') {
+                                const mirrors = mirrorsNameMap.get(audPos.id) || [];
+                                assignment = [audPos.name, ...mirrors].join(' + ');
+                                colorClass = 'text-purple-600 font-bold print:text-black'
+                              }
                             }
                           }
 
@@ -332,7 +367,7 @@ export default function DepartmentView({
                                     : `${pos.id}_${oversight.shiftId}`)
 
                                 if (isMirror) {
-                                    const sourcePos = positions.find(x => x.id === sourcePosId)
+                                    const sourcePos = positionsMap.get(sourcePosId)
                                     assignmentKey = (sourcePos && sourcePos.type === 'auditorium')
                                         ? sourcePosId
                                         : `${sourcePosId}_${oversight.shiftId}`
