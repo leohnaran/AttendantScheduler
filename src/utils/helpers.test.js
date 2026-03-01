@@ -1,6 +1,40 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { getHeatBg, parseAssignmentKey, parseCSV } from './helpers.js'
+import { getHeatBg, getLastName, parseAssignmentKey, parseCSV } from './helpers.js'
+
+describe('getLastName', () => {
+  it('should return the last name from a full name', () => {
+    assert.strictEqual(getLastName('John Doe'), 'doe')
+  })
+
+  it('should handle middle names correctly', () => {
+    assert.strictEqual(getLastName('John James Doe'), 'doe')
+  })
+
+  it('should handle single names', () => {
+    assert.strictEqual(getLastName('John'), 'john')
+  })
+
+  it('should handle extra spaces', () => {
+    assert.strictEqual(getLastName('  John   Doe  '), 'doe')
+  })
+
+  it('should return empty string for null', () => {
+    assert.strictEqual(getLastName(null), '')
+  })
+
+  it('should return empty string for undefined', () => {
+    assert.strictEqual(getLastName(undefined), '')
+  })
+
+  it('should return empty string for empty string input', () => {
+    assert.strictEqual(getLastName(''), '')
+  })
+
+  it('should return empty string for string with only whitespace', () => {
+    assert.strictEqual(getLastName('   '), '')
+  })
+})
 
 describe('parseCSV', () => {
   it('should parse simple CSV', () => {
