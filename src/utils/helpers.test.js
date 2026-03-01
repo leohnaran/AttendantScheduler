@@ -84,6 +84,22 @@ describe('getHeatBg', () => {
 describe('parseAssignmentKey', () => {
   const shifts = [{ id: 's1' }, { id: 's2' }]
 
+  it('should handle key with only underscore', () => {
+    assert.deepStrictEqual(parseAssignmentKey('_', shifts), { posId: '_', shiftId: 'all' })
+  })
+
+  it('should handle posId with leading underscore', () => {
+    assert.deepStrictEqual(parseAssignmentKey('_pos1_s1', shifts), { posId: '_pos1', shiftId: 's1' })
+  })
+
+  it('should handle posId with trailing underscore before shift', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1__s1', shifts), { posId: 'pos1_', shiftId: 's1' })
+  })
+
+  it('should handle shift array with missing id property', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', [{name: 'shift1'}, {id: 's2'}]), { posId: 'pos1_s1', shiftId: 'all' })
+  })
+
   it('should extract shift correctly when given valid inputs', () => {
     assert.deepStrictEqual(parseAssignmentKey('pos1_s1', shifts), { posId: 'pos1', shiftId: 's1' })
   })
