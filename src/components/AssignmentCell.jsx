@@ -1,10 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { t } from '../i18n/translations'
 import {
-  getAssignId,
   getHeatColor,
   getHeatBg,
-  isAutoAssigned,
   checkQualification,
 } from '../utils/helpers'
 import SearchableSelect from './SearchableSelect'
@@ -53,7 +51,8 @@ export default function AssignmentCell({
 
   if (isMirror) {
     const mirrorKey = `${sourcePosId}_${shiftId}`
-    const mirrorId = getAssignId(assignments[mirrorKey])
+    const mirrorVal = assignments[mirrorKey]
+    const mirrorId = mirrorVal ? (typeof mirrorVal === 'object' ? parseInt(mirrorVal.id) : parseInt(mirrorVal)) : null
     const mirrorPerson = personnel.find((p) => p.id === mirrorId)
     return (
       <td
@@ -75,8 +74,8 @@ export default function AssignmentCell({
   }
 
   const assignmentVal = assignments[assignmentKey]
-  const assignedId = getAssignId(assignmentVal)
-  const isAuto = isAutoAssigned(assignmentVal)
+  const assignedId = assignmentVal ? (typeof assignmentVal === 'object' ? parseInt(assignmentVal.id) : parseInt(assignmentVal)) : null
+  const isAuto = assignmentVal ? assignmentVal.isAuto === true : false
   const conflictData = getConflict(assignedId, pos, shiftId, assignments)
   const conflictMsg = conflictData ? conflictData.msg : null
   const isWarning = conflictData ? conflictData.type === 'warning' : false
