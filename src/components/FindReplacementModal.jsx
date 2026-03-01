@@ -20,32 +20,40 @@ export default function FindReplacementModal({
     if (!slot) return
     const { pos, shiftId } = slot
 
+    const busyMap = new Map()
+    for (let otherPos of positions) {
+      if (otherPos.type === 'auditorium') {
+        const pId = getAssignId(assignments[otherPos.id])
+        if (pId && !busyMap.has(pId)) {
+          busyMap.set(pId, {
+            busyWhere: otherPos.name,
+            busySlot: { pos: otherPos, shiftId: 'all' }
+          })
+        }
+      } else if (otherPos.type === 'rotational' && !otherPos.isMirror) {
+        if (otherPos.validShifts && !otherPos.validShifts.includes(shiftId)) continue
+        const pId = getAssignId(assignments[`${otherPos.id}_${shiftId}`])
+        if (pId && !busyMap.has(pId)) {
+          busyMap.set(pId, {
+            busyWhere: otherPos.name,
+            busySlot: { pos: otherPos, shiftId: shiftId }
+          })
+        }
+      }
+    }
+
     const initialList = personnel.map((p) => {
       const { qualified, reason } = checkQualification(p, pos, shiftId, areas, tags, personnel)
       let isBusy = false
       let busyWhere = null
       let busySlot = null
 
-      for (let otherPos of positions) {
-        if (otherPos.type === 'auditorium' && getAssignId(assignments[otherPos.id]) === p.id) {
-          isBusy = true
-          busyWhere = otherPos.name
-          busySlot = { pos: otherPos, shiftId: 'all' }
-          break
-        }
-
-        if (otherPos.type === 'rotational' && !otherPos.isMirror) {
-          if (otherPos.validShifts && !otherPos.validShifts.includes(shiftId)) continue
-          if (getAssignId(assignments[`${otherPos.id}_${shiftId}`]) === p.id) {
-            isBusy = true
-            busyWhere = otherPos.name
-            busySlot = { pos: otherPos, shiftId: shiftId }
-            break
-          }
-        }
-      }
-
-      if (!isBusy && p.unavailable && p.unavailable.includes(shiftId)) {
+      const busyData = busyMap.get(p.id)
+      if (busyData) {
+        isBusy = true
+        busyWhere = busyData.busyWhere
+        busySlot = busyData.busySlot
+      } else if (p.unavailable && p.unavailable.includes(shiftId)) {
         isBusy = true
         busyWhere = 'Marked Unavailable'
         busySlot = null

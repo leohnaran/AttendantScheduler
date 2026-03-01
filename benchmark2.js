@@ -1,6 +1,6 @@
 import { performance } from 'perf_hooks';
 
-// Mock data
+// Setup Mock Data matching actual structure
 const P_COUNT = 500;
 const POS_COUNT = 200;
 
@@ -25,8 +25,9 @@ for (let i = 0; i < POS_COUNT; i++) {
 }
 
 const getAssignId = (val) => val;
+const shiftId = 'shift_1';
 
-function oldApproach(shiftId) {
+function oldApproach() {
   return personnel.map((p) => {
     let isBusy = false;
     let busyWhere = null;
@@ -51,11 +52,17 @@ function oldApproach(shiftId) {
       }
     }
 
+    if (!isBusy && p.unavailable && p.unavailable.includes(shiftId)) {
+      isBusy = true;
+      busyWhere = 'Marked Unavailable';
+      busySlot = null;
+    }
+
     return { ...p, isBusy, busyWhere, busySlot };
   });
 }
 
-function newApproach(shiftId) {
+function newApproach() {
   const busyMap = new Map();
   for (let otherPos of positions) {
     if (otherPos.type === 'auditorium') {
@@ -88,40 +95,44 @@ function newApproach(shiftId) {
       isBusy = true;
       busyWhere = busyData.busyWhere;
       busySlot = busyData.busySlot;
+    } else if (p.unavailable && p.unavailable.includes(shiftId)) {
+      isBusy = true;
+      busyWhere = 'Marked Unavailable';
+      busySlot = null;
     }
 
     return { ...p, isBusy, busyWhere, busySlot };
   });
 }
 
-const ITERATIONS = 100;
-const shiftId = 'shift_1';
+const ITERATIONS = 1000;
 
 const startOld = performance.now();
 for (let i = 0; i < ITERATIONS; i++) {
-  oldApproach(shiftId);
+  oldApproach();
 }
 const timeOld = performance.now() - startOld;
 
 const startNew = performance.now();
 for (let i = 0; i < ITERATIONS; i++) {
-  newApproach(shiftId);
+  newApproach();
 }
 const timeNew = performance.now() - startNew;
 
+console.log(`[FindReplacementModal.jsx:754] Benchmark:`);
 console.log(`Old approach time: ${timeOld.toFixed(2)}ms`);
 console.log(`New approach time: ${timeNew.toFixed(2)}ms`);
 console.log(`Improvement: ${((timeOld - timeNew) / timeOld * 100).toFixed(2)}%`);
 
 // Correctness check
-const r1 = oldApproach(shiftId);
-const r2 = newApproach(shiftId);
+const r1 = oldApproach();
+const r2 = newApproach();
 let match = true;
 for (let i = 0; i < P_COUNT; i++) {
-  if (r1[i].isBusy !== r2[i].isBusy || r1[i].busyWhere !== r2[i].busyWhere) {
+  if (r1[i].isBusy !== r2[i].isBusy || r1[i].busyWhere !== r2[i].busyWhere || r1[i].busySlot?.shiftId !== r2[i].busySlot?.shiftId) {
     match = false;
     console.log('Mismatch!', r1[i], r2[i]);
     break;
   }
 }
-console.log(`Outputs match: ${match}`);
+if (!match) process.exit(1);
