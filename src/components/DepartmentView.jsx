@@ -197,10 +197,21 @@ export default function DepartmentView({
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="text-[10px] uppercase text-gray-400 border-b border-gray-200 dark:border-slate-700 print:text-[10px] print:text-black">
-                      <th className="py-2 pr-4">Brother</th>
-                      {shifts.map(s => (
-                          <th key={s.id} className="py-2 px-2 text-center">{s.label.split('(')[0]}</th>
-                      ))}
+                      <th className="py-2 pr-4 align-bottom">Brother</th>
+                      {shifts.map(s => {
+                          const [namePart, timePart] = s.label.split('(');
+                          const cleanTime = timePart ? timePart.replace(')', '') : '';
+                          return (
+                              <th key={s.id} className="py-2 px-2 text-center align-bottom leading-tight">
+                                  <div className="font-bold">{namePart.trim()}</div>
+                                  {cleanTime && (
+                                      <div className="font-normal normal-case text-gray-500 print:text-gray-600 mt-0.5">
+                                          {cleanTime}
+                                      </div>
+                                  )}
+                              </th>
+                          );
+                      })}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-slate-800 print:divide-black">
