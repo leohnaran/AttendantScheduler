@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { getHeatBg, getLastName, parseAssignmentKey, parseCSV } from './helpers.js'
+import { getHeatColor, getHeatBg, getLastName, parseAssignmentKey, parseCSV } from './helpers.js'
 
 describe('getLastName', () => {
   it('should return the last name from a full name', () => {
@@ -93,6 +93,25 @@ describe('parseCSV', () => {
     const input = 'a,b,c\n1,2,3'
     const expected = [['a', 'b', 'c'], ['1', '2', '3']]
     assert.deepStrictEqual(parseCSV(input), expected)
+  })
+})
+
+describe('getHeatColor', () => {
+  it('should return green bg for count 0', () => {
+    assert.strictEqual(getHeatColor(0), 'bg-green-500')
+  })
+
+  it('should return yellow bg for count 1', () => {
+    assert.strictEqual(getHeatColor(1), 'bg-yellow-500')
+  })
+
+  it('should return orange bg for count 2', () => {
+    assert.strictEqual(getHeatColor(2), 'bg-orange-500')
+  })
+
+  it('should return red bg for count > 2', () => {
+    assert.strictEqual(getHeatColor(3), 'bg-red-500')
+    assert.strictEqual(getHeatColor(10), 'bg-red-500')
   })
 })
 
