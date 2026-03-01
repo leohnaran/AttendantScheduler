@@ -97,8 +97,11 @@ export default function AssignmentCell({
   }
 
   const filteredCandidates = useMemo(() => {
+    // Performance Optimization: Create map for O(1) lookups during array processing
+    const areasMap = new Map(areas.map((a) => [a.id, a]))
+
     // Determine effective restriction (Inheritance: Pos > Legacy > Area)
-    const area = areas.find((a) => a.id === pos.areaId)
+    const area = areasMap.get(pos.areaId)
     let limitType = pos.limitType
     let limitValue = pos.limitValue
     if (!limitType && pos.teamKeyManId) {
@@ -112,7 +115,7 @@ export default function AssignmentCell({
 
     // Create a list of ALL personnel, but mark if they are recommended or not
     let candidates = personnel.map((p) => {
-      const { qualified, reason } = checkQualification(p, pos, shiftId, areas, tags, personnel)
+      const { qualified, reason } = checkQualification(p, pos, shiftId, areasMap, tags, personnel)
       return { ...p, qualified, reason }
     })
 

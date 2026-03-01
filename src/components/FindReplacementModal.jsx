@@ -20,6 +20,9 @@ export default function FindReplacementModal({
     if (!slot) return
     const { pos, shiftId } = slot
 
+    // Performance Optimization: Create map for O(1) lookups during array processing
+    const areasMap = new Map(areas.map((a) => [a.id, a]))
+
     const busyMap = new Map()
     for (let otherPos of positions) {
       if (otherPos.type === 'auditorium') {
@@ -43,7 +46,7 @@ export default function FindReplacementModal({
     }
 
     const initialList = personnel.map((p) => {
-      const { qualified, reason } = checkQualification(p, pos, shiftId, areas, tags, personnel)
+      const { qualified, reason } = checkQualification(p, pos, shiftId, areasMap, tags, personnel)
       let isBusy = false
       let busyWhere = null
       let busySlot = null
@@ -69,7 +72,7 @@ export default function FindReplacementModal({
         let replacementForP = null;
         for (let fp of freePeople) {
           if (fp.id === p.id) continue;
-          const fpEval = checkQualification(fp, p.busySlot.pos, p.busySlot.shiftId, areas, tags, personnel);
+          const fpEval = checkQualification(fp, p.busySlot.pos, p.busySlot.shiftId, areasMap, tags, personnel);
           if (fpEval.qualified) {
             replacementForP = fp;
             break;
