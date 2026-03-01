@@ -100,12 +100,15 @@ export const parseCSV = (text) => {
 
 // --- CENTRALIZED CANDIDATE FINDER (Now relies on props) ---
 export const parseAssignmentKey = (key, shifts) => {
+  if (!key || typeof key !== 'string') {
+    return { posId: key, shiftId: 'all' }
+  }
   let posId = key
   let shiftId = 'all'
   if (key.includes('_')) {
     const parts = key.split('_')
     const lastPart = parts[parts.length - 1]
-    if (shifts.some((s) => s.id === lastPart)) {
+    if (Array.isArray(shifts) && shifts.some((s) => s?.id === lastPart)) {
       shiftId = lastPart
       posId = parts.slice(0, parts.length - 1).join('_')
     }
