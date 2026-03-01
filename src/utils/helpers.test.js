@@ -1,6 +1,66 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert'
-import { getHeatBg, parseAssignmentKey } from './helpers.js'
+import { getHeatBg, parseAssignmentKey, parseCSV } from './helpers.js'
+
+describe('parseCSV', () => {
+  it('should parse simple CSV', () => {
+    const input = 'a,b,c\n1,2,3'
+    const expected = [['a', 'b', 'c'], ['1', '2', '3']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should parse CSV with quotes', () => {
+    const input = '"a","b","c"\n"1","2","3"'
+    const expected = [['a', 'b', 'c'], ['1', '2', '3']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should parse CSV with commas inside quotes', () => {
+    const input = 'a,"b,c",d\n1,"2,3",4'
+    const expected = [['a', 'b,c', 'd'], ['1', '2,3', '4']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should parse CSV with newlines inside quotes', () => {
+    const input = 'a,"b\nc",d\n1,"2\n3",4'
+    const expected = [['a', 'b\nc', 'd'], ['1', '2\n3', '4']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should parse CSV with escaped quotes inside quotes', () => {
+    const input = 'a,"b""c",d\n1,"2""3",4'
+    const expected = [['a', 'b"c', 'd'], ['1', '2"3', '4']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should handle different line endings (CRLF)', () => {
+    const input = 'a,b,c\r\n1,2,3'
+    const expected = [['a', 'b', 'c'], ['1', '2', '3']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should handle different line endings (CR)', () => {
+    const input = 'a,b,c\r1,2,3'
+    const expected = [['a', 'b', 'c'], ['1', '2', '3']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should handle empty input', () => {
+    assert.deepStrictEqual(parseCSV(''), [])
+  })
+
+  it('should handle trailing newline', () => {
+    const input = 'a,b,c\n'
+    const expected = [['a', 'b', 'c']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+
+  it('should handle missing trailing newline on last line', () => {
+    const input = 'a,b,c\n1,2,3'
+    const expected = [['a', 'b', 'c'], ['1', '2', '3']]
+    assert.deepStrictEqual(parseCSV(input), expected)
+  })
+})
 
 describe('getHeatBg', () => {
   it('should return green classes for count 0', () => {
