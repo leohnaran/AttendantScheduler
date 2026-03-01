@@ -47,4 +47,24 @@ describe('parseAssignmentKey', () => {
   it('should handle empty string key gracefully', () => {
     assert.deepStrictEqual(parseAssignmentKey('', shifts), { posId: '', shiftId: 'all' })
   })
+
+  it('should handle null or undefined key gracefully', () => {
+    assert.deepStrictEqual(parseAssignmentKey(null, shifts), { posId: null, shiftId: 'all' })
+    assert.deepStrictEqual(parseAssignmentKey(undefined, shifts), { posId: undefined, shiftId: 'all' })
+  })
+
+  it('should handle non-string key gracefully', () => {
+    assert.deepStrictEqual(parseAssignmentKey(123, shifts), { posId: 123, shiftId: 'all' })
+    assert.deepStrictEqual(parseAssignmentKey({ id: 'pos1' }, shifts), { posId: { id: 'pos1' }, shiftId: 'all' })
+  })
+
+  it('should handle missing or invalid shifts array gracefully', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', null), { posId: 'pos1_s1', shiftId: 'all' })
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', undefined), { posId: 'pos1_s1', shiftId: 'all' })
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', {}), { posId: 'pos1_s1', shiftId: 'all' })
+  })
+
+  it('should handle shifts array containing null items gracefully', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', [null, { id: 's1' }]), { posId: 'pos1', shiftId: 's1' })
+  })
 })
