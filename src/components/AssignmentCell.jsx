@@ -96,7 +96,7 @@ export default function AssignmentCell({
     }
   }
 
-  const getFilteredCandidates = () => {
+  const filteredCandidates = useMemo(() => {
     // Determine effective restriction (Inheritance: Pos > Legacy > Area)
     const area = areas.find((a) => a.id === pos.areaId)
     let limitType = pos.limitType
@@ -147,9 +147,7 @@ export default function AssignmentCell({
       return [assignedPerson, ...candidates]
     }
     return candidates
-  }
-
-  const filteredCandidates = getFilteredCandidates()
+  }, [personnel, pos, shiftId, areas, tags, assignedId, assignedPerson])
 
   const quickFixes = useMemo(() => {
     if (!conflictMsg) return []
