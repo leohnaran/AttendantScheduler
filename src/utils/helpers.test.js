@@ -84,8 +84,21 @@ describe('getHeatBg', () => {
 describe('parseAssignmentKey', () => {
   const shifts = [{ id: 's1' }, { id: 's2' }]
 
+  it('should extract shift correctly when given valid inputs', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', shifts), { posId: 'pos1', shiftId: 's1' })
+  })
+
   it('should return original key and "all" if key has no underscore', () => {
     assert.deepStrictEqual(parseAssignmentKey('pos1', shifts), { posId: 'pos1', shiftId: 'all' })
+  })
+
+  it('should return default posId and shiftId when key is empty string', () => {
+    assert.deepStrictEqual(parseAssignmentKey('', shifts), { posId: '', shiftId: 'all' })
+  })
+
+  it('should extract correct posId and shiftId when valid key and valid shift', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos1_s1', shifts), { posId: 'pos1', shiftId: 's1' })
+    assert.deepStrictEqual(parseAssignmentKey('pos_with_multiple_underscores_s2', shifts), { posId: 'pos_with_multiple_underscores', shiftId: 's2' })
   })
 
   it('should return original key and "all" if key has underscore but last part is not a valid shift', () => {
