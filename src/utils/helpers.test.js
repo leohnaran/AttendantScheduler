@@ -67,4 +67,12 @@ describe('parseAssignmentKey', () => {
   it('should handle shifts array containing null items gracefully', () => {
     assert.deepStrictEqual(parseAssignmentKey('pos1_s1', [null, { id: 's1' }]), { posId: 'pos1', shiftId: 's1' })
   })
+
+  it('should handle posId that looks like a shift ID but has no underscore', () => {
+    assert.deepStrictEqual(parseAssignmentKey('s1', shifts), { posId: 's1', shiftId: 'all' })
+  })
+
+  it('should correctly handle keys with multiple underscores if last part is not a shift', () => {
+    assert.deepStrictEqual(parseAssignmentKey('area_pos1_s3', shifts), { posId: 'area_pos1_s3', shiftId: 'all' })
+  })
 })
