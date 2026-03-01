@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { t } from '../i18n/translations'
 import { getAssignId, parseAssignmentKey } from '../utils/helpers'
 import { TOTAL_PROGRAM_MINUTES } from '../utils/constants'
