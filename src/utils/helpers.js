@@ -126,7 +126,7 @@ export const ROLE_HIERARCHY = {
 export const checkQualification = (p, pos, shiftId, areas, tags, personnel) => {
   let qualified = true
   let reason = null
-  const area = areas.find((a) => a.id === pos.areaId)
+  const area = areas instanceof Map ? areas.get(pos.areaId) : areas.find((a) => a.id === pos.areaId)
   if (!area) return { qualified: false, reason: 'Area not found' }
   const requiredCap = area.capability
 
@@ -223,8 +223,11 @@ export const getCandidatesForPosition = (pos, personnel, areas, tags) => {
   // In ScheduleView, it's called with (pos, personnel, areas, tags)
   // Let's assume 'all' for general qualification if shiftId is not provided.
   
+  // Performance Optimization: Create map for O(1) lookups during array processing
+  const areasMap = areas instanceof Map ? areas : new Map(areas.map((a) => [a.id, a]))
+
   return personnel.filter((p) => {
-    const { qualified } = checkQualification(p, pos, 'all', areas, tags, personnel)
+    const { qualified } = checkQualification(p, pos, 'all', areasMap, tags, personnel)
     return qualified
   })
 }
