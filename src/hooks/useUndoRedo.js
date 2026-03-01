@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState } from "react";
 // --- UNDO/REDO HOOK ---
 export function useUndoRedo(initialState) {
     const [history, setHistory] = useState([initialState]);
