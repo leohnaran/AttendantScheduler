@@ -3,7 +3,7 @@
   "description": "Attendant Scheduler for Jehovah's Witnesses Circuit Assemblies and Regional Conventions",
   "author": "leohnaran",
   "private": true,
-  "version": "3.6.9",
+  "version": "3.6.10",
   "type": "module",
   "repository": {
     "type": "git",
@@ -48,6 +48,8 @@
   "dependencies": {
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.8.3",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
     "node-machine-id": "^1.1.12",
     "react": "^18.2.0",

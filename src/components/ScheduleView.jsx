@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import * as htmlToImage from 'html-to-image'
+import { exportToExcel } from '../utils/excelExport'
 import { t } from '../i18n/translations'
 import {
   getAssignId,
@@ -855,6 +856,22 @@ export default function ScheduleView({
                     className="w-full text-left px-4 py-2 text-sm hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center gap-2 font-bold"
                   >
                     <i className="fa fa-image"></i> Download as PNG
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToExcel({
+                        personnel,
+                        assignments,
+                        areas,
+                        positions,
+                        shifts,
+                        language,
+                      });
+                      setShowPrintMenu(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-green-50 dark:hover:bg-green-900/20 text-green-600 dark:text-green-400 flex items-center gap-2 font-bold"
+                  >
+                    <i className="fa fa-file-excel"></i> Export to Excel
                   </button>
                 </div>
               )}
