@@ -87,7 +87,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v3.6.7'
+const APP_VERSION = 'v3.6.9'
 
 export default function App() {
   console.log(`Attendant Scheduler ${APP_VERSION} - Reset Fix Active`);
