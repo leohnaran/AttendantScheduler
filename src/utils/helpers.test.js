@@ -218,3 +218,34 @@ describe('parseAssignmentKey', () => {
     assert.deepStrictEqual(parseAssignmentKey('area_pos1_s3', shifts), { posId: 'area_pos1_s3', shiftId: 'all' })
   })
 })
+
+describe('parseAssignmentKey edge cases', () => {
+  const shifts = [{ id: 's1' }, { id: 's2' }]
+
+  it('should handle extremely long posId', () => {
+    const longPosId = 'a'.repeat(1000)
+    assert.deepStrictEqual(parseAssignmentKey(`${longPosId}_s1`, shifts), { posId: longPosId, shiftId: 's1' })
+  })
+
+  it('should handle shift array where some shifts have no id', () => {
+    const mixedShifts = [{ name: 'Morning' }, { id: 's1' }]
+    assert.deepStrictEqual(parseAssignmentKey('pos_s1', mixedShifts), { posId: 'pos', shiftId: 's1' })
+  })
+
+  it('should handle array as key gracefully', () => {
+    assert.deepStrictEqual(parseAssignmentKey(['pos', 's1'], shifts), { posId: ['pos', 's1'], shiftId: 'all' })
+  })
+
+  it('should return all for shiftId when shift array contains numbers', () => {
+    assert.deepStrictEqual(parseAssignmentKey('pos_1', [1, 2, { id: 's1' }]), { posId: 'pos_1', shiftId: 'all' })
+  })
+
+  it('should correctly handle a key that exactly matches a shift id but has no underscore', () => {
+    assert.deepStrictEqual(parseAssignmentKey('s1', shifts), { posId: 's1', shiftId: 'all' })
+  })
+
+  it('should correctly parse when shift id contains underscores', () => {
+    const complexShifts = [{ id: 'shift_morning' }]
+    assert.deepStrictEqual(parseAssignmentKey('pos_shift_morning', complexShifts), { posId: 'pos_shift_morning', shiftId: 'all' })
+  })
+})
