@@ -12,7 +12,6 @@ import {
 } from '../utils/helpers'
 import PersonnelSidebar from './PersonnelSidebar'
 import MobileScheduleView from './MobileScheduleView'
-import BatchActionMenu from './BatchActionMenu'
 import AssignmentCell from './AssignmentCell'
 import FindReplacementModal from './FindReplacementModal'
 
