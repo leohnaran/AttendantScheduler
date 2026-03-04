@@ -29,6 +29,7 @@ export default function ScheduleView({
 }) {
   const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas]);
   const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel]);
+  const shiftsMap = useMemo(() => new Map(shifts.map(s => [s.id, s])), [shifts]);
 
   const [layoutMode, setLayoutMode] = useState('grid')
   const [search, setSearch] = useState('')
@@ -249,7 +250,7 @@ export default function ScheduleView({
           if (key.includes('_')) {
             const parts = key.split('_')
             const shiftId = parts[parts.length - 1]
-            const shift = shifts.find((s) => s.id === shiftId)
+            const shift = shiftsMap.get(shiftId)
             if (shift) minutesWorking += shift.minutes || 150
           }
         }
@@ -517,7 +518,7 @@ export default function ScheduleView({
         if (key.includes('_')) {
           const parts = key.split('_')
           const shiftId = parts[parts.length - 1]
-          const shift = shifts.find((s) => s.id === shiftId)
+          const shift = shiftsMap.get(shiftId)
           if (shift) {
             workMinutesMap.set(pid, (workMinutesMap.get(pid) || 0) + (shift.minutes || 150))
           }
@@ -675,7 +676,7 @@ export default function ScheduleView({
       filledCount++
 
       if (slot.key.includes('_')) {
-        const shift = shifts.find(s => s.id === slot.shiftId)
+        const shift = shiftsMap.get(slot.shiftId)
         workMinutesMap.set(chosen.id, (workMinutesMap.get(chosen.id) || 0) + (shift ? shift.minutes || 150 : 150))
       }
       if (!workloadStatsMap.has(chosen.id)) {
@@ -721,7 +722,7 @@ export default function ScheduleView({
       filledCount++
 
       if (slot.key.includes('_')) {
-        const shift = shifts.find(s => s.id === slot.shiftId)
+        const shift = shiftsMap.get(slot.shiftId)
         workMinutesMap.set(chosen.id, (workMinutesMap.get(chosen.id) || 0) + (shift ? shift.minutes || 150 : 150))
       }
       if (!workloadStatsMap.has(chosen.id)) {
