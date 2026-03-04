@@ -239,25 +239,29 @@ export default function ScheduleView({
               })
               return count
             }
-  const getWorkPercentage = (pid, currentAssignments) => {
+  const getWorkPercentage = (pid, currentAssignments, workMinutesMap = null) => {
     let minutesWorking = 0
-    Object.keys(currentAssignments).forEach((key) => {
-      if (getAssignId(currentAssignments[key]) === pid) {
-        // ONLY count rotational assignments (with underscore) towards work load/time away
-        if (key.includes('_')) {
-          const parts = key.split('_')
-          const shiftId = parts[parts.length - 1]
-          const shift = shifts.find((s) => s.id === shiftId)
-          if (shift) minutesWorking += shift.minutes || 150
+    if (workMinutesMap) {
+      minutesWorking = workMinutesMap.get(pid) || 0
+    } else {
+      Object.keys(currentAssignments).forEach((key) => {
+        if (getAssignId(currentAssignments[key]) === pid) {
+          // ONLY count rotational assignments (with underscore) towards work load/time away
+          if (key.includes('_')) {
+            const parts = key.split('_')
+            const shiftId = parts[parts.length - 1]
+            const shift = shifts.find((s) => s.id === shiftId)
+            if (shift) minutesWorking += shift.minutes || 150
+          }
         }
-      }
-    })
+      })
+    }
     return Math.round((minutesWorking / 600) * 100)
   }
 
-  const isOverWorkLimit = (pid, currentAssignments) => {
+  const isOverWorkLimit = (pid, currentAssignments, workMinutesMap = null) => {
     const limit = rules.maxWorkPercent || 50
-    const pct = getWorkPercentage(pid, currentAssignments)
+    const pct = getWorkPercentage(pid, currentAssignments, workMinutesMap)
     return pct >= limit
   }
 
@@ -505,23 +509,59 @@ export default function ScheduleView({
     const totalPersonnel = personnel.length
     let filledCount = 0
 
+    // PRE-COMPUTE WORK MINUTES & SCORES FOR PERFORMANCE
+    const workMinutesMap = new Map()
+    const workloadStatsMap = new Map()
+    Object.keys(newAssignments).forEach((key) => {
+      const pid = getAssignId(newAssignments[key])
+      if (pid !== null) {
+        if (key.includes('_')) {
+          const parts = key.split('_')
+          const shiftId = parts[parts.length - 1]
+          const shift = shifts.find((s) => s.id === shiftId)
+          if (shift) {
+            workMinutesMap.set(pid, (workMinutesMap.get(pid) || 0) + (shift.minutes || 150))
+          }
+        }
+
+        // initialize workload stats
+        if (!workloadStatsMap.has(pid)) {
+          workloadStatsMap.set(pid, { score: 0, hasKeymanJob: false })
+        }
+        const stats = workloadStatsMap.get(pid)
+        const { posId } = parseAssignmentKey(key, shifts)
+        const pos = positions.find((p) => p.id === posId)
+        if (pos) {
+          if (pos.type === 'auditorium') stats.score += 0.1
+          else stats.score += 1.0
+          if (pos.keyMan) stats.hasKeymanJob = true
+        }
+      }
+    })
+
     // HELPER: Calculate dynamic workload score
-    const getWorkloadScore = (pid, currentAssignments, targetPos, targetShiftId) => {
+    const getWorkloadScore = (pid, currentAssignments, targetPos, targetShiftId, workloadMap = null) => {
       let score = 0
       let hasKeymanJob = false
 
-      Object.keys(currentAssignments).forEach((key) => {
-        if (getAssignId(currentAssignments[key]) === pid) {
-          const { posId } = parseAssignmentKey(key, shifts)
-          const pos = positions.find((p) => p.id === posId)
-          if (pos) {
-            if (pos.type === 'auditorium') score += 0.1
-            else score += 1.0
+      if (workloadMap && workloadMap.has(pid)) {
+        const stats = workloadMap.get(pid)
+        score = stats.score
+        hasKeymanJob = stats.hasKeymanJob
+      } else {
+        Object.keys(currentAssignments).forEach((key) => {
+          if (getAssignId(currentAssignments[key]) === pid) {
+            const { posId } = parseAssignmentKey(key, shifts)
+            const pos = positions.find((p) => p.id === posId)
+            if (pos) {
+              if (pos.type === 'auditorium') score += 0.1
+              else score += 1.0
 
-            if (pos.keyMan) hasKeymanJob = true
+              if (pos.keyMan) hasKeymanJob = true
+            }
           }
-        }
-      })
+        })
+      }
 
       // Preference bonus: If person's role exactly matches the restriction
       const area = areasMap.get(targetPos.areaId)
@@ -553,7 +593,7 @@ export default function ScheduleView({
       return score
     }
     // HELPER: Get valid candidates based on current state
-    const getValidCandidates = (pos, shiftId, currentAssignments) => {
+    const getValidCandidates = (pos, shiftId, currentAssignments, workMinutesMap = null) => {
       let candidates = getCandidatesForPosition(pos, personnel, areas, tags)
 
       // RELIEF MODE expansion
@@ -586,7 +626,7 @@ export default function ScheduleView({
         if (conflict && conflict.type === 'error') return false
 
         // 2. Rules & Load
-        if (isOverWorkLimit(p.id, currentAssignments)) return false
+        if (isOverWorkLimit(p.id, currentAssignments, workMinutesMap)) return false
         if (workedAdjacentShift(p.id, shiftId, currentAssignments)) return false
         if (!isAnchorAvailableForShift(p, shiftId, currentAssignments)) return false
 
@@ -618,7 +658,7 @@ export default function ScheduleView({
     })
 
     keymanSlots.forEach(slot => {
-      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments, workMinutesMap)
       if (candidates.length === 0) return
 
       // 1. Pre-shuffle candidates for true randomness among equals
@@ -626,8 +666,8 @@ export default function ScheduleView({
 
       // 2. Sort candidates by Workload Score (Lowest first)
       shuffled.sort((a, b) => {
-        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId)
-        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId)
+        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap)
+        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap)
         return scoreA - scoreB
       })
 
@@ -635,9 +675,21 @@ export default function ScheduleView({
       newAssignments[slot.key] = { id: chosen.id, isAuto: true }
       filledCount++
 
+      if (slot.key.includes('_')) {
+        const shift = shifts.find(s => s.id === slot.shiftId)
+        workMinutesMap.set(chosen.id, (workMinutesMap.get(chosen.id) || 0) + (shift ? shift.minutes || 150 : 150))
+      }
+      if (!workloadStatsMap.has(chosen.id)) {
+        workloadStatsMap.set(chosen.id, { score: 0, hasKeymanJob: false })
+      }
+      const stats = workloadStatsMap.get(chosen.id)
+      if (slot.pos.type === 'auditorium') stats.score += 0.1
+      else stats.score += 1.0
+      if (slot.pos.keyMan) stats.hasKeymanJob = true
+
       newLog.push({
         type: 'keyman',
-        msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId).toFixed(1)}`,
+        msg: `[KEYMAN] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap).toFixed(1)}`,
       })
     })
 
@@ -652,7 +704,7 @@ export default function ScheduleView({
     })
 
     regularSlots.forEach(slot => {
-      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments)
+      const candidates = getValidCandidates(slot.pos, slot.shiftId, newAssignments, workMinutesMap)
       if (candidates.length === 0) return
 
       // 1. Pre-shuffle candidates for true randomness among equals
@@ -660,8 +712,8 @@ export default function ScheduleView({
 
       // 2. Sort candidates by Workload Score (Lowest first, including Keyman Penalty)
       shuffled.sort((a, b) => {
-        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId)
-        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId)
+        const scoreA = getWorkloadScore(a.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap)
+        const scoreB = getWorkloadScore(b.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap)
         return scoreA - scoreB
       })
 
@@ -669,9 +721,21 @@ export default function ScheduleView({
       newAssignments[slot.key] = { id: chosen.id, isAuto: true }
       filledCount++
 
+      if (slot.key.includes('_')) {
+        const shift = shifts.find(s => s.id === slot.shiftId)
+        workMinutesMap.set(chosen.id, (workMinutesMap.get(chosen.id) || 0) + (shift ? shift.minutes || 150 : 150))
+      }
+      if (!workloadStatsMap.has(chosen.id)) {
+        workloadStatsMap.set(chosen.id, { score: 0, hasKeymanJob: false })
+      }
+      const stats = workloadStatsMap.get(chosen.id)
+      if (slot.pos.type === 'auditorium') stats.score += 0.1
+      else stats.score += 1.0
+      if (slot.pos.keyMan) stats.hasKeymanJob = true
+
       newLog.push({
         type: 'rotational',
-        msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId).toFixed(1)}`,
+        msg: `[REGULAR] Assigned ${chosen.name} to ${slot.pos.name} (${slot.shiftId}). Final Score: ${getWorkloadScore(chosen.id, newAssignments, slot.pos, slot.shiftId, workloadStatsMap).toFixed(1)}`,
       })
     })
 
