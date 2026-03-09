@@ -387,10 +387,21 @@ export default function ScheduleView({
     }
 
     // 2. Unavailability
-    if (person.unavailable && person.unavailable.includes(shiftId)) {
-      return {
-        type: rules.unavailableSeverity || 'error',
-        msg: 'Marked Unavailable',
+    if (person.unavailable) {
+      if (shiftId === 'all') {
+        if (person.unavailable.includes('all_day')) {
+          return {
+            type: rules.unavailableSeverity || 'error',
+            msg: 'Marked Unavailable',
+          }
+        }
+      } else {
+        if (person.unavailable.includes(shiftId)) {
+          return {
+            type: rules.unavailableSeverity || 'error',
+            msg: 'Marked Unavailable',
+          }
+        }
       }
     }
 
