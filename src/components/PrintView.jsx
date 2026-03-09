@@ -220,7 +220,7 @@ export default function PrintView({
             ))}
         </div>
       ) : (
-        <div className="overflow-auto border border-gray-100 dark:border-slate-800 rounded-2xl print:border-none">
+        <div className="overflow-auto border border-gray-100 dark:border-slate-800 rounded-2xl print:border-none print:rounded-none print:overflow-visible">
             <table className="w-full text-left border-collapse text-xs print:text-[8px] volunteer-table">
                 <thead className="bg-gray-50 dark:bg-slate-800 print:bg-gray-100">
                     <tr>
