@@ -12,6 +12,32 @@ export async function exportToExcel({
 }) {
   const workbook = new ExcelJS.Workbook();
   const personnelMap = new Map(personnel.map((p) => [p.id, p]));
+  const positionsMap = new Map(positions.map((p) => [p.id, p]));
+
+  const lookup = {
+    personnelMap,
+    positionsMap,
+    personAssignments: new Map(),
+    personAuditorium: new Map()
+  };
+
+  // Pre-compute assignment indices for O(1) lookups
+  Object.keys(assignments).forEach((k) => {
+    const pId = getAssignId(assignments[k]);
+    if (!pId) return;
+
+    if (k.includes('_')) {
+      const parts = k.split('_');
+      const shiftId = parts.pop();
+      const posId = parts.join('_');
+      if (!lookup.personAssignments.has(pId)) {
+        lookup.personAssignments.set(pId, new Map());
+      }
+      lookup.personAssignments.get(pId).set(shiftId, posId);
+    } else {
+      lookup.personAuditorium.set(pId, k);
+    }
+  });
 
   // --- SHEET 1: FULL SCHEDULE (Original Request) ---
   const scheduleSheet = workbook.addWorksheet('Full Schedule');
@@ -23,11 +49,11 @@ export async function exportToExcel({
 
   // --- SHEET 3: ASSIGNMENTS BY VOLUNTEER (New Request) ---
   const volSheet = workbook.addWorksheet('Assignments by Volunteer');
-  setupByVolunteerSheet(volSheet, personnel, positions, shifts, assignments, personnelMap);
+  setupByVolunteerSheet(volSheet, personnel, positions, shifts, assignments, lookup);
 
   // --- SHEET 4: KEY MAN REPORTS ---
   const kmSheet = workbook.addWorksheet('Key Man Reports');
-  setupKeyManReportsSheet(kmSheet, personnel, positions, shifts, assignments, areas, personnelMap);
+  setupKeyManReportsSheet(kmSheet, personnel, positions, shifts, assignments, areas, lookup);
 
   // Write and Save
   const buffer = await workbook.xlsx.writeBuffer();
@@ -98,7 +124,7 @@ function setupByPositionSheet(sheet, positions, shifts, assignments, personnelMa
   });
 }
 
-function setupByVolunteerSheet(sheet, personnel, positions, shifts, assignments, personnelMap) {
+function setupByVolunteerSheet(sheet, personnel, positions, shifts, assignments, lookup) {
   const header = sheet.addRow(['Name', ...shifts.map(s => s.label.toUpperCase())]);
   header.font = { bold: true };
   sheet.getColumn(1).width = 30;
@@ -108,25 +134,23 @@ function setupByVolunteerSheet(sheet, personnel, positions, shifts, assignments,
     const rowData = [p.name];
     
     // Find auditorium assignment
-    const audPos = positions.find(pos => pos.type === 'auditorium' && getAssignId(assignments[pos.id]) === p.id);
+    const audPosId = lookup.personAuditorium.get(p.id);
+    const audPos = audPosId ? lookup.positionsMap.get(audPosId) : null;
 
     shifts.forEach(s => {
       let cellLines = [];
       
       // If primary exists, it goes on every shift
       if (audPos) {
-        cellLines.push(cellLines.length === 0 && shifts.some(sh => Object.keys(assignments).some(k => k.endsWith(`_${sh.id}`) && getAssignId(assignments[k]) === p.id)) 
+        cellLines.push(cellLines.length === 0 && lookup.personAssignments.has(p.id)
           ? `Primary: ${audPos.name}` 
           : audPos.name);
       }
 
       // Find rotational assignments for this shift
-      const rotAssignments = Object.keys(assignments)
-        .filter(k => k.endsWith(`_${s.id}`) && getAssignId(assignments[k]) === p.id)
-        .map(k => {
-          const posId = k.replace(`_${s.id}`, '');
-          return positions.find(pos => pos.id === posId)?.name || 'Unknown';
-        });
+      const pAssigns = lookup.personAssignments.get(p.id);
+      const posId = pAssigns?.get(s.id);
+      const rotAssignments = posId ? [lookup.positionsMap.get(posId)?.name || 'Unknown'] : [];
 
       if (rotAssignments.length > 0) {
         if (audPos) {
@@ -147,7 +171,7 @@ function setupByVolunteerSheet(sheet, personnel, positions, shifts, assignments,
   });
 }
 
-function setupKeyManReportsSheet(sheet, personnel, positions, shifts, assignments, areas, personnelMap) {
+function setupKeyManReportsSheet(sheet, personnel, positions, shifts, assignments, areas, lookup) {
   sheet.getColumn(1).width = 25;
   sheet.getColumn(2).width = 30;
   sheet.getColumn(3).width = 30;
@@ -170,12 +194,15 @@ function setupKeyManReportsSheet(sheet, personnel, positions, shifts, assignment
     personnel.filter(p => p.keyManId === km.id || p.id === km.id).sort((a, b) => a.name.localeCompare(b.name)).forEach(m => {
       const rowData = [m.name + (m.id === km.id ? ' (YOU)' : '')];
       shifts.forEach(s => {
-        const rotKey = Object.keys(assignments).find(k => getAssignId(assignments[k]) === m.id && k.endsWith(`_${s.id}`));
-        if (rotKey) {
-          const pos = positions.find(p => p.id === rotKey.replace(`_${s.id}`, ''));
+        const pAssigns = lookup.personAssignments.get(m.id);
+        const posId = pAssigns?.get(s.id);
+
+        if (posId) {
+          const pos = lookup.positionsMap.get(posId);
           rowData.push(pos ? pos.name : 'Assigned');
         } else {
-          const audPos = positions.find(p => p.type === 'auditorium' && getAssignId(assignments[p.id]) === m.id);
+          const audPosId = lookup.personAuditorium.get(m.id);
+          const audPos = audPosId ? lookup.positionsMap.get(audPosId) : null;
           rowData.push(audPos ? audPos.name : '-');
         }
       });
@@ -199,8 +226,8 @@ function setupKeyManReportsSheet(sheet, personnel, positions, shifts, assignment
         sheet.addRow(['Post', 'Brother', 'Oversight']).font = { bold: true };
         positions.filter(p => p.areaId === area?.id && (ov.shiftId === 'all' ? p.type === 'auditorium' : p.type === 'rotational')).forEach(p => {
           const aKey = ov.shiftId === 'all' ? p.id : `${p.id}_${ov.shiftId}`;
-          const person = personnelMap.get(getAssignId(assignments[aKey]));
-          const r = sheet.addRow([p.name, person ? person.name : 'VACANT', personnelMap.get(person?.keyManId)?.name || '-']);
+          const person = lookup.personnelMap.get(getAssignId(assignments[aKey]));
+          const r = sheet.addRow([p.name, person ? person.name : 'VACANT', lookup.personnelMap.get(person?.keyManId)?.name || '-']);
           if (!person) r.getCell(2).font = { color: { argb: 'FFFF0000' } };
         });
         sheet.addRow([]);

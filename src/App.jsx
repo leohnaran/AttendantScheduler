@@ -461,8 +461,25 @@ export default function App() {
     }
     try {
       const data = JSON.stringify(state)
-      const encrypted = CryptoJS.AES.encrypt(data, password).toString()
-      const blob = new Blob([encrypted], { type: 'text/plain' })
+
+      const salt = CryptoJS.lib.WordArray.random(128 / 8)
+      const iv = CryptoJS.lib.WordArray.random(128 / 8)
+
+      const key = CryptoJS.PBKDF2(password, salt, {
+        keySize: 256 / 32,
+        iterations: 100000
+      })
+
+      const encrypted = CryptoJS.AES.encrypt(data, key, { iv: iv }).toString()
+
+      const payload = JSON.stringify({
+        v: 2,
+        salt: salt.toString(CryptoJS.enc.Base64),
+        iv: iv.toString(CryptoJS.enc.Base64),
+        ciphertext: encrypted
+      })
+
+      const blob = new Blob([payload], { type: 'text/plain' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -482,11 +499,34 @@ export default function App() {
     reader.onload = (event) => {
       try {
         const encryptedData = event.target.result
-        const decrypted = CryptoJS.AES.decrypt(
-          encryptedData,
-          password,
-        ).toString(CryptoJS.enc.Utf8)
+        let decrypted = null
+
+        try {
+          const parsedPayload = JSON.parse(encryptedData)
+          if (parsedPayload.v === 2 && parsedPayload.salt && parsedPayload.iv && parsedPayload.ciphertext) {
+            const salt = CryptoJS.enc.Base64.parse(parsedPayload.salt)
+            const iv = CryptoJS.enc.Base64.parse(parsedPayload.iv)
+
+            const key = CryptoJS.PBKDF2(password, salt, {
+              keySize: 256 / 32,
+              iterations: 100000
+            })
+
+            decrypted = CryptoJS.AES.decrypt(parsedPayload.ciphertext, key, { iv: iv }).toString(CryptoJS.enc.Utf8)
+          }
+        } catch (e) {
+          // Fall back to old method if parsing JSON fails or it's not the new format
+        }
+
+        if (!decrypted) {
+          decrypted = CryptoJS.AES.decrypt(
+            encryptedData,
+            password,
+          ).toString(CryptoJS.enc.Utf8)
+        }
+
         if (!decrypted) throw new Error('Incorrect password or invalid file.')
+
         const parsed = JSON.parse(decrypted)
         setState(parsed)
         setShowLoadModal(false)
