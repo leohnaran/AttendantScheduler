@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import CryptoJS from 'crypto-js'
+import toast from 'react-hot-toast'
 import { t } from './i18n/translations'
+import { useConfirm } from './hooks/useConfirm'
 import { useUndoRedo } from './hooks/useUndoRedo'
 import {
   DEFAULT_SHIFTS,
@@ -91,6 +93,7 @@ const APP_VERSION = 'v3.6.10'
 
 export default function App() {
   console.log(`Attendant Scheduler ${APP_VERSION} - Reset Fix Active`);
+  const confirm = useConfirm()
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -429,12 +432,12 @@ export default function App() {
       personnel: mergedPersonnel,
       assignments: newAssignments,
     })
-    alert(`Merged ${source.name} into ${target.name}. All assignments updated.`)
+    toast.success(`Merged ${source.name} into ${target.name}. All assignments updated.`)
   }
 
   const resetAll = async () => {
     if (
-      confirm('Are you sure you want to clear EVERYTHING? This cannot be undone.')
+      await confirm('Are you sure you want to clear EVERYTHING? This cannot be undone.')
     ) {
       // 1. Clear localStorage
       localStorage.removeItem('circuit_scheduler_data');
@@ -452,7 +455,10 @@ export default function App() {
   }
 
   const handleExport = () => {
-    if (!password) return alert('Please enter a password.')
+    if (!password) {
+      toast.error('Please enter a password.')
+      return
+    }
     try {
       const data = JSON.stringify(state)
       const encrypted = CryptoJS.AES.encrypt(data, password).toString()
@@ -465,7 +471,7 @@ export default function App() {
       setShowSaveModal(false)
       setPassword('')
     } catch (e) {
-      alert('Export failed: ' + e.message)
+      toast.error('Export failed: ' + e.message)
     }
   }
 
@@ -485,9 +491,9 @@ export default function App() {
         setState(parsed)
         setShowLoadModal(false)
         setPassword('')
-        alert('Schedule loaded successfully!')
+        toast.success('Schedule loaded successfully!')
       } catch (err) {
-        alert('Import Error: ' + err.message)
+        toast.error('Import Error: ' + err.message)
       }
     }
     reader.readAsText(file)

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import { t } from '../i18n/translations'
 
 export default function CSVMapperModal({ data, onImport, onClose, language }) {
@@ -41,7 +42,7 @@ export default function CSVMapperModal({ data, onImport, onClose, language }) {
 
   const handleFinish = () => {
     if (mapping.nameIdx === -1)
-      return alert("You must at least select a 'Name' column.")
+      return toast.error("You must at least select a 'Name' column.")
     onImport(mapping)
   }
 

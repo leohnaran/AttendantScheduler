@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 import { t } from '../i18n/translations'
+import { useConfirm } from '../hooks/useConfirm'
 
 export default function TagsView({
   tags,
@@ -11,6 +13,7 @@ export default function TagsView({
   onDeleteTag,
   language,
 }) {
+  const confirm = useConfirm()
   const [newTag, setNewTag] = useState({
     name: '',
     restrictedShifts: [],
@@ -21,16 +24,16 @@ export default function TagsView({
 
   // --- TAG MANAGEMENT ---
   const addTag = () => {
-    if (!newTag.name) return alert('Tag Name is required')
+    if (!newTag.name) return toast.error('Tag Name is required')
     const id = 'tag_' + Date.now()
     setTags([...tags, { id, ...newTag }])
     setNewTag({ name: '', restrictedShifts: [], restrictedAreas: [] })
     setSelectedTagId(id) // Auto-select new tag
   }
 
-  const deleteTag = (tagId) => {
+  const deleteTag = async (tagId) => {
     console.log('TagsView: deleteTag called for:', tagId)
-    if (confirm('Delete this tag?')) {
+    if (await confirm('Delete this tag?')) {
       onDeleteTag(tagId)
       if (selectedTagId === tagId) {
         console.log('TagsView: Deselecting deleted tag')

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import toast from 'react-hot-toast'
 import { t } from '../i18n/translations'
 import RulesView from './RulesView'
+import { useConfirm } from '../hooks/useConfirm'
 
 export default function ConfigView({
   areas,
@@ -18,6 +20,7 @@ export default function ConfigView({
   onConfigUpdate,
   language,
 }) {
+  const confirm = useConfirm()
   const [activeTab, setActiveTab] = useState('areas')
 
   const handleExportBlueprint = (blueprint) => {
@@ -31,7 +34,7 @@ export default function ConfigView({
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert("Export failed: " + err.message);
+      toast.error("Export failed: " + err.message);
     }
   }
 
@@ -48,9 +51,9 @@ export default function ConfigView({
         // Ensure unique ID
         blueprint.id = "bp_" + Date.now();
         setBlueprints([...blueprints, blueprint]);
-        alert(`Blueprint "${blueprint.name}" imported successfully!`);
+        toast.success(`Blueprint "${blueprint.name}" imported successfully!`);
       } catch (err) {
-        alert("Import failed: " + err.message);
+        toast.error("Import failed: " + err.message);
       }
     };
     reader.readAsText(file);
@@ -178,7 +181,7 @@ export default function ConfigView({
     setEditAreaForm({ ...area })
   }
 
-  const saveAreaEdit = () => {
+  const saveAreaEdit = async () => {
     const oldArea = areas.find((a) => a.id === editingAreaId)
     const updatedAreas = areas.map((a) =>
       a.id === editingAreaId ? { ...editAreaForm } : a,
@@ -192,7 +195,7 @@ export default function ConfigView({
       )
       if (
         affectedPositions.length > 0 &&
-        confirm(
+        await confirm(
           `You cleared the constraint for "${oldArea.name}". Would you like to clear the constraints for all positions in this area as well?`,
         )
       ) {
@@ -210,8 +213,8 @@ export default function ConfigView({
     setEditAreaForm(null)
   }
 
-  const deleteArea = (id) => {
-    if (confirm('Delete area and all associated positions?')) {
+  const deleteArea = async (id) => {
+    if (await confirm('Delete area and all associated positions?')) {
       setAreas(areas.filter((a) => a.id !== id))
       setPositions(positions.filter((p) => p.areaId !== id))
     }
@@ -225,8 +228,8 @@ export default function ConfigView({
     setShiftForm({ label: '', minutes: 120 })
   }
 
-  const deleteShift = (id) => {
-    if (confirm('Delete this shift?')) {
+  const deleteShift = async (id) => {
+    if (await confirm('Delete this shift?')) {
       setShifts(shifts.filter((s) => s.id !== id))
     }
   }
@@ -267,8 +270,8 @@ export default function ConfigView({
     setEditPosForm(null)
   }
 
-  const deletePosition = (id) => {
-    if (confirm('Delete this position?')) {
+  const deletePosition = async (id) => {
+    if (await confirm('Delete this position?')) {
       setPositions(positions.filter((p) => p.id !== id))
     }
   }
@@ -296,15 +299,15 @@ export default function ConfigView({
       a.download = `${name.replace(/\s+/g, '_')}.assemblyhall`
       a.click()
       window.URL.revokeObjectURL(url)
-      alert(`Blueprint "${name}" saved and downloaded!`)
+      toast.success(`Blueprint "${name}" saved and downloaded!`)
     } catch (err) {
       console.error('Auto-download failed', err)
     }
   }
 
-  const loadBlueprint = (bp) => {
+  const loadBlueprint = async (bp) => {
     if (
-      confirm(
+      await confirm(
         'Load this template? This will replace your current Areas, Shifts, and Positions. Schedule data might become invalid.',
       )
     ) {
@@ -316,8 +319,8 @@ export default function ConfigView({
     }
   }
 
-  const deleteBlueprint = (id) => {
-    if (confirm('Delete this blueprint?')) {
+  const deleteBlueprint = async (id) => {
+    if (await confirm('Delete this blueprint?')) {
       setBlueprints(blueprints.filter((bp) => bp.id !== id))
     }
   }

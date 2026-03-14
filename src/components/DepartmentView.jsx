@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { t } from '../i18n/translations'
 import { getAssignId } from '../utils/helpers'
+import { useConfirm } from '../hooks/useConfirm'
 
 export default function DepartmentView({
   personnel = [],
@@ -10,6 +11,7 @@ export default function DepartmentView({
   shifts = [],
   language,
 }) {
+  const confirm = useConfirm()
   const personnelMap = useMemo(() => {
     const map = new Map()
     personnel.forEach(p => map.set(p.id, p))
@@ -34,8 +36,8 @@ export default function DepartmentView({
     return () => window.removeEventListener('afterprint', handleAfterPrint)
   }, [])
 
-  const handlePrintRequest = () => {
-    if (confirm('Would you like to print EVERY Key Man Report? \n\nSelect "OK" for All, or "Cancel" for just the currently selected one.')) {
+  const handlePrintRequest = async () => {
+    if (await confirm('Would you like to print EVERY Key Man Report? \n\nSelect "Confirm" for All, or "Cancel" for just the currently selected one.')) {
         setIsPrintAllMode(true)
         // Give React a moment to render all reports before opening the print dialog
         setTimeout(() => {

@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
+import toast from 'react-hot-toast'
 import { t } from '../i18n/translations'
 import { getLastName, parseCSV, getAssignId } from '../utils/helpers'
 import CSVMapperModal from './CSVMapperModal'
+import { useConfirm } from '../hooks/useConfirm'
 
 export default function RosterView({
   personnel,
@@ -14,6 +16,7 @@ export default function RosterView({
   onMerge,
   language,
 }) {
+  const confirm = useConfirm()
   const initialCaps = useMemo(() => {
     const c = { keyman: false }
     areas.forEach((a) => (c[a.capability] = true))
@@ -107,17 +110,17 @@ export default function RosterView({
     })
   }
 
-  const handleMergeAction = (targetId) => {
+  const handleMergeAction = async (targetId) => {
     if (!mergingId || !targetId) return
     const source = personnel.find((p) => p.id === mergingId)
     const target = personnel.find((p) => p.id === targetId)
-    if (confirm(`Are you sure you want to merge ${source.name} into ${target.name}? \n\nAll of ${source.name}'s assignments will be moved to ${target.name}. This cannot be undone.`)) {
+    if (await confirm(`Are you sure you want to merge ${source.name} into ${target.name}? \n\nAll of ${source.name}'s assignments will be moved to ${target.name}. This cannot be undone.`)) {
       onMerge(mergingId, targetId)
       setMergingId(null)
     }
   }
 
-  const savePerson = () => {
+  const savePerson = async () => {
     if (!formData.name.trim()) return
     const capabilityList = Object.keys(formData.caps).filter(
       (k) => formData.caps[k],
@@ -164,7 +167,7 @@ export default function RosterView({
       });
 
       if (affectedCount > 0) {
-        if (confirm(`${newPerson.name} is currently assigned to ${affectedCount} position(s) that conflict with this unavailability. Do you want to unassign them from those slots?`)) {
+        if (await confirm(`${newPerson.name} is currently assigned to ${affectedCount} position(s) that conflict with this unavailability. Do you want to unassign them from those slots?`)) {
           setAssignments(newAssignments);
         }
       }
@@ -192,10 +195,10 @@ export default function RosterView({
     reader.onload = (event) => {
       try {
         const rows = parseCSV(event.target.result)
-        if (rows.length < 2) return alert('CSV file seems empty or invalid.')
+        if (rows.length < 2) return toast.error('CSV file seems empty or invalid.')
         setCsvData(rows)
       } catch (err) {
-        alert('Error parsing CSV: ' + err.message)
+        toast.error('Error parsing CSV: ' + err.message)
       }
     }
     reader.readAsText(file)
@@ -332,11 +335,11 @@ export default function RosterView({
 
     setPersonnel(newPersonnel)
     setCsvData(null)
-    alert(`Import Complete!\nAdded: ${newCount}\nUpdated: ${updatedCount}`)
+    toast.success(`Import Complete!\nAdded: ${newCount}\nUpdated: ${updatedCount}`)
   }
 
-  const deletePerson = (id) => {
-    if (confirm('Delete this person?')) {
+  const deletePerson = async (id) => {
+    if (await confirm('Delete this person?')) {
       setPersonnel(personnel.filter((p) => p.id !== id))
       if (editingId === id) cancelEdit()
     }

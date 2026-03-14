@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import * as htmlToImage from 'html-to-image'
+import toast from 'react-hot-toast'
 import { exportToExcel } from '../utils/excelExport'
 import { t } from '../i18n/translations'
+import { useConfirm } from '../hooks/useConfirm'
 import {
   getAssignId,
   getCandidatesForPosition,
@@ -28,6 +30,7 @@ export default function ScheduleView({
   tags,
   language,
 }) {
+  const confirm = useConfirm()
   const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas]);
   const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel]);
 
@@ -119,7 +122,7 @@ export default function ScheduleView({
       link.click();
     } catch (err) {
       console.error('oops, something went wrong!', err);
-      alert('PNG Export failed. Try standard Print instead.');
+      toast.error('PNG Export failed. Try standard Print instead.');
     } finally {
       if (isDark) {
         document.documentElement.classList.add('dark');
@@ -131,7 +134,7 @@ export default function ScheduleView({
     setReplacementSlot({ pos, shiftId })
   }
 
-  const handleReplacementAssign = (pos, shiftId, personId, isDominoSwap = false, dominoData = null) => {
+  const handleReplacementAssign = async (pos, shiftId, personId, isDominoSwap = false, dominoData = null) => {
     let newAssignments = { ...assignments }
 
     if (isDominoSwap && dominoData) {
@@ -150,7 +153,7 @@ export default function ScheduleView({
       const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
       const conflictingPos = getConflict(parseInt(personId), pos, shiftId, assignments)
       if (conflictingPos) {
-        if (!confirm(`${personnelMap.get(parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
+        if (!await confirm(`${personnelMap.get(parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
           return
         }
       }
@@ -695,16 +698,17 @@ export default function ScheduleView({
       : `\n\n✅ All positions were successfully filled.`;
 
     onAutoFill(newAssignments, newLog)
-    alert(
-      `Weighted Scoring Auto-Fill Complete! (v2.9.2)\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)${vacancyWarning}\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
+    toast.success(
+      `Weighted Scoring Auto-Fill Complete!\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)${vacancyWarning}\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
+      { duration: 8000 }
     )
   }
 
-  const handleClearAll = () => {
-    if (confirm('Clear ALL assignments?')) {
+  const handleClearAll = async () => {
+    if (await confirm('Clear ALL assignments?')) {
       const count = Object.keys(assignments).length
       setAssignments({})
-      alert(`Cleared ${count} assignments.`)
+      toast.success(`Cleared ${count} assignments.`)
     }
   }
 
@@ -718,7 +722,7 @@ export default function ScheduleView({
       }
     })
     setAssignments(cleanedAssignments)
-    alert(`Cleared ${count} auto-assigned slots.`)
+    toast.success(`Cleared ${count} auto-assigned slots.`)
   }
 
   const handleFixConflicts = () => {
@@ -745,11 +749,11 @@ export default function ScheduleView({
 
     if (fixedCount > 0) {
       setAssignments(newAssignments)
-      alert(
+      toast.success(
         `Resolved ${fixedCount} conflicts:\n- Reassigned: ${reassignedCount}\n- Unassigned: ${unassignedCount}`,
       )
     } else {
-      alert('No conflicts found to fix.')
+      toast.success('No conflicts found to fix.')
     }
   }
 
