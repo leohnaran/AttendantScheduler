@@ -3,15 +3,15 @@ import { t } from '../i18n/translations'
 import { getAssignId } from '../utils/helpers'
 import { useConfirm } from '../hooks/useConfirm'
 
-export default function DepartmentView({
-  personnel = [],
-  assignments = {},
-  areas = [],
-  positions = [],
-  shifts = [],
-  language,
-}) {
+import { useStore } from '../store/useStore'
+
+export default function DepartmentView({ language }) {
   const confirm = useConfirm()
+  const personnel = useStore((state) => state.personnel) || []
+  const assignments = useStore((state) => state.assignments) || {}
+  const areas = useStore((state) => state.areas) || []
+  const positions = useStore((state) => state.positions) || []
+  const shifts = useStore((state) => state.shifts) || []
   const personnelMap = useMemo(() => {
     const map = new Map()
     personnel.forEach(p => map.set(p.id, p))

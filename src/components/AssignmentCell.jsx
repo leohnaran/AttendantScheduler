@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react'
+import React, { useMemo } from 'react'
+import { useDroppable } from '@dnd-kit/core'
 import { t } from '../i18n/translations'
 import {
   getHeatColor,
@@ -21,8 +22,6 @@ export default function AssignmentCell({
   setHoveredMirrorKey,
   language,
 }) {
-  const [isDragOver, setIsDragOver] = useState(false)
-
   if (pos.validShifts && !pos.validShifts.includes(shiftId) && shiftId !== 'all')
     return (
       <td className="p-3 bg-gray-50/50 border-l border-dashed border-gray-200 dark:bg-slate-800/50 dark:border-slate-700 text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest cursor-not-allowed">
@@ -34,6 +33,10 @@ export default function AssignmentCell({
   const sourcePosId = pos.mirrorOf
   const assignmentKey =
     pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
+
+  const { isOver, setNodeRef } = useDroppable({
+    id: assignmentKey,
+  })
 
   // 0. NEW: Shift Validation (Position-level)
   const isShiftValid = !pos.validShifts || pos.validShifts.length === 0 || pos.validShifts.includes(shiftId) || shiftId === 'all';
@@ -81,19 +84,9 @@ export default function AssignmentCell({
   const isWarning = conflictData ? conflictData.type === 'warning' : false
   const assignedPerson = personnel.find((p) => p.id === assignedId)
 
-  // Handle hover for source cells (highlight their mirrors)
   const handleMouseEnter = () => {
     // Set the hovered key to THIS key so that all mirrors can react to it
     setHoveredMirrorKey(assignmentKey);
-  }
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    setIsDragOver(false)
-    const personId = e.dataTransfer.getData('personId')
-    if (personId) {
-      onAssign(assignmentKey, personId)
-    }
   }
 
   const filteredCandidates = useMemo(() => {
@@ -169,16 +162,11 @@ export default function AssignmentCell({
 
   return (
     <td
+      ref={setNodeRef}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHoveredMirrorKey(null)}
-      onDragOver={(e) => {
-        e.preventDefault()
-        setIsDragOver(true)
-      }}
-      onDragLeave={() => setIsDragOver(false)}
-      onDrop={handleDrop}
       className={`p-3 border-l border-dashed border-gray-200 dark:border-slate-700 transition-all duration-300 relative group-hover:bg-opacity-50 schedule-drop-zone print:border-none print:p-1 ${
-        isDragOver ? 'drag-over' : ''
+        isOver ? 'drag-over ring-2 ring-blue-400 ring-inset bg-blue-50/30 dark:bg-blue-900/30' : ''
       } ${isTargetedByHover ? 'mirror-highlight' : ''} ${
         conflictMsg
           ? isWarning

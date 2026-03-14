@@ -3,7 +3,7 @@
   "description": "Attendant Scheduler for Jehovah's Witnesses Circuit Assemblies and Regional Conventions",
   "author": "leohnaran",
   "private": true,
-  "version": "3.6.10",
+  "version": "3.6.11",
   "type": "module",
   "repository": {
     "type": "git",
@@ -14,6 +14,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:nocache": "npm run build && cp dist/index.html schedule.html",
+    "test": "vitest",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"cross-env BROWSER=none npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder"
@@ -46,29 +47,40 @@
     }
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@tanstack/react-virtual": "^3.13.22",
     "crypto-js": "^4.2.0",
     "electron-updater": "^6.8.3",
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "html-to-image": "^1.11.13",
+    "localforage": "^1.10.0",
     "node-machine-id": "^1.1.12",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^18.3.28",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.2.0",
     "autoprefixer": "^10.4.16",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
+    "jsdom": "^28.1.0",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.5",
+    "typescript": "^5.9.3",
     "vite": "^5.0.0",
     "vite-plugin-singlefile": "^0.13.5",
+    "vitest": "^2.1.8",
     "wait-on": "^9.0.4"
   }
 }

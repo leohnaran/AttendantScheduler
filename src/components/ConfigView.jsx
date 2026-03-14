@@ -3,24 +3,25 @@ import toast from 'react-hot-toast'
 import { t } from '../i18n/translations'
 import RulesView from './RulesView'
 import { useConfirm } from '../hooks/useConfirm'
+import { useStore } from '../store/useStore'
 
-export default function ConfigView({
-  areas,
-  setAreas,
-  positions,
-  setPositions,
-  shifts,
-  setShifts,
-  personnel,
-  rules,
-  setRules,
-  tags,
-  blueprints,
-  setBlueprints,
-  onConfigUpdate,
-  language,
-}) {
+export default function ConfigView({ language }) {
   const confirm = useConfirm()
+  const areas = useStore((state) => state.areas)
+  const positions = useStore((state) => state.positions)
+  const shifts = useStore((state) => state.shifts)
+  const personnel = useStore((state) => state.personnel)
+  const rules = useStore((state) => state.rules)
+  const tags = useStore((state) => state.tags)
+  const blueprints = useStore((state) => state.blueprints)
+  const updateState = useStore((state) => state.updateState)
+
+  const setAreas = (val) => updateState({ areas: typeof val === 'function' ? val(areas) : val })
+  const setPositions = (val) => updateState({ positions: typeof val === 'function' ? val(positions) : val })
+  const setShifts = (val) => updateState({ shifts: typeof val === 'function' ? val(shifts) : val })
+  const setRules = (val) => updateState({ rules: typeof val === 'function' ? val(rules) : val })
+  const setBlueprints = (val) => updateState({ blueprints: typeof val === 'function' ? val(blueprints) : val })
+  const onConfigUpdate = (updates) => updateState(updates)
   const [activeTab, setActiveTab] = useState('areas')
 
   const handleExportBlueprint = (blueprint) => {

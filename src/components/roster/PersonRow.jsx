@@ -1,4 +1,6 @@
 import React from 'react'
+import { useDraggable } from '@dnd-kit/core'
+import { CSS } from '@dnd-kit/utilities'
 
 export default function PersonRow({
   p,
@@ -14,20 +16,39 @@ export default function PersonRow({
   setMergingId,
   startEdit,
   deletePerson,
-  handleDragStart,
   handleCapChange,
   handleUnavailableChange,
   handleTagAdd,
   handleTagRemove,
+  virtualStyle,
 }) {
   const isEditing = editingId === p.id
   const isKeyMan = p.caps && p.caps.includes('keyman')
 
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: p.id,
+    disabled: isEditing || isKeyMan,
+  })
+
+  // Merge virtualStyle with dnd-kit transform
+  let finalTransform = virtualStyle?.transform || ''
+  if (transform) {
+    const dndTransform = CSS.Translate.toString(transform)
+    finalTransform = finalTransform ? `${finalTransform} ${dndTransform}` : dndTransform
+  }
+
+  const style = {
+    ...virtualStyle,
+    transform: finalTransform || undefined,
+    zIndex: isDragging ? 50 : (virtualStyle?.zIndex || 'auto'),
+    opacity: isDragging ? 0.8 : 1,
+    boxShadow: isDragging ? '0 5px 15px rgba(0,0,0,0.1)' : 'none',
+  }
+
   return (
     <tr
-      key={p.id}
-      draggable={!isEditing}
-      onDragStart={(e) => !isEditing && handleDragStart(e, p.id)}
+      ref={setNodeRef}
+      style={style}
       className={`draggable-row transition-all duration-200 ${isEditing
           ? 'bg-yellow-50/50 dark:bg-yellow-900/20'
           : isKeyMan
@@ -136,7 +157,9 @@ export default function PersonRow({
                     <i className="fa fa-user-tie text-[10px]"></i>
                   </div>
                 ) : (
-                  <i className="fa fa-grip-vertical text-gray-300 cursor-grab"></i>
+                  <div {...attributes} {...listeners} className="cursor-grab touch-none active:cursor-grabbing px-1.5 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-slate-600">
+                    <i className="fa fa-grip-vertical text-gray-300 dark:text-gray-500"></i>
+                  </div>
                 )}
                 <span className={isKeyMan ? 'font-black text-blue-900 dark:text-blue-300' : ''}>{p.name}</span>
               </div>

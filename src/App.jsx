@@ -22,7 +22,8 @@ import ScheduleView from './components/ScheduleView'
 import PrintView from './components/PrintView'
 import QuickStartModal from './components/QuickStartModal'
 import Wizard from './components/Wizard'
-import { saveToDatabase, loadFromDatabase, clearDatabase } from './utils/persistence'
+import { useStore } from './store/useStore'
+import localforage from 'localforage'
 
 const WIZARD_STEPS = [
   {
@@ -89,11 +90,13 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-const APP_VERSION = 'v3.6.10'
+const APP_VERSION = 'v3.6.11'
 
 export default function App() {
   console.log(`Attendant Scheduler ${APP_VERSION} - Reset Fix Active`);
   const confirm = useConfirm()
+  const state = useStore()
+  
   const [view, setView] = useState('schedule')
   const [showWizard, setShowWizard] = useState(false)
   const [wizardStep, setWizardStep] = useState(0)
@@ -139,67 +142,8 @@ export default function App() {
     checkForUpdates()
   }, [])
 
-  const INITIAL_STATE = useMemo(() => ({
-    personnel: INITIAL_ROSTER,
-    tags: [],
-    assignments: {},
-    log: [],
-    areas: DEFAULT_AREAS,
-    positions: DEFAULT_POSITIONS,
-    shifts: DEFAULT_SHIFTS,
-    blueprints: [
-      {
-        id: 'bp_default_assembly',
-        name: 'Standard Assembly Hall',
-        areas: DEFAULT_AREAS,
-        positions: DEFAULT_POSITIONS,
-        shifts: DEFAULT_SHIFTS,
-      },
-    ],
-    rules: {
-      capabilitySeverity: 'error',
-      doubleBookingSeverity: 'error',
-      unavailableSeverity: 'error',
-      avoidConsecutive: true,
-      anchorLimits: true,
-      maxWorkPercent: 50,
-      auditoriumRotationMode: false,
-      auditoriumCoverage: 25,
-    },
-    lastUpdated: 0
-  }), [])
-
-  // Load from database OR localStorage on initialization
-  const [initialData] = useState(() => {
-    try {
-      const saved = localStorage.getItem('circuit_scheduler_data')
-      if (saved) {
-        let parsed = JSON.parse(saved)
-
-        // MIGRATION: Auto-sync mirror properties from default configurations
-        if (parsed.positions) {
-          parsed.positions = parsed.positions.map(p => {
-            const defaultPos = DEFAULT_POSITIONS.find(dp => dp.id === p.id)
-            if (defaultPos && defaultPos.isMirror && p.mirrorOf === undefined) {
-              return { ...p, isMirror: true, mirrorOf: defaultPos.mirrorOf }
-            }
-            return p
-          })
-        }
-
-        return { ...INITIAL_STATE, ...parsed }
-      }
-    } catch (err) {
-      console.error('Error loading initial data:', err)
-    }
-    return INITIAL_STATE
-  })
-
-  const { state, setState, undo, redo, canUndo, canRedo, resetHistory } =
-    useUndoRedo(initialData)
-
-  // Safety check for state
-  if (!state) {
+  // Safety check for state dehydration 
+  if (!state || !state.personnel) {
     return <div className="p-10 text-center">Initializing State...</div>
   }
 
@@ -213,7 +157,17 @@ export default function App() {
     shifts = [],
     blueprints = [],
     rules = {},
+    updateState,
+    undo,
+    redo,
+    past,
+    future,
+    resetHistory,
+    clearStore
   } = state
+
+  const canUndo = past.length > 0
+  const canRedo = future.length > 0
 
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showLoadModal, setShowLoadModal] = useState(false)
@@ -223,52 +177,24 @@ export default function App() {
   )
   const [password, setPassword] = useState('')
 
-  // 1. ROBUST LOAD: Combine Electron Native, LocalStorage and IndexedDB
+  // 1. ELECTRON FILE LOAD OVERRIDE
   useEffect(() => {
-    async function loadAll() {
-      let finalState = null;
-
-      // FIRST PASS: Am I running in Electron?
+    async function loadElectron() {
       if (window.electronAPI) {
         try {
           console.log("Electron API detected, attempting native file load...");
           const result = await window.electronAPI.loadData();
           if (result && result.success && result.data) {
-            finalState = result.data;
+            resetHistory(result.data);
             console.log("Restored state from native OS file.");
           }
         } catch (e) {
           console.error("Native Load Failed", e);
         }
       }
-
-      // SECOND PASS: If no Electron file existed, try web storage
-      if (!finalState) {
-        // Try LocalStorage first (Synchronous data already in initialData, but we check here too for safety)
-        try {
-          const lsRaw = localStorage.getItem('circuit_scheduler_data');
-          if (lsRaw) finalState = JSON.parse(lsRaw);
-        } catch (e) { console.error("LS Load Failed", e); }
-
-        // Try IndexedDB (Async, reliable)
-        try {
-          const dbState = await loadFromDatabase();
-          if (dbState) {
-            // Pick whichever is newer
-            if (!finalState || (dbState.lastUpdated || 0) > (finalState.lastUpdated || 0)) {
-              finalState = dbState;
-              console.log("Restored state from IndexedDB (Newer or Only copy).");
-            }
-          }
-        } catch (e) { console.error("DB Load Failed", e); }
-      }
-
-      if (finalState) {
-        resetHistory({ ...INITIAL_STATE, ...finalState });
-      }
     }
-    loadAll();
-  }, []);
+    loadElectron();
+  }, [resetHistory]);
 
   useEffect(() => {
     const wizardComplete = localStorage.getItem('wizard_complete')
@@ -290,12 +216,9 @@ export default function App() {
     localStorage.setItem('app_language', language)
   }, [language])
 
-  // --- PERSISTENCE: Auto-Save to Native File or Database ---
+  // --- PERSISTENCE: Auto-Save to Native File ---
   useEffect(() => {
-    if (!state) return
-
-    // Mirror to localStorage for dual-layer safety (Web only fallback)
-    localStorage.setItem('circuit_scheduler_data', JSON.stringify(state))
+    if (!state.personnel) return
 
     // Primary Auto-Save
     if (window.electronAPI) {
@@ -305,11 +228,8 @@ export default function App() {
           if (!res.success) console.error("Electron Save Error:", res.error)
         })
         .catch(err => console.error("Electron IPC Error:", err))
-    } else {
-      // We are on the web 
-      saveToDatabase(state);
     }
-  }, [state])
+  }, [state.lastUpdated])
 
   // --- WIZARD HANDLERS ---
   const handleWizardNext = () => {
@@ -337,32 +257,14 @@ export default function App() {
   }
 
   // --- WRAPPERS FOR STATE UPDATES ---
-  const updateState = (updates) => setState({ ...state, ...updates, lastUpdated: Date.now() })
-
-  const setPersonnel = (val) =>
-    updateState({
-      personnel: typeof val === 'function' ? val(personnel) : val,
-    })
-  const setTags = (val) => {
-    console.log('App: setTags called', val)
-    updateState({ tags: typeof val === 'function' ? val(tags) : val })
-  }
-  const setAssignments = (val) =>
-    updateState({
-      assignments: typeof val === 'function' ? val(assignments) : val,
-    })
-  const setAreas = (val) =>
-    updateState({ areas: typeof val === 'function' ? val(areas) : val })
-  const setPositions = (val) =>
-    updateState({ positions: typeof val === 'function' ? val(positions) : val })
-  const setShifts = (val) =>
-    updateState({ shifts: typeof val === 'function' ? val(shifts) : val })
-  const setBlueprints = (val) =>
-    updateState({
-      blueprints: typeof val === 'function' ? val(blueprints) : val,
-    })
-  const setRules = (val) =>
-    updateState({ rules: typeof val === 'function' ? val(rules) : val })
+  const setPersonnel = (val) => updateState({ personnel: typeof val === 'function' ? val(personnel) : val })
+  const setTags = (val) => updateState({ tags: typeof val === 'function' ? val(tags) : val })
+  const setAssignments = (val) => updateState({ assignments: typeof val === 'function' ? val(assignments) : val })
+  const setAreas = (val) => updateState({ areas: typeof val === 'function' ? val(areas) : val })
+  const setPositions = (val) => updateState({ positions: typeof val === 'function' ? val(positions) : val })
+  const setShifts = (val) => updateState({ shifts: typeof val === 'function' ? val(shifts) : val })
+  const setBlueprints = (val) => updateState({ blueprints: typeof val === 'function' ? val(blueprints) : val })
+  const setRules = (val) => updateState({ rules: typeof val === 'function' ? val(rules) : val })
 
   const handleDeleteTag = (tagId) => {
     console.log('App: handleDeleteTag starting for:', tagId)
@@ -439,15 +341,15 @@ export default function App() {
     if (
       await confirm('Are you sure you want to clear EVERYTHING? This cannot be undone.')
     ) {
-      // 1. Clear localStorage
-      localStorage.removeItem('circuit_scheduler_data');
-
-      // 2. Clear IndexedDB
+      // 1. Clear IndexedDB
       try {
-        await clearDatabase();
+        await localforage.clear();
       } catch (err) {
         console.error("Database reset failed", err);
       }
+
+      // 2. Clear store
+      clearStore();
 
       // 3. Reload
       window.location.reload();
@@ -528,7 +430,7 @@ export default function App() {
         if (!decrypted) throw new Error('Incorrect password or invalid file.')
 
         const parsed = JSON.parse(decrypted)
-        setState(parsed)
+        resetHistory(parsed)
         setShowLoadModal(false)
         setPassword('')
         toast.success('Schedule loaded successfully!')
@@ -720,17 +622,7 @@ export default function App() {
 
         <main className="container mx-auto mt-6 px-4">
           {view === 'roster' ? (
-            <RosterView
-              personnel={personnel}
-              setPersonnel={setPersonnel}
-              assignments={assignments}
-              setAssignments={setAssignments}
-              areas={areas}
-              shifts={shifts}
-              tags={tags}
-              onMerge={handleMerge}
-              language={language}
-            />
+            <RosterView onMerge={handleMerge} language={language} />
           ) : view === 'stats' ? (
             <StatsView
               personnel={personnel}
@@ -740,14 +632,7 @@ export default function App() {
               language={language}
             />
           ) : view === 'dept' ? (
-            <DepartmentView
-              personnel={personnel}
-              assignments={assignments}
-              areas={areas}
-              positions={positions}
-              shifts={shifts}
-              language={language}
-            />
+            <DepartmentView language={language} />
           ) : view === 'log' ? (
             <LogView log={log} language={language} />
           ) : view === 'tags' ? (
@@ -770,35 +655,9 @@ export default function App() {
               language={language}
             />
           ) : view === 'config' ? (
-            <ConfigView
-              areas={areas}
-              setAreas={setAreas}
-              positions={positions}
-              setPositions={setPositions}
-              shifts={shifts}
-              setShifts={setShifts}
-              personnel={personnel}
-              rules={rules}
-              setRules={setRules}
-              tags={tags}
-              blueprints={blueprints}
-              setBlueprints={setBlueprints}
-              onConfigUpdate={updateState}
-              language={language}
-            />
+            <ConfigView language={language} />
           ) : (
-            <ScheduleView
-              personnel={personnel}
-              assignments={assignments}
-              setAssignments={setAssignments}
-              onAutoFill={handleAutoFill}
-              areas={areas}
-              positions={positions}
-              shifts={shifts}
-              rules={rules}
-              tags={tags}
-              language={language}
-            />
+            <ScheduleView language={language} />
           )}
         </main>
 

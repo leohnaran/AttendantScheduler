@@ -8,19 +8,20 @@ import MergeModal from './roster/MergeModal'
 import RosterForm from './roster/RosterForm'
 import EmptyRoster from './roster/EmptyRoster'
 import RosterTable from './roster/RosterTable'
+import { useStore } from '../store/useStore'
+import { DndContext, closestCenter } from '@dnd-kit/core'
 
-export default function RosterView({
-  personnel,
-  setPersonnel,
-  assignments,
-  setAssignments,
-  areas,
-  shifts,
-  tags,
-  onMerge,
-  language,
-}) {
+export default function RosterView({ onMerge, language }) {
   const confirm = useConfirm()
+  const personnel = useStore((state) => state.personnel)
+  const assignments = useStore((state) => state.assignments)
+  const areas = useStore((state) => state.areas)
+  const shifts = useStore((state) => state.shifts)
+  const tags = useStore((state) => state.tags)
+  const updateState = useStore((state) => state.updateState)
+
+  const setPersonnel = (val) => updateState({ personnel: typeof val === 'function' ? val(personnel) : val })
+  const setAssignments = (val) => updateState({ assignments: typeof val === 'function' ? val(assignments) : val })
   const initialCaps = useMemo(() => {
     const c = { keyman: false }
     areas.forEach((a) => (c[a.capability] = true))
@@ -38,8 +39,6 @@ export default function RosterView({
   })
   const [editingId, setEditingId] = useState(null)
   const [mergingId, setMergingId] = useState(null)
-  const [draggedPersonId, setDraggedPersonId] = useState(null)
-  const [dragOverGroup, setDragOverGroup] = useState(null)
   const [csvData, setCsvData] = useState(null)
 
   const uniqueCongregations = useMemo(() => {
@@ -349,32 +348,22 @@ export default function RosterView({
     }
   }
 
-  // --- DRAG AND DROP LOGIC ---
-  const handleDragStart = (e, personId) => {
-    setDraggedPersonId(personId)
-    e.dataTransfer.effectAllowed = 'move'
-  }
+  // --- DRAG AND DROP LOGIC (dnd-kit) ---
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over) return;
 
-  const handleDragOver = (e, groupId) => {
-    e.preventDefault()
-    setDragOverGroup(groupId)
-  }
+    const personId = active.id;
+    const targetKeyManId = over.id === 'unassigned' ? null : over.id;
 
-  const handleDrop = (e, targetKeyManId) => {
-    e.preventDefault()
-    setDragOverGroup(null)
-    if (draggedPersonId === null) return
-    if (draggedPersonId === targetKeyManId) return
+    if (personId === targetKeyManId) return;
 
-    setPersonnel((prev) =>
-      prev.map((p) => {
-        if (p.id === draggedPersonId) {
-          return { ...p, keyManId: targetKeyManId }
-        }
-        return p
-      }),
-    )
-    setDraggedPersonId(null)
+    const person = personnel.find(p => p.id === personId);
+    if (!person || person.keyManId === targetKeyManId) return;
+
+    setPersonnel(personnel.map(p => 
+      p.id === personId ? { ...p, keyManId: targetKeyManId } : p
+    ));
   }
 
   // --- GROUPING & SORTING LOGIC ---
@@ -411,7 +400,6 @@ export default function RosterView({
     setMergingId,
     startEdit,
     deletePerson,
-    handleDragStart,
     handleCapChange,
     handleUnavailableChange,
     handleTagAdd,
@@ -487,14 +475,13 @@ export default function RosterView({
         />
 
         {/* ROSTER LIST (Key Man Groups) */}
-        <RosterTable
-          groups={groups}
-          dragOverGroup={dragOverGroup}
-          handleDragOver={handleDragOver}
-          handleDrop={handleDrop}
-          language={language}
-          rowProps={rowProps}
-        />
+        <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>
+          <RosterTable
+            groups={groups}
+            language={language}
+            rowProps={rowProps}
+          />
+        </DndContext>
       </div>
 
       {/* MODALS */}

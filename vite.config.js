@@ -18,8 +18,12 @@ export default defineConfig({
 
 				return html
 					.replace('</head>', `${metaTags}\n  </head>`)
-					.replace('<title>Attendant Scheduler v3.6.10</title>', `<title>Attendant Scheduler v3.6.10 (Build: ${timestamp})</title>`);
+					.replace('<title>Attendant Scheduler v3.6.11</title>', `<title>Attendant Scheduler v3.6.11 (Build: ${timestamp})</title>`);
 			},
 		},
 	],
+	test: {
+		globals: true,
+		environment: 'node',
+	},
 })
