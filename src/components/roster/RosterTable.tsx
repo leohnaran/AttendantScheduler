@@ -77,23 +77,23 @@ function DroppableGroup({ group, language, rowProps }: DroppableGroupProps) {
         ref={parentRef}
         className="overflow-x-auto overflow-y-auto max-h-[400px]"
       >
-        <table className="w-full text-sm text-left">
-          <thead className="sticky top-0 z-10 bg-white dark:bg-slate-800 shadow-sm border-b border-gray-100 dark:border-slate-700">
-            <tr className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              <th className="px-6 py-3 w-1/3">
+        <table className="w-full text-sm text-left block">
+          <thead className="sticky top-0 z-10 bg-white dark:bg-slate-800 shadow-sm border-b border-gray-100 dark:border-slate-700 block w-full">
+            <tr className="text-[10px] font-black uppercase tracking-widest text-gray-400 flex w-full">
+              <th className="px-6 py-3 w-[30%]">
                 {t('roster_name', language)}
               </th>
-              <th className="px-6 py-3 w-1/6">
+              <th className="px-6 py-3 w-[15%]">
                 {t('roster_role', language)}
               </th>
-              <th className="px-6 py-3">{t('roster_perms', language)}</th>
-              <th className="px-6 py-3 w-24 text-center">
+              <th className="px-6 py-3 flex-1">{t('roster_perms', language)}</th>
+              <th className="px-6 py-3 w-32 text-center">
                 {t('grid_actions', language) || 'Actions'}
               </th>
             </tr>
           </thead>
           <tbody 
-            className="divide-y divide-gray-50 dark:divide-slate-700/50"
+            className="divide-y divide-gray-50 dark:divide-slate-700/50 block w-full"
             style={{
               height: group.members.length > 0 ? `${rowVirtualizer.getTotalSize()}px` : 'auto',
               position: 'relative'
@@ -105,10 +105,9 @@ function DroppableGroup({ group, language, rowProps }: DroppableGroupProps) {
             )}
 
             {group.members.length === 0 && !group.keyMan ? (
-              <tr>
+              <tr className="flex w-full">
                 <td
-                  colSpan={4}
-                  className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30"
+                  className="px-6 py-8 text-center text-gray-400 italic bg-gray-50/30 dark:bg-slate-800/30 w-full"
                 >
                   {t('drop_members_hint', language) ||
                     'Drop members here to assign'}
