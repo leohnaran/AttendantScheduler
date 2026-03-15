@@ -19,63 +19,6 @@ interface ExportLookup {
   personAuditorium: Map<number, string>;
 }
 
-export async function exportToExcel({
-  personnel,
-  assignments,
-  areas,
-  positions,
-  shifts,
-}: Omit<ExportToExcelProps, 'language'>) {
-  const workbook = new ExcelJS.Workbook();
-  const personnelMap = new Map<number, Person>(personnel.map((p) => [p.id, p]));
-  const positionsMap = new Map<string, Position>(positions.map((p) => [p.id, p]));
-
-  const lookup: ExportLookup = {
-    personnelMap,
-    positionsMap,
-    personAssignments: new Map(),
-    personAuditorium: new Map()
-  };
-
-  // Pre-compute assignment indices for O(1) lookups
-  Object.keys(assignments).forEach((k) => {
-    const pId = getAssignId(assignments[k]);
-    if (!pId) return;
-
-    if (k.includes('_')) {
-      const parts = k.split('_');
-      const shiftId = parts.pop()!;
-      const posId = parts.join('_');
-      if (!lookup.personAssignments.has(pId)) {
-        lookup.personAssignments.set(pId, new Map<string, string>());
-      }
-      lookup.personAssignments.get(pId)!.set(shiftId, posId);
-    } else {
-      lookup.personAuditorium.set(pId, k);
-    }
-  });
-
-  // --- SHEET 1: FULL SCHEDULE (Original Request) ---
-  const scheduleSheet = workbook.addWorksheet('Full Schedule');
-  setupScheduleSheet(scheduleSheet, areas, positions, shifts, assignments, personnelMap);
-
-  // --- SHEET 2: ASSIGNMENTS BY POSITION (New Request) ---
-  const posSheet = workbook.addWorksheet('Assignments by Position');
-  setupByPositionSheet(posSheet, positions, shifts, assignments, personnelMap);
-
-  // --- SHEET 3: ASSIGNMENTS BY VOLUNTEER (New Request) ---
-  const volSheet = workbook.addWorksheet('Assignments by Volunteer');
-  setupByVolunteerSheet(volSheet, personnel, lookup);
-
-  // --- SHEET 4: KEY MAN REPORTS ---
-  const kmSheet = workbook.addWorksheet('Key Man Reports');
-  setupKeyManReportsSheet(kmSheet, personnel, positions, shifts, assignments, areas, lookup);
-
-  // Write and Save
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  saveAs(blob, `Attendant_Schedule_${new Date().toISOString().split('T')[0]}.xlsx`);
-}
 
 function setupScheduleSheet(
   sheet: any, 
@@ -223,7 +166,7 @@ function setupByVolunteerSheetFixed(
 }
 
 // Updating the main call to use the fixed one
-export async function exportToExcelFinal({
+export async function exportToExcel({
   personnel,
   assignments,
   areas,
@@ -350,5 +293,3 @@ function setupKeyManReportsSheet(
   });
 }
 
-// Ensure compatible export
-export const exportToExcel = exportToExcelFinal;
