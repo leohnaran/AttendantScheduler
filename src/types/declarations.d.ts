@@ -1,0 +1,10 @@
+declare module '../utils/constants';
+declare module '../utils/excelExport';
+declare module '../i18n/translations';
+declare module '../hooks/useConfirm';
+declare module './PersonnelSidebar';
+declare module './MobileScheduleView';
+declare module './AssignmentCell';
+declare module './FindReplacementModal';
+declare module '../utils/schedulerEngine';
+declare module '../utils/helpers';

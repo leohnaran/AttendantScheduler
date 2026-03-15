@@ -69,3 +69,13 @@ export interface LogEntry {
   type: string
   msg: string
 }
+
+export interface RosterFormData {
+  name: string
+  congregation: string
+  role: string
+  caps: Record<string, boolean>
+  keyManId: string
+  unavailable: string[]
+  tags: string[]
+}

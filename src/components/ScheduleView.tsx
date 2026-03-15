@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import * as htmlToImage from 'html-to-image'
 import toast from 'react-hot-toast'
 import { exportToExcel } from '../utils/excelExport'
@@ -6,18 +6,16 @@ import { t } from '../i18n/translations'
 import { useConfirm } from '../hooks/useConfirm'
 import {
   getAssignId,
-  getCandidatesForPosition,
-  isAutoAssigned,
   parseAssignmentKey,
-  shuffleArray,
 } from '../utils/helpers'
 import { DndContext, closestCenter, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core'
-import { useStore } from '../store/useStore'
+import { useAppStore } from '../store/useAppStore'
 import PersonnelSidebar, { DraggablePerson } from './PersonnelSidebar'
 import MobileScheduleView from './MobileScheduleView'
 import AssignmentCell from './AssignmentCell'
 import FindReplacementModal from './FindReplacementModal'
 import { executeAutoFill } from '../utils/schedulerEngine'
+import { Person, Assignment, Area, Position, LogEntry } from '../types/models'
 
 interface ScheduleViewProps {
   language: string;
@@ -25,30 +23,40 @@ interface ScheduleViewProps {
 
 export default function ScheduleView({ language }: ScheduleViewProps) {
   const confirm = useConfirm()
-  const personnel = useStore((state) => state.personnel)
-  const assignments = useStore((state) => state.assignments)
-  const areas = useStore((state) => state.areas)
-  const positions = useStore((state) => state.positions)
-  const shifts = useStore((state) => state.shifts)
-  const rules = useStore((state) => state.rules)
-  const tags = useStore((state) => state.tags)
-  const updateState = useStore((state) => state.updateState)
+  const personnel = useAppStore((state) => state.personnel)
+  const assignments = useAppStore((state) => state.assignments)
+  const areas = useAppStore((state) => state.areas)
+  const positions = useAppStore((state) => state.positions)
+  const shifts = useAppStore((state) => state.shifts)
+  const rules = useAppStore((state) => state.rules)
+  const tags = useAppStore((state) => state.tags)
+  const updateState = useAppStore((state) => state.updateState)
 
-  const setAssignments = (val) => updateState({ assignments: typeof val === 'function' ? val(assignments) : val })
-  const onAutoFill = (newAssigns, newLog) => updateState({ assignments: newAssigns, log: newLog })
-  const areasMap = useMemo(() => new Map(areas.map(a => [a.id, a])), [areas]);
-  const personnelMap = useMemo(() => new Map(personnel.map(p => [p.id, p])), [personnel]);
-  const shiftsMap = useMemo(() => new Map(shifts.map(s => [s.id, s])), [shifts]);
+  const setAssignments = (val: any) => updateState({ assignments: typeof val === 'function' ? val(assignments) : val })
+  const onAutoFill = (newAssigns: Record<string, Assignment | null>, newLog: LogEntry[]) => updateState({ assignments: newAssigns, log: newLog })
+  const areasMap = useMemo(() => new Map<string, Area>(areas.map(a => [a.id, a])), [areas]);
+  const personnelMap = useMemo(() => new Map<number, Person>(personnel.map(p => [p.id, p])), [personnel]);
 
-  const [layoutMode, setLayoutMode] = useState('grid')
-  const [search, setSearch] = useState('')
-  const [pendingAction, setPendingAction] = useState(null)
-  const [replacementSlot, setReplacementSlot] = useState(null)
-  const [hoveredMirrorKey, setHoveredMirrorKey] = useState(null)
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'mobile'>('grid')
+  const [pendingAction, setPendingAction] = useState<{
+    personId: number;
+    personName: string;
+    targetKey: string;
+    conflictMsg: string;
+    targetShiftId: string;
+    conflictSourceKeys: string[];
+  } | null>(null)
+  const [replacementSlot, setReplacementSlot] = useState<{
+    posId: string;
+    shiftId: string;
+    posName: string;
+    currentPersonId: number | null;
+  } | null>(null)
+  const [hoveredMirrorKey, setHoveredMirrorKey] = useState<string | null>(null)
   const [activeDragPersonId, setActiveDragPersonId] = useState<number | null>(null)
 
   const [resolvingAbsences, setResolvingAbsences] = useState(false)
-  const [resolveQueue, setResolveQueue] = useState([])
+  const [resolveQueue, setResolveQueue] = useState<{ pos: Position; shiftId: string }[]>([])
 
   const [showActionMenu, setShowActionMenu] = useState(false)
   const [showPrintMenu, setShowPrintMenu] = useState(false)
@@ -58,10 +66,11 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target)) {
+      const target = e.target as Node;
+      if (actionMenuRef.current && !actionMenuRef.current.contains(target)) {
         setShowActionMenu(false)
       }
-      if (printMenuRef.current && !printMenuRef.current.contains(e.target)) {
+      if (printMenuRef.current && !printMenuRef.current.contains(target)) {
         setShowPrintMenu(false)
       }
     }
@@ -99,7 +108,7 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
       const width = scrollEl.scrollWidth;
       const height = scrollEl.scrollHeight;
 
-      const dataUrl = await htmlToImage.toPng(scrollEl, {
+      const dataUrl = await htmlToImage.toPng(scrollEl as HTMLElement, {
         width: width,
         height: height,
         style: {
@@ -137,47 +146,64 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
     }
   }
 
-  const handleFindReplacement = (pos, shiftId) => {
-    setReplacementSlot({ pos, shiftId })
+  const handleFindReplacement = (pos: Position, shiftId: string) => {
+    const key = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
+    setReplacementSlot({ 
+      posId: pos.id, 
+      shiftId, 
+      posName: pos.name,
+      currentPersonId: getAssignId(assignments[key])
+    })
   }
 
-  const handleReplacementAssign = async (pos, shiftId, personId, isDominoSwap = false, dominoData = null) => {
+  const handleReplacementAssign = async (posId: string, shiftId: string, personId: number, isDominoSwap = false, dominoData: { posId?: string, shiftId?: string, currentPersonId?: number } | null = null) => {
     let newAssignments = { ...assignments }
+    const pos = positions.find((p) => p.id === posId)
+    if (!pos) return
 
+    const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
     if (isDominoSwap && dominoData) {
       // 1. Assign Brother B to the new target slot
-      const targetKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
-      newAssignments[targetKey] = { id: parseInt(personId), isAuto: false }
+      newAssignments[assignmentKey] = { id: personId, isAuto: false }
 
-      // 2. Assign Brother C to Brother B's old slot, or clear it if no replacement
-      const oldSlotKey = dominoData.pos.type === 'auditorium' ? dominoData.pos.id : `${dominoData.pos.id}_${dominoData.shiftId}`
-      if (dominoData.replacementId) {
-        newAssignments[oldSlotKey] = { id: parseInt(dominoData.replacementId), isAuto: false }
-      } else {
-        newAssignments[oldSlotKey] = null
+      // 2. Clear Brother B's old slot (the one that triggered the Domino swap)
+      const actualDominoKey = dominoData.posId && dominoData.shiftId ? 
+        (positions.find(p => p.id === dominoData.posId)?.type === 'auditorium' ? dominoData.posId : `${dominoData.posId}_${dominoData.shiftId}`)
+        : null;
+      
+      if (actualDominoKey) {
+        newAssignments[actualDominoKey] = null
       }
+
+      toast.success(`${personnelMap.get(personId)?.name} swapped with ${personnelMap.get(dominoData.currentPersonId)?.name}`)
     } else {
-      const assignmentKey = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
-      const conflictingPos = getConflict(parseInt(personId), pos, shiftId, assignments, personnelMap, shifts, positions, rules, areasMap, tags)
+      const conflictingPos = getConflict(personId, pos, shiftId, assignments)
       if (conflictingPos) {
-        if (!await confirm(`${personnelMap.get(parseInt(personId))?.name} is already assigned to a concurrent shift. Double book?`)) {
+        if (!await confirm(`${personnelMap.get(personId)?.name} is already assigned to a concurrent shift. Double book?`)) {
           return
         }
       }
-      newAssignments[assignmentKey] = { id: parseInt(personId), isAuto: false }
+      newAssignments[assignmentKey] = { id: personId, isAuto: false }
     }
 
     setAssignments(newAssignments)
 
     if (resolvingAbsences && resolveQueue.length > 0) {
-      const remainingQueue = resolveQueue.filter(slot => {
+      const remainingQueue = resolveQueue.filter((slot: { pos: Position, shiftId: string }) => {
         // Remove the slot we just filled
-        return !(slot.pos.id === pos.id && slot.shiftId === shiftId)
+        return !(slot.pos.id === posId && slot.shiftId === shiftId)
       })
 
       if (remainingQueue.length > 0) {
         setResolveQueue(remainingQueue)
-        setReplacementSlot(remainingQueue[0])
+        const next = remainingQueue[0]
+        const nextKey = next.pos.type === 'auditorium' ? next.pos.id : `${next.pos.id}_${next.shiftId}`
+        setReplacementSlot({
+          posId: next.pos.id,
+          shiftId: next.shiftId,
+          posName: next.pos.name,
+          currentPersonId: getAssignId(assignments[nextKey])
+        })
       } else {
         setResolvingAbsences(false)
         setResolveQueue([])
@@ -188,221 +214,89 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
     }
   }
 
-  const handleAssignAttempt = (key, personId) => {
-    const value = personId || null
-    const pid = parseInt(personId)
-    const assignObj = value ? { id: parseInt(value), isAuto: false } : null
-
-    const { posId, shiftId } = parseAssignmentKey(key, shifts)
-
+  const handleManualAssign = (posId: string, shiftId: string, personId: number | null) => {
     const pos = positions.find((p) => p.id === posId)
-    if (!pos) {
-      setAssignments((prev) => ({ ...prev, [key]: assignObj }))
+    if (!pos) return
+
+    const key = pos.type === 'auditorium' ? pos.id : `${pos.id}_${shiftId}`
+    const assignObj = personId ? { id: personId, isAuto: false } : null
+
+    if (personId === null) {
+      setAssignments((prev: Record<string, Assignment | null>) => ({ ...prev, [key]: null }))
       return
     }
 
-    // Collect ALL conflicts for this person, not just the first one
-    const allConflicts = getAllConflicts(value, pos, shiftId, assignments)
-    if (allConflicts.length > 0) {
+    const conflicts = getAllConflicts(personId, pos, shiftId, assignments)
+    if (conflicts && conflicts.length > 0) {
       setPendingAction({
-        targetKey: key,
-        targetValue: assignObj,
-        conflictMsg: allConflicts.map(c => c.msg).join('\n'),
-        conflictSourceKeys: allConflicts.map(c => c.key).filter(Boolean),
-        personName: personnelMap.get(parseInt(value))?.name,
+        targetKey: key as string,
+        personId: personId,
+        conflictMsg: conflicts.map((c: { type: string, msg: string }) => c.msg).join('\n'),
+        conflictSourceKeys: conflicts.map((c: { type: string, msg: string, key?: string }) => c.key).filter((k): k is string => !!k),
+        personName: personnelMap.get(personId)?.name || 'Unknown',
+        targetShiftId: shiftId,
       })
     } else {
-      setAssignments((prev) => ({ ...prev, [key]: assignObj }))
+      setAssignments((prev: Record<string, Assignment | null>) => ({ ...prev, [key]: assignObj }))
     }
+  }
+
+  // ALIAS for JSX consistency
+  const handleAssignAttempt = (key: string, personId: string) => {
+    const { posId, shiftId } = parseAssignmentKey(key, shifts)
+    handleManualAssign(posId, shiftId, personId ? parseInt(personId) : null)
   }
 
   const confirmConflict = () => {
     if (pendingAction) {
-      setAssignments((prev) => ({
+      setAssignments((prev: Record<string, Assignment | null>) => ({
         ...prev,
-        [pendingAction.targetKey]: pendingAction.targetValue,
+        [pendingAction.targetKey]: { id: pendingAction.personId, isAuto: false },
       }))
       setPendingAction(null)
     }
   }
 
   const resolveAndAssign = () => {
-    if (pendingAction && pendingAction.conflictSourceKeys && pendingAction.conflictSourceKeys.length > 0) {
-      setAssignments((prev) => {
-        const updated = { ...prev }
-        // Clear ALL conflicting assignments
-        pendingAction.conflictSourceKeys.forEach((sourceKey) => {
-          updated[sourceKey] = null
-        })
-        // Assign to the new target
-        updated[pendingAction.targetKey] = pendingAction.targetValue
-        return updated
+    if (!pendingAction) return
+    const { targetKey, personId, conflictSourceKeys } = pendingAction
+
+    setAssignments((prev: Record<string, Assignment | null>) => {
+      const next = { ...prev }
+      conflictSourceKeys.forEach(key => {
+        next[key] = null
       })
-      setPendingAction(null)
-    }
+      next[targetKey] = { id: personId, isAuto: false }
+      return next
+    })
+    setPendingAction(null)
+    toast.success(`${pendingAction.personName} assigned. Conflicts resolved.`)
   }
 
-  const getRotationalShiftCount = (pid, currentAssignments) => {
-    let count = 0
-        Object.keys(currentAssignments).forEach((key) => {
-          if (getAssignId(currentAssignments[key]) === pid) {
-            const { posId } = parseAssignmentKey(key, shifts)
-            const pos = positions.find((p) => p.id === posId)
-            if (pos && pos.type !== 'auditorium') {
-              count++
-            }
-                }
-              })
-              return count
-            }
-  const getWorkPercentage = (pid, currentAssignments, workMinutesMap = null) => {
-    let minutesWorking = 0
-    if (workMinutesMap) {
-      minutesWorking = workMinutesMap.get(pid) || 0
-    } else {
-      Object.keys(currentAssignments).forEach((key) => {
-        if (getAssignId(currentAssignments[key]) === pid) {
-          // ONLY count rotational assignments (with underscore) towards work load/time away
-          if (key.includes('_')) {
-            const parts = key.split('_')
-            const shiftId = parts[parts.length - 1]
-            const shift = shiftsMap.get(shiftId)
-            if (shift) minutesWorking += shift.minutes || 150
-          }
-        }
-      })
-    }
-    return Math.round((minutesWorking / 600) * 100)
-  }
 
-  const isOverWorkLimit = (pid, currentAssignments, workMinutesMap = null) => {
-    const limit = rules.maxWorkPercent || 50
-    const pct = getWorkPercentage(pid, currentAssignments, workMinutesMap)
-    return pct >= limit
-  }
 
-  const getReliefUsedCount = (shiftId, currentAssignments) => {
-    let count = 0
-    positions
-      .filter((p) => p.type === 'rotational' && !p.isMirror)
-      .forEach((pos) => {
-        const key = `${pos.id}_${shiftId}`
-        const pid = getAssignId(currentAssignments[key])
-        const person = personnelMap.get(pid)
-        if (person && person.caps && person.caps.includes('auditorium')) count++
-      })
-    return count
-  }
 
-  // Collect ALL conflicts for a person being assigned to a position,
-  // instead of returning on the first one like getConflict does.
-  const getAllConflicts = (personId, pos, shiftId, currentAssignments) => {
+  // Collect ALL conflicts for a person being assigned to a position.
+  const getAllConflicts = (personId: number, pos: Position, shiftId: string, currentAssignments: Record<string, Assignment | null>) => {
     if (!personId) return []
-    const pid = parseInt(personId)
-    const person = personnelMap.get(pid)
+    const person = personnelMap.get(personId)
     if (!person) return []
 
-    const conflicts = []
-
-    // 1. Double Bookings - collect ALL overlapping assignments
-    const activeAssignments = Object.keys(currentAssignments).filter(
-      (key) => getAssignId(currentAssignments[key]) === pid,
-    )
-
-    for (let aid of activeAssignments) {
-      let existingPosId = aid
-      let existingShiftId = 'all'
-
-      for (const s of shifts) {
-        if (aid.endsWith(`_${s.id}`)) {
-          existingShiftId = s.id
-          existingPosId = aid.substring(0, aid.length - s.id.length - 1)
-          break
-        }
-      }
-
-      if (existingPosId === pos.id && existingShiftId === shiftId) continue
-
-      const overlap =
-        shiftId === 'all' || existingShiftId === 'all' || shiftId === existingShiftId
-
-      if (overlap) {
-        const otherPos = positions.find((p) => p.id === existingPosId)
-        const isReliefOverlap = (shiftId === 'all' && existingShiftId !== 'all') || (shiftId !== 'all' && existingShiftId === 'all')
-
-        if (isReliefOverlap && rules.auditoriumRotationMode) {
-          // Relief mode — skip this overlap (it's allowed)
-          continue
-        }
-
-        conflicts.push({
-          type: rules.doubleBookingSeverity || 'error',
-          msg: `Double booked with ${otherPos ? otherPos.name : existingPosId}`,
-          key: aid,
-        })
-      }
-    }
-
-    // 2. Non-double-booking conflicts (unavailability, tags, capabilities)
-    // Use existing getConflict but only if it returns a NON-double-booking error
-    // (double bookings are already collected above)
-    if (person.unavailable) {
-      if (shiftId === 'all' && person.unavailable.includes('all_day')) {
-        conflicts.push({ type: rules.unavailableSeverity || 'error', msg: 'Marked Unavailable' })
-      } else if (person.unavailable.includes(shiftId)) {
-        conflicts.push({ type: rules.unavailableSeverity || 'error', msg: 'Marked Unavailable' })
-      }
-    }
-
-    const area = areasMap.get(pos.areaId)
-    const requiredCap = area ? area.capability : ''
-    const bypassCap = rules.auditoriumRotationMode && pos.type === 'rotational' && person.caps && person.caps.includes('auditorium')
-    if (!bypassCap && (!person.caps || !person.caps.includes(requiredCap))) {
-      conflicts.push({ type: rules.capabilitySeverity || 'error', msg: 'Missing Capability' })
-    }
-    if (pos.keyMan && (!person.caps || !person.caps.includes('keyman'))) {
-      conflicts.push({ type: rules.capabilitySeverity || 'error', msg: 'Not a Key Man' })
-    }
-
-    // Only return 'error' type conflicts (warnings are allowed through)
-    return conflicts.filter(c => c.type === 'error')
-  }
-
-  const getConflict = (personId, pos, shiftId, currentAssignments) => {
-    if (!personId) return null
-    const pid = parseInt(personId)
-    const person = personnelMap.get(pid)
-    if (!person) return null
+    const conflicts: { type: string; msg: string; key?: string }[] = []
 
     // 1. Double Booking
     const activeAssignments = Object.keys(currentAssignments).filter(
-      (key) => getAssignId(currentAssignments[key]) === pid,
+      (key) => getAssignId(currentAssignments[key]) === personId,
     )
 
     for (let aid of activeAssignments) {
-      // Find what position and shift the existing assignment (aid) is for
-      let existingPosId = aid
-      let existingShiftId = 'all'
-
-      for (const s of shifts) {
-        if (aid.endsWith(`_${s.id}`)) {
-          existingShiftId = s.id
-          existingPosId = aid.substring(0, aid.length - s.id.length - 1)
-          break
-        }
-      }
-
-      // If it's the exact same slot we are checking, it's not a conflict
+      const { posId: existingPosId, shiftId: existingShiftId } = parseAssignmentKey(aid, shifts)
       if (existingPosId === pos.id && existingShiftId === shiftId) continue
 
-      // Check for temporal overlap
-      const overlap =
-        shiftId === 'all' || existingShiftId === 'all' || shiftId === existingShiftId
+      const overlap = shiftId === 'all' || existingShiftId === 'all' || shiftId === existingShiftId
 
       if (overlap) {
         const otherPos = positions.find((p) => p.id === existingPosId)
-
-        // RELIEF MODE: Allow overlap if one is All-Day ('all') and the other is a specific shift
         const isReliefOverlap = (shiftId === 'all' && existingShiftId !== 'all') || (shiftId !== 'all' && existingShiftId === 'all');
 
         if (isReliefOverlap && rules.auditoriumRotationMode) {
@@ -429,26 +323,24 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
             })
 
             if (someoneElseRelieved) {
-              return {
+              conflicts.push({
                 type: 'error',
                 msg: `Section ${targetAudPos.section} already has a brother relieved in this shift.`,
                 key: 'relief_section_limit',
-              }
+              })
+              continue
             }
           }
 
-          // 2. Respect Max Relief % per shift
+          // Respect Max Relief % per shift
           const allAudPositions = positions.filter((p) => p.type === 'auditorium')
           const totalAudCount = allAudPositions.length
           const maxReliefPct = rules.auditoriumCoverage || 25
-          const maxReliefCount = Math.max(
-            1,
-            Math.floor(totalAudCount * (maxReliefPct / 100)),
-          )
+          const maxReliefCount = Math.max(1, Math.floor(totalAudCount * (maxReliefPct / 100)))
 
           const otherReliefCount = allAudPositions.filter((ap) => {
             const apPid = getAssignId(currentAssignments[ap.id])
-            if (!apPid || apPid === pid) return false
+            if (!apPid || apPid === personId) return false
 
             return Object.keys(currentAssignments).some((k) => {
               if (!k.endsWith(`_${targetRotShiftId}`)) return false
@@ -457,151 +349,79 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
           }).length
 
           if (otherReliefCount >= maxReliefCount) {
-            return {
+            conflicts.push({
               type: 'error',
               msg: `Max relief limit reached (${maxReliefPct}%).`,
               key: 'relief_total_limit',
-            }
+            })
+            continue
           }
 
           // If we passed both checks, this overlap is ALLOWED
           continue
         }
 
-        return {
+        conflicts.push({
           type: rules.doubleBookingSeverity || 'error',
           msg: `Double booked with ${otherPos ? otherPos.name : existingPosId}`,
           key: aid,
-        }
+        })
       }
     }
 
     // 2. Unavailability
     if (person.unavailable) {
-      if (shiftId === 'all') {
-        if (person.unavailable.includes('all_day')) {
-          return {
-            type: rules.unavailableSeverity || 'error',
-            msg: 'Marked Unavailable',
-          }
-        }
-      } else {
-        if (person.unavailable.includes(shiftId)) {
-          return {
-            type: rules.unavailableSeverity || 'error',
-            msg: 'Marked Unavailable',
-          }
-        }
+      const isUnavailable = shiftId === 'all' ? person.unavailable.includes('all_day') : person.unavailable.includes(shiftId)
+      if (isUnavailable) {
+        conflicts.push({
+          type: rules.unavailableSeverity || 'error',
+          msg: 'Marked Unavailable',
+        })
       }
     }
 
-    // 2a. Tag Restrictions (Shifts & Areas)
+    // 3. Tag Restrictions
     if (tags && person.tags) {
       for (let tid of person.tags) {
         const tag = tags.find((t) => t.id === tid)
         if (tag) {
-          // Check Restricted Areas
           if (tag.restrictedAreas && tag.restrictedAreas.includes(pos.areaId)) {
-            return {
-              type: 'error',
-              msg: `Restricted Area: ${tag.name}`,
-            }
+            conflicts.push({ type: 'error', msg: `Restricted Area: ${tag.name}` })
           }
-          // Check Restricted Shifts
           if (tag.restrictedShifts) {
-            if (tag.restrictedShifts.includes(shiftId)) {
-              return {
-                type: 'error',
-                msg: `Restricted Shift: ${tag.name}`,
-              }
-            }
-            if (shiftId === 'all' && tag.restrictedShifts.includes('all_day')) {
-              return {
-                type: 'error',
-                msg: `Restricted All Day: ${tag.name}`,
-              }
+            const isRestrictedShift = tag.restrictedShifts.includes(shiftId) || (shiftId === 'all' && tag.restrictedShifts.includes('all_day'))
+            if (isRestrictedShift) {
+              conflicts.push({ type: 'error', msg: `Restricted Shift: ${tag.name}` })
             }
           }
         }
       }
     }
 
-    // 3. Capabilities
+    // 4. Capabilities
     const area = areasMap.get(pos.areaId)
-    const requiredCap = area ? area.capability : ''
-
-    // RELIEF MODE BYPASS: If enabled, brothers with 'auditorium' capability
-    // are allowed to work any rotational position even without the specific capability.
-    const bypassCap =
-      rules.auditoriumRotationMode &&
-      pos.type === 'rotational' &&
-      person.caps &&
-      person.caps.includes('auditorium')
+    const requiredCap = (area && area.capability) || ''
+    const bypassCap = rules.auditoriumRotationMode && pos.type === 'rotational' && person.caps && person.caps.includes('auditorium')
 
     if (!bypassCap && (!person.caps || !person.caps.includes(requiredCap))) {
-      return {
-        type: rules.capabilitySeverity || 'error',
-        msg: 'Missing Capability',
-      }
+      conflicts.push({ type: rules.capabilitySeverity || 'error', msg: 'Missing Capability' })
     }
     if (pos.keyMan && (!person.caps || !person.caps.includes('keyman'))) {
-      return { type: rules.capabilitySeverity || 'error', msg: 'Not a Key Man' }
+      conflicts.push({ type: rules.capabilitySeverity || 'error', msg: 'Not a Key Man' })
     }
 
-    return null
+    return conflicts.filter(c => c.type === 'error')
   }
 
-  const workedAdjacentShift = (pid, shiftId, currentAssignments) => {
-    if (rules.avoidConsecutive === false) return false
-    const sIdx = shifts.findIndex((s) => s.id === shiftId)
-    if (sIdx === -1) return false
-
-    // Check Previous
-    const prevShift = sIdx > 0 ? shifts[sIdx - 1] : null
-    const workedPrev = prevShift && Object.keys(currentAssignments).some((key) => {
-      return (
-        key.endsWith(`_${prevShift.id}`) &&
-        getAssignId(currentAssignments[key]) === pid
-      )
-    })
-    if (workedPrev) return true
-
-    // Check Next
-    const nextShift = sIdx < shifts.length - 1 ? shifts[sIdx + 1] : null
-    const workedNext = nextShift && Object.keys(currentAssignments).some((key) => {
-      return (
-        key.endsWith(`_${nextShift.id}`) &&
-        getAssignId(currentAssignments[key]) === pid
-      )
-    })
-    if (workedNext) return true
-
-    return false
+  const getConflict = (personId: number, pos: Position, shiftId: string, currentAssignments: Record<string, Assignment | null>) => {
+    const list = getAllConflicts(personId, pos, shiftId, currentAssignments)
+    return list.length > 0 ? list[0] : null
   }
 
-  const isAnchorAvailableForShift = (person, shiftId, currentAssignments) => {
-    if (rules.anchorLimits === false) return true
-
-    // Check if he's an anchor (Auditorium assignment)
-    const isAnchor = Object.keys(currentAssignments).some(k => {
-      const pos = positions.find(p => p.id === k);
-      return pos && pos.type === 'auditorium' && getAssignId(currentAssignments[k]) === person.id;
-    });
-
-    if (!isAnchor) return true;
-
-    // Enforce 25% rule for anchors in Auto-Fill
-    if (getRotationalShiftCount(person.id, currentAssignments) >= 1) return false;
-
-    return true
-  }
-
-  const getTotalAssignmentCount = (pid, currentAssignments) => {
-    let count = 0
-    Object.keys(currentAssignments).forEach((key) => {
-      if (getAssignId(currentAssignments[key]) === pid) count++
-    })
-    return count
+  const getTotalAssignmentCount = (personId: number, currentAssignments: Record<string, Assignment | null>) => {
+    return Object.keys(currentAssignments).filter(
+      (key) => getAssignId(currentAssignments[key]) === personId,
+    ).length
   }
 
   const handleAutoFill = () => {
@@ -615,29 +435,10 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
         tags,
         rules
       )
-      
-      const totalPersonnel = personnel.length
-      const assignedIds = new Set()
-      Object.keys(newAssignments).forEach((k) => {
-        const id = getAssignId(newAssignments[k])
-        if (id) assignedIds.add(id)
-      })
 
-      const emptyCount = positions.reduce((count, p) => {
-        if (p.type === 'auditorium' && !newAssignments[p.id]) return count + 1;
-        if (p.type === 'rotational' && !p.isMirror) {
-           return count + shifts.filter(s => (!p.validShifts || p.validShifts.includes(s.id)) && !newAssignments[`${p.id}_${s.id}`]).length;
-        }
-        return count;
-      }, 0);
-
-      const vacancyWarning = emptyCount > 0
-        ? `\n\n⚠️ WARNING: ${emptyCount} positions could not be filled! Check for red cells in the schedule.`
-        : `\n\n✅ All positions were successfully filled.`;
 
       onAutoFill(newAssignments, newLog)
-      toast.success(
-        `Weighted Scoring Auto-Fill Complete!\n\nUtilization: ${assignedIds.size}/${totalPersonnel} Volunteers (${Math.round((assignedIds.size / totalPersonnel) * 100)}%)${vacancyWarning}\n\nPLEASE CHECK THE LOG TAB FOR THE BREAKDOWN.`,
+      toast.success(t('toast_autofill_success', language) || `Auto-fill complete. ${filledCount} slots filled.`,
         { duration: 8000 }
       )
     } catch (err) {
@@ -658,7 +459,7 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
     const cleanedAssignments = { ...assignments }
     let count = 0
     Object.keys(cleanedAssignments).forEach((key) => {
-      if (isAutoAssigned(cleanedAssignments[key])) {
+      if (cleanedAssignments[key] && (cleanedAssignments[key] as Assignment).isAuto) {
         cleanedAssignments[key] = null
         count++
       }
@@ -676,12 +477,14 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
     Object.keys(newAssignments).forEach((key) => {
       const val = newAssignments[key]
       if (!val) return
-      const pid = getAssignId(val)
+      const pid = getAssignId(val as number | Assignment)
+      if (!pid) return
+
       const { posId, shiftId } = parseAssignmentKey(key, shifts)
       const pos = positions.find((p) => p.id === posId)
       if (!pos) return
 
-      const conflict = getConflict(pid, pos, shiftId, newAssignments, personnelMap, shifts, positions, rules, areasMap, tags)
+      const conflict = getConflict(pid, pos, shiftId, newAssignments)
       if (conflict && conflict.type === 'error') {
         newAssignments[key] = null
         unassignedCount++
@@ -706,7 +509,7 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
   }, [assignments])
 
   const orphanedSlots = useMemo(() => {
-    let empty = []
+    let empty: { pos: Position, shiftId: string }[] = []
     positions.forEach(pos => {
       if (pos.type === 'auditorium') {
         const slotId = pos.id
@@ -728,21 +531,23 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const personId = active.data.current?.personId;
+    const personId = active.data.current?.personId as number | undefined;
     if (personId) {
       setActiveDragPersonId(personId);
     }
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDragPersonId(null);
-    if (!over) return;
-    
-    const personId = active.data.current?.personId;
-    if (personId) {
-      handleAssignAttempt(over.id as string, personId);
-    }
+    const { active, over } = event
+    setActiveDragPersonId(null)
+
+    if (!over) return
+
+    const personId = active.data.current?.personId as number
+    const targetKey = over.id as string // format: posId_shiftId
+    const { posId, shiftId } = parseAssignmentKey(targetKey, shifts)
+
+    handleManualAssign(posId, shiftId, personId);
   }
 
   const activeDragPerson = useMemo(() => {
@@ -792,7 +597,14 @@ export default function ScheduleView({ language }: ScheduleViewProps) {
                 onClick={() => {
                   setResolvingAbsences(true)
                   setResolveQueue([...orphanedSlots])
-                  setReplacementSlot(orphanedSlots[0])
+                  const first = orphanedSlots[0]
+                  const key = first.pos.type === 'auditorium' ? first.pos.id : `${first.pos.id}_${first.shiftId}`
+                  setReplacementSlot({
+                    posId: first.pos.id,
+                    shiftId: first.shiftId,
+                    posName: first.pos.name,
+                    currentPersonId: getAssignId(assignments[key])
+                  })
                 }}
                 className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-bold shadow-lg shadow-orange-200 transition-all active:scale-95 flex items-center gap-2 dark:shadow-none animate-pulse"
               >

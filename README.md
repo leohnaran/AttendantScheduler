@@ -66,6 +66,7 @@ To generate the single-file `schedule.html`:
 ## 🏗️ Tech Stack
 
 *   **Framework:** React 18
+*   **Language:** TypeScript
 *   **Build Tool:** Vite + `vite-plugin-singlefile`
 *   **Styling:** Tailwind CSS
 *   **Icons:** FontAwesome
