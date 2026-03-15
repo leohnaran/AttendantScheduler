@@ -71,14 +71,14 @@ export default function PersonRow({
     <tr
       ref={setNodeRef}
       style={style}
-      className={`draggable-row transition-all duration-200 ${isEditing
+      className={`draggable-row transition-all duration-200 flex w-full items-center ${isEditing
           ? 'bg-yellow-50/50 dark:bg-yellow-900/20'
           : isKeyMan
             ? 'bg-blue-50/20 dark:bg-blue-900/10 hover:bg-blue-50/40'
             : 'hover:bg-gray-50/80 bg-white dark:bg-slate-800 dark:hover:bg-slate-700/50'
         }`}
     >
-      <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200">
+      <td className="px-6 py-3 font-medium text-gray-700 dark:text-gray-200 w-[30%] box-border">
         {isEditing ? (
           <div className="flex flex-col gap-1">
             <input
@@ -209,7 +209,7 @@ export default function PersonRow({
           </div>
         )}
       </td>
-      <td className="px-6 py-3">
+      <td className="px-6 py-3 w-[15%] box-border">
         {isEditing ? (
           <select
             value={formData.role}
@@ -239,7 +239,7 @@ export default function PersonRow({
           </span>
         )}
       </td>
-      <td className="px-6 py-3">
+      <td className="px-6 py-3 flex-1 box-border">
         {isEditing ? (
           <div>
             <div className="flex flex-wrap gap-2 max-w-[200px] mb-2">
@@ -360,7 +360,7 @@ export default function PersonRow({
           </div>
         )}
       </td>
-      <td className="px-6 py-3 text-center">
+      <td className="px-6 py-3 text-center w-32 box-border shrink-0">
         {isEditing ? (
           <div className="flex justify-center gap-2">
             <button
